@@ -1,0 +1,35 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.13)  4 JAN 2024 20:57
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**Physiology.tex
+(./Physiology.tex
+LaTeX2e <2023-11-01>
+L3 programming layer <2023-11-09>
+)
+*X
+
+! LaTeX Error: Missing \begin{document}.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+<*> X
+     
+? X
+ 
+Here is how much of TeX's memory you used:
+ 17 strings out of 474273
+ 528 string characters out of 5747719
+ 1923555 words of memory out of 5000000
+ 22323 multiletter control sequences out of 15000+600000
+ 558069 words of font info for 36 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 14i,0n,18p,46b,14s stack positions out of 10000i,1000n,20000p,200000b,200000s
+No pages of output.
+PDF statistics:
+ 0 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+

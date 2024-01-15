@@ -1,0 +1,82 @@
+\documentclass[10pt]{article}
+\usepackage[margin = 0.8in]{geometry}
+\usepackage{indentfirst}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{float}
+\hypersetup{
+   colorlinks,
+   linkcolor={red!50!black},
+   citecolor={blue!50!black},
+   urlcolor={blue!80!black}
+}
+%\usepackage{breakurl}
+\usepackage{siunitx}
+
+\usepackage[font={footnotesize},labelfont=bf]{caption}
+
+
+\title{Physiology}
+\author{Julian Landaw}
+\begin{document}
+\maketitle
+\section{Respiratory Physiology}
+\subsection{The Basic Model}
+The lungs can be modeled as a narrow tube, or straw, and balloon that is open to the outside world. 
+The narrow tube models the airways of the lungs, with a resistance that we will label $R$.
+The balloon is the collection of all air sacs, or alveoli, that expands and recoils during inspiration and expiration. The lungs expand with a compliance $C$, which is equivalent to the inverse of elasticity, $e$. $C = \frac{1}{e}$.
+
+The pressure inside the lungs depend on two things. First, it depends on the actual volume of lungs, $V$, in the lungs at any moment of time. As an analogy, suppose a balloon is blown up to a large volume $V$, and the end is closed off so the air cannot escape. The balloon will have a high pressure, that will become apparent once one the end is released, allowing a huge rush of air to flow from the balloon to the outside world. Flow of air moves from an area of high pressure to an area of low pressure. The compliance of the balloon relates the pressure difference to the amount of volume:
+\begin{equation} \label{eq:plat}
+P_{plat} = \frac{V}{C}
+\end{equation}
+(This pressure will be called the ``plateau pressure'' for reasons to be described soon)
+
+Secondly, the pressure depends on the actual flow of air, $\dot V = \frac{d V}{d t}$, through the narrow tube. A pressure difference across the narrow tube will cause flow through the tube, but the resistance will decrease the flow. The relation with the resistance $R$ is as follows:
+\begin{equation} \label{eq:res}
+P_{res} = R\dot V
+\end{equation}
+
+Together, with the lungs filled up to a volume V that is open to the outside world with a pressure difference $\Delta P = P_{res} + P_{plat}$, then
+\begin{equation} \label{eq:RCeq}
+\Delta P = \frac{V}{C} + R\dot V
+\end{equation}
+This produces a differential equation, where we assume $C$ and $R$ are constants, which can however vary in certain conditions. For example, the resistance $R$ in the airway can increase with mucous plugging. The compliance $C$ can go up in pathologic conditions like acute respiratory distress syndrome (ARDS) or when the lungs become stiff in certain chronic conditions like emphysema or COPD. 
+
+\subsection{Solving Eq.~(\ref{eq:RCeq})}
+Rearranging and isolating the $\dot V$ term gives
+\begin{equation}
+\dot V + \frac{V}{RC} = \frac{P}{R}
+\end{equation}
+There are multiple ways of solving this equation, but one instructive way of doing this is to use \textit{integrating factors}. Define a new variable $W(t)$ such that 
+\begin{equation} \label{eq:wdef}
+W(t) = e^{\frac{t}{RC}}V. 
+\end{equation}
+$\left[e^{\frac{t}{RC}}\right]$ is known as the integrating factor. Then by using the chain rule from calculus,
+\begin{equation}
+\frac{dW}{dt} = \frac{d}{dt}\left[e^{\frac{t}{RC}}V\right] = e^{\frac{t}{RC}}\left[\dot V + \frac{V}{RC}\right] = e^{\frac{t}{RC}}\frac{P}{R}.
+\end{equation}
+Integrating both sides with respect to $t$ gives
+\begin{equation}
+W(t) = W(0) + \int_0^t e^{\frac{s}{RC}}\frac{P}{R}\,ds.
+\end{equation}
+Relating $W$ with $V$ as in Eq.~(\ref{eq:wdef}) gives
+\begin{equation}
+e^{\frac{t}{RC}}V(t) = V(0) + \int_0^t e^{\frac{s}{RC}}\frac{P}{R}\,ds
+\end{equation}
+or equivalently,
+\begin{equation} \label{eq:volume}
+\boxed{V(t) = e^{-\frac{t}{RC}}V(0) + \int_0^t e^{\frac{s-t}{RC}}\frac{P}{R}\,ds.}
+\end{equation}
+Taking the derivative will give the flow:
+\begin{equation}
+\boxed{R \times \dot V(t) = P - \frac{e^{-\frac{t}{RC}V(0)}}{C} + \int_0^t e^{\frac{s-t}{RC}}\left[\dot P - \frac{P}{RC}\right]\,ds.}
+\end{equation}
+Here the only assumptions we make are that $R$ and $C$ are constants. 
+
+
+
+\end{document}
