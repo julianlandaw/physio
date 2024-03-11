@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <script src="assets/js/math.js"></script>
+  <script src="assets/js/plotly.js"></script>
+</head>
+<body>
+    <article style="margin:2%;">
+    <h2 style="font-size: 2em; text-align: center;">Two Compartment Model</h2>
+    <table>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><center><u>Volumes of Distribution</u></center></td>
+                </tr>
+                <tr>
+                    <td><div id='Vd1html' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='50' id='Vd1slider'></input>
+                    </td>
+                </tr>
+                <tr>
+                    <td><div id='Vd2html' style='margin-top:2em;'></div><input type='range' min='1' max='100000' value='40000' id='Vd2slider'></input></td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><center><u>Pharmacokinetic Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td><div id='Clhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='600' id='Clslider'></input></td>
+                </tr>
+                <tr>
+                    <td><div id='khtml' style='margin-top:2em;'></div><input type='range' min='0' max='10000' value='2000' id='kslider'></input></td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><center><u>Bolus Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td><div id='bhtml' style='margin-top:2em;'></div><input type='range' min='0' max='10000' value='2000' id='bslider'></input></td>
+                </tr>
+                <tr>
+                    <td><div id='tbolushtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='200' id='tbolusslider'></input></td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <div id='tfinalhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='1000' id='tfinalslider'></input>
+        </td>
+        <td>
+            <img src="assets/imgs/compartmentmodel_two.png" width="50%"></img>
+        </td>
+    </table>
+    <br>
+    <table>
+        <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
+        <td><div id="myDiv1"></div></td>
+        <td><div id="myDiv2"></div></td>
+    </table>
+    <script src="assets/js/twocompartmentmodel.js"></script>
+    </article>
+</body>
+</html>
