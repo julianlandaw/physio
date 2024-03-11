@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="Start your development with Steller landing page.">
     <meta name="author" content="Devcrud">
-    <title>Respiratory Physiology</title>
+    <title>Physiology and Pharmacology</title>
     <!-- font icons -->
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
     <!-- Bootstrap + Steller main styles -->
@@ -53,11 +53,56 @@
 
     <section id="respiratory" class="section mt-3">
         <h1>Respiratory Physiology</h1>
-        <a class="btn btn-light rounded" href="respiratory.html">Respiratory Physiology</a>
+        <p>
+            The lungs can be modeled as a narrow tube, or straw, attached to a balloon that is open to the outside world. The narrow tube models the airways of the lungs, with a resistance <i>R</i>. The balloon is the collection of all air sacs, or alveoli, that expands and recoils during inspiration and expiration. The lungs expand with a compliance <i>C</i>, which is equivalent to the inverse of its elasticity, <i>e</i>, i.e., <i>C</i> = 1/<i>e</i>. 
+        </p>
+        <p>
+            The pressure inside the lungs depend on two factors. First, it depends on the actual volume of the lungs, <i>V</i>, at any moment in time. As an analogy, consider a balloon that is blown up to a large volume, with the end closed or knotted off so the air cannot escape. The balloon will have a high pressure which will become apparent once the end is unknotted or released, causing a huge rush of air to flow out. Flow of air moves from an area of high pressure to an area of low pressure. The compliance of the balloon relates the pressure difference to the amount of volume inside: <i>P<sub>plat</sub></i> = <i>V</i>/<i>C</i>. (This pressure will be called the "plautea pressure" for reasons to be described soon).
+        </p>
+        <p>
+            Secondly, the pressure depends on the actual flow of air, <i>V'</i> = <i>dV</i>/<i>dt</i>. A pressure difference across the narrow tubes will cause flow through the tube, but the resistance will decrease the flow. The relation with the resistance <i>R</i> is as follows: <i>P<sub>res</sub></i> = <i>RV'</i>. 
+        </p>
+        <p>Together, with the lungs filled up to a volume <i>V</i> that is open to the outside world with a pressure difference <b><i>P</i></b> = <i>P<sub>res</sub></i> + <i>P<sub>plat</sub></i>, then
+        </p>
+        <p>
+            <b><i>P</i></b> = <i>V</i>/<i>C</i> + <i>RV'</i>.
+        </p>
+        <a href="respiratory.html">Try out this simulator of a ventilator, and try to optimize vent settings with difference resistances and compliances!</a>
     </section>
-    <section id="respiratory" class="section mt-3">
+    
+    <section id="pharmacology" class="section mt-3">
         <h1>Pharmacology</h1>
         <a class="btn btn-light rounded" href="pharmacology.html">Pharmacology</a>
     </section>
+    <!-- Page Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-sm-6">
+                    <p>Copyright <script>document.write(new Date().getFullYear())</script> &copy; Julian Landaw</p>
+                </div>
+                <!-- 
+                <div class="col-sm-6">
+                    <div class="socials">
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-facebook"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-google"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-github"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-twitter"></i></a>
+                    </div>
+                </div>
+                -->
+            </div>
+        </div>
+    </footer> 
+    <!-- End of page footer -->
+	
+	<!-- core  -->
+    <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
+    <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
+    <!-- bootstrap 3 affix -->
+	<script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
+
+    <!-- steller js -->
+    <script src="assets/js/steller.js"></script>
 </body>
 </html>
