@@ -1,0 +1,105 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Start your development with Steller landing page.">
+    <meta name="author" content="Devcrud">
+    <title>One Compartment Pharmacological Model</title>
+    <!-- font icons -->
+    <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
+    <!-- Bootstrap + Steller main styles -->
+	<link rel="stylesheet" href="assets/css/steller.css">
+    <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style>
+
+    <!-- Include Plotly library -->
+    <script src="assets/css/plotly.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label, input {
+            margin-bottom: 10px;
+            display: block;
+        }
+    </style>
+    <script src="assets/js/math.js"></script>
+    <script src="assets/js/plotly.js"></script>
+</head>
+<body>
+    <!-- Page navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top" data-spy="affix" data-offset-top="0">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><img src="assets/imgs/chaos.jpeg" alt=""></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#onecompartment">One Compartment Model</a>
+                    </li>
+                </ul>
+            </div>
+        </div>          
+    </nav>
+    <!-- End of page navigation -->
+    <section id="onecompartment" class="section mt-3" style="margin:2%;">
+    <h2 style="font-size: 2em; text-align: center;">One Compartment Model</h2>
+    <table>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><center><u>Volume of Distribution</u></center></td>
+                </tr>
+                <tr>
+                    <td><div id='Vdhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='50' id='Vdslider'></input>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><center><u>Pharmacokinetic Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td><div id='Clhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='600' id='Clslider'></input></td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><center><u>Bolus Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td><div id='bhtml' style='margin-top:2em;'></div><input type='range' min='0' max='10000' value='2000' id='bslider'></input></td>
+                </tr>
+                <tr>
+                    <td><div id='tbolushtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='200' id='tbolusslider'></input></td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table>
+                <tr>
+                    <td><div id='tfinalhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='1000' id='tfinalslider'></input></td>
+                </tr>
+                <tr align="middle">
+                    <td><a class="btn btn-light rounded" onclick="reset()">Reset</button></td>
+                </tr>
+            </table>
+        </td>
+        <td>
+            <img src="assets/imgs/compartmentmodel_two.png" width="75%"></img>
+        </td>
+    </table>
+    <br>
+    <div id="myDiv"></div>
+    <script src="assets/js/onecompartmentmodel.js"></script>
+    </section>
+</body>
+</html>
