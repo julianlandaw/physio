@@ -14,6 +14,14 @@
     <!-- Include Plotly library -->
     <script src="assets/css/plotly.js"></script>
 
+    <!-- Include LaTeX environment -->
+    <script type="text/x-mathjax-config">
+       MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+    </script>
+    <script type="text/javascript"
+      src="http://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -100,7 +108,11 @@
             </table>
         </td>
         <td align = "middle">
-            <img src="assets/imgs/compartmentmodel_two.png" width="50%"></img>
+            <!-- <img src="assets/imgs/compartmentmodel_two.png" width="50%"></img> -->
+            $$\begin{align*}
+               V_{d,\text{ central}} \frac{d\textbf{c}_{\text{central}}}{dt} &= b - C_l \textbf{c}_{\text{central}} - k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}}) \\
+               V_{d,\text{ peripheral}} \frac{d\textbf{c}_{\text{peripheral}}}{dt} &= k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}})
+            \end{align*}$$
         </td>
     </table>
     <br>
