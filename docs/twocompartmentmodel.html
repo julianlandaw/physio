@@ -14,13 +14,14 @@
     <!-- Include Plotly library -->
     <script src="assets/css/plotly.js"></script>
 
-    <!-- Include LaTeX environment -->
+    <!-- Include LaTeX environment
     <script type="text/x-mathjax-config">
        MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
     </script>
     <script type="text/javascript"
       src="http://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
     </script>
+    -->
 
     <style>
         body {
@@ -32,7 +33,7 @@
             display: block;
         }
     </style>
-    <script src="assets/js/math.js"></script>
+    <script src="assets/js/math.js" type="text/javascript"></script>
     <script src="assets/js/plotly.js"></script>
 </head>
 <body>
@@ -80,7 +81,7 @@
                     <td><div id='Clhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='600' id='Clslider'></input></td>
                 </tr>
                 <tr>
-                    <td><div id='khtml' style='margin-top:2em;'></div><input type='range' min='0' max='10000' value='2000' id='kslider'></input></td>
+                    <td><div id='khtml' style='margin-top:2em;'></div><input type='range' min='1' max='10000' value='2000' id='kslider'></input></td>
                 </tr>
             </table>
         </td>
@@ -108,11 +109,12 @@
             </table>
         </td>
         <td align = "middle">
-            <!-- <img src="assets/imgs/compartmentmodel_two.png" width="50%"></img> -->
+            <img src="assets/imgs/twocompartmentmodel.svg" width="100%"></img> 
+            <!--
             $$\begin{align*}
                V_{d,\text{ central}} \frac{d\textbf{c}_{\text{central}}}{dt} &= b - C_l \textbf{c}_{\text{central}} - k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}}) \\
                V_{d,\text{ peripheral}} \frac{d\textbf{c}_{\text{peripheral}}}{dt} &= k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}})
-            \end{align*}$$
+            \end{align*}$$ -->
         </td>
     </table>
     <br>
