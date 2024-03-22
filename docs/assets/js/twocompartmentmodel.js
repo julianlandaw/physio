@@ -34,39 +34,79 @@ function dfsolve() {
     }
 
     function iterate1(t, C1, C2, params) {
-        const a1 = -(params.Cl + params.k)/params.Vd1;
-        const a2 = params.k/params.Vd1;
-        const a3 = params.k/params.Vd2;
-        const a4 = -params.k/params.Vd2;
-        const e = params.b/params.Vd1;
-        const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
-        const dt = params.dt;
+        if (kslider.value == 0) {
+            const a1 = -params.Cl/params.Vd1;
+            const e = params.b/params.Vd1;
+            const dt = params.dt;
+            const b1 = e*(expn(dt) - 1);
+            return C1*expn(a1*dt) + b1;
+        }
+        else if (Clslider.value == 0) {
+            const a2 = params.k/params.Vd1;
+            const a3 = params.k/params.Vd2;
+            const e = params.b/params.Vd1;
+            const dt = params.dt;
+            const b1 = (a3*dt*e)/(a2 + a3) - (a2*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
+
+            const a11 = (a3 + a2*expn(-dt*(a2 + a3)))/(a2 + a3);
+            const a12 = (a2 - a2*expn(-dt*(a2 + a3)))/(a2 + a3);
+            
+            return a11*C1 + a12*C2 + b1;
+            
+        }
+        else {
+            const a1 = -(params.Cl + params.k)/params.Vd1;
+            const a2 = params.k/params.Vd1;
+            const a3 = params.k/params.Vd2;
+            const a4 = -params.k/params.Vd2;
+            const e = params.b/params.Vd1;
+            const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
+            const dt = params.dt;
         
-        const a11 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 + sqrtfun))/2) - a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) + a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
+            const a11 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 + sqrtfun))/2) - a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) + a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
 
-        const a12 = -(a2*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0) - a2*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0))/sqrtfun;
+            const a12 = -(a2*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0) - a2*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0))/sqrtfun;
 
-        const b1 = (2.0*e*expn(-(dt*sqrtfun)/2.0)*(a4*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) - 2.0*a4*expn((dt*sqrtfun)/2.0)*sqrtfun - a1*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) + 2.0*a2*a3*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) + a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*sqrtfun - a4*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun) + a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun)*sqrtfun + a1*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun) - 2.0*a2*a3*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun)))/((4.0*a1*a4 - 4.0*a2*a3)*sqrtfun);
+            const b1 = (2.0*e*expn(-(dt*sqrtfun)/2.0)*(a4*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) - 2.0*a4*expn((dt*sqrtfun)/2.0)*sqrtfun - a1*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) + 2.0*a2*a3*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) + a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*sqrtfun - a4*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun) + a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun)*sqrtfun + a1*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun) - 2.0*a2*a3*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun)))/((4.0*a1*a4 - 4.0*a2*a3)*sqrtfun);
 
-        return a11*C1 + a12*C2 + b1;
+            return a11*C1 + a12*C2 + b1;
+        }
     }
 
     function iterate2(t, C1, C2, params) {
-        const a1 = -(params.Cl + params.k)/params.Vd1;
-        const a2 = params.k/params.Vd1;
-        const a3 = params.k/params.Vd2;
-        const a4 = -params.k/params.Vd2;
-        const e = params.b/params.Vd1;
-        const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
-        const dt = params.dt;
+        if (kslider.value == 0) {
+            return C2;
+        }
+        else if (Clslider.value == 0) {
+            const a2 = params.k/params.Vd1;
+            const a3 = params.k/params.Vd2;
+            const e = params.b/params.Vd1;
+            const dt = params.dt;
+            const b2 = (a3*dt*e)/(a2 + a3) + (a3*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
+
+            const a21 = (a3 - a3*expn(-dt*(a2 + a3)))/(a2 + a3);
+            const a22 = (a2 + a3*exp(-dt*(a2 + a3)))/(a2 + a3);
+            
+            return a21*C1 + a22*C2 + b2;
+            
+        }
+        else {
+            const a1 = -(params.Cl + params.k)/params.Vd1;
+            const a2 = params.k/params.Vd1;
+            const a3 = params.k/params.Vd2;
+            const a4 = -params.k/params.Vd2;
+            const e = params.b/params.Vd1;
+            const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
+            const dt = params.dt;
         
-        const a22 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 + sqrtfun))/2) + a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) - a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
+            const a22 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 + sqrtfun))/2) + a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) - a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
 
-        const a21 = -(a3*(expn((dt*(a1 + a4 - sqrtfun))/2.0) - expn((dt*(a1 + a4 + sqrtfun))/2.0)))/sqrtfun;
+            const a21 = -(a3*(expn((dt*(a1 + a4 - sqrtfun))/2.0) - expn((dt*(a1 + a4 + sqrtfun))/2.0)))/sqrtfun;
 
-        const b2 = (a3*e*(2.0/(a1 + a4 - sqrtfun) - (2.0*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0))/(a1 + a4 - sqrtfun)))/sqrtfun + (2.0*a3*e*(expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0) - 1.0))/((a1 + a4 + sqrtfun)*sqrtfun);
+            const b2 = (a3*e*(2.0/(a1 + a4 - sqrtfun) - (2.0*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0))/(a1 + a4 - sqrtfun)))/sqrtfun + (2.0*a3*e*(expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0) - 1.0))/((a1 + a4 + sqrtfun)*sqrtfun);
 
-        return a21*C1 + a22*C2 + b2;
+            return a21*C1 + a22*C2 + b2;
+        }
     }
     
     let params = { b: [], Cl: [], k: [], Vd1: [], Vd2: []};
@@ -190,183 +230,6 @@ function dfsolve() {
     Plotly.newPlot('myDiv2', [trace_u2], layout2);
 }
 
-/*
-function dfsolveold() {
-    function df1(t, C1, C2, params) {
-        return (params.b - params.Cl*C1 - params.k*(C1-C2) ) / params.Vd1;
-    }
-
-    function df2(t, C1, C2, params) {
-        return params.k*(C1 - C2) / params.Vd2;
-    }
-    
-    let params = { b: [], Cl: [], k: [], Vd1: [], Vd2: []};
-    
-    params.Vd1 = Vd1slider.value/10;
-    params.Vd2 = Vd2slider.value/10;
-    params.Cl = Clslider.value/10;
-    params.k = kslider.value/10;
-    params.b = bslider.value/tbolusslider.value;
-    params.tbolus = tbolusslider.value/10;
-    params.tfinal = tfinalslider.value/10;
-    
-    let t0 = 0;
-    let y01 = 0;
-    let y02 = 0;
-
-    let dt = 0.01;
-    let N = Math.ceil(params.tfinal/dt);
-    let Nhalf = Math.ceil(params.tbolus/dt);
-
-    let ts = new Array(N + 1);
-    let ys1 = new Array(N + 1);
-    let ys2 = new Array(N + 1);
-
-    for (let i = 0; i < N+1; i++) {
-       ts[i] = i*dt;
-    }
-
-    ys1[0] = y01;
-    ys2[0] = y02;
-
-
-    
-//Runge-Kutta Loop
-    for (let i = 0; i < Nhalf; i++) {
-        const k11 = df1(ts[i], ys1[i], ys2[i], params);
-        const k12 = df2(ts[i], ys1[i], ys2[i], params);
-
-        const s11 = ys1[i] + k11 * dt/2;
-        const s12 = ys2[i] + k12 * dt/2;
-
-        const k21 = df1(ts[i] + dt/2, s11, s12, params);
-        const k22 = df2(ts[i] + dt/2, s11, s12, params);
-
-        const s21 = ys1[i] + k21 * dt/2;
-        const s22 = ys2[i] + k22 * dt/2;
-    
-        const k31 = df1(ts[i] + dt/2, s21, s22, params); 
-        const k32 = df2(ts[i] + dt/2, s21, s22, params); 
-
-        const s31 = ys1[i] + k31 * dt;
-        const s32 = ys2[i] + k32 * dt;
-
-        const k41 = df1(ts[i] + dt, s31, s32, params); // f(t + h, y_n + k3*h)
-        const k42 = df2(ts[i] + dt, s31, s32, params);
-    
-        ys1[i + 1] = ys1[i] + (k11/6 + k21/3 + k31/3 + k41/6) * dt;
-        ys2[i + 1] = ys2[i] + (k12/6 + k22/3 + k32/3 + k42/6) * dt;
-    }
-
-    params.b = 0
-    for (let i = Nhalf; i < N + 1; i++) {
-        const k11 = df1(ts[i], ys1[i], ys2[i], params);
-        const k12 = df2(ts[i], ys1[i], ys2[i], params);
-
-        const s11 = ys1[i] + k11 * dt/2;
-        const s12 = ys2[i] + k12 * dt/2;
-
-        const k21 = df1(ts[i] + dt/2, s11, s12, params);
-        const k22 = df2(ts[i] + dt/2, s11, s12, params);
-
-        const s21 = ys1[i] + k21 * dt/2;
-        const s22 = ys2[i] + k22 * dt/2;
-    
-        const k31 = df1(ts[i] + dt/2, s21, s22, params); 
-        const k32 = df2(ts[i] + dt/2, s21, s22, params); 
-
-        const s31 = ys1[i] + k31 * dt;
-        const s32 = ys2[i] + k32 * dt;
-
-        const k41 = df1(ts[i] + dt, s31, s32, params); // f(t + h, y_n + k3*h)
-        const k42 = df2(ts[i] + dt, s31, s32, params);
-    
-        ys1[i + 1] = ys1[i] + (k11/6 + k21/3 + k31/3 + k41/6) * dt;
-        ys2[i + 1] = ys2[i] + (k12/6 + k22/3 + k32/3 + k42/6) * dt;
-    }
-
-    let trace_u1 = { x: [], y: [], name: 'Central Compartment'};
-    let trace_u2 = { x: [], y: [], name: 'Peripheral Compartment'};
-    let trace_u3 = { x: [], y: [], name: 'Average Concentration'};
-    
-    for (let i = 0; i < N + 1; i++) {
-        trace_u1.x.push(ts[i]);  
-        trace_u1.y.push(ys1[i]);
-        trace_u2.x.push(ts[i]);
-        trace_u2.y.push(ys2[i]);
-        trace_u3.x.push(ts[i]);
-        trace_u3.y.push((params.Vd1*ys1[i] + params.Vd2*ys2[i])/(params.Vd1 + params.Vd2));
-    }
-
-    var layout1 = {
-        title: {
-            text:'Central Compartment',
-            font: {
-                family: 'Courier New, monospace',
-                size: 24
-            },
-            //xref: 'paper',
-            //x: 0.05,
-        },
-        xaxis: {
-            title: {
-                text: 'Time (s)',
-                font: {
-                    family: 'Courier New, monospace',
-                    size: 18,
-                    color: '#7f7f7f'
-                }
-            },
-        },
-        yaxis: {
-            title: {
-                text: 'Concentration (mg/L)',
-                font: {
-                    family: 'Courier New, monospace',
-                    size: 18,
-                    color: '#7f7f7f'
-                }
-            }
-        }
-    };
-
-    var layout2 = {
-        title: {
-            text:'Peripheral Compartment',
-            font: {
-                family: 'Courier New, monospace',
-                size: 24
-            },
-            //xref: 'paper',
-            //x: 0.05,
-        },
-        xaxis: {
-            title: {
-                text: 'Time (s)',
-                font: {
-                    family: 'Courier New, monospace',
-                    size: 18,
-                    color: '#7f7f7f'
-                }
-            },
-        },
-        yaxis: {
-            title: {
-                text: 'Concentration (mg/L)',
-                font: {
-                    family: 'Courier New, monospace',
-                    size: 18,
-                    color: '#7f7f7f'
-                }
-            }
-        }
-    };
-
-    Plotly.newPlot('myDiv1', [trace_u1], layout1);
-    Plotly.newPlot('myDiv2', [trace_u2], layout2);
-}
-*/
-
 dfsolve();
 
 function reset() {
@@ -384,7 +247,6 @@ function reset() {
     bhtml.innerHTML = "Bolus Amount (mg) = " + bslider.value/10;
     tbolushtml.innerHTML = "Bolus Time (s) = " + tbolusslider.value/10;
     tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (s) = " + tfinalslider.value/10;
-    dthtml.innerHTML = "<i>dt</i> (s) = " + dtslider.value/1000;
     dfsolve();
 }
 

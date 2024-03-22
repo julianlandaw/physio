@@ -14,15 +14,6 @@
     <!-- Include Plotly library -->
     <script src="assets/css/plotly.js"></script>
 
-    <!-- Include LaTeX environment
-    <script type="text/x-mathjax-config">
-       MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
-    </script>
-    <script type="text/javascript"
-      src="http://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-    </script>
-    -->
-
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -78,10 +69,10 @@
                     <td><center><u>Pharmacokinetic Parameters</u></center></td>
                 </tr>
                 <tr>
-                    <td><div id='Clhtml' style='margin-top:2em;'></div><input type='range' min='1' max='1000' value='600' id='Clslider'></input></td>
+                    <td><div id='Clhtml' style='margin-top:2em;'></div><input type='range' min='0' max='1000' value='600' id='Clslider'></input></td>
                 </tr>
                 <tr>
-                    <td><div id='khtml' style='margin-top:2em;'></div><input type='range' min='1' max='10000' value='2000' id='kslider'></input></td>
+                    <td><div id='khtml' style='margin-top:2em;'></div><input type='range' min='0' max='10000' value='2000' id='kslider'></input></td>
                 </tr>
             </table>
         </td>
