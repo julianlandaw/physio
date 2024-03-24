@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
     <!-- Bootstrap + Steller main styles -->
 	<link rel="stylesheet" href="assets/css/steller.css">
-    <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style>
+    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
 
     <!-- Include Plotly library -->
     <script src="assets/css/plotly.js"></script>
@@ -48,9 +48,9 @@
     <!-- End of page navigation -->
     <section id="twocompartment" class="section mt-3" style="margin:2%;">
     <h2 style="font-size: 2em; text-align: center;">Two Compartment Model</h2>
-    <table>
+    <table align = "center" width="80%">
         <td style="border:2px double black;">
-            <table>
+            <table align="center">
                 <tr>
                     <td><center><u>Volumes of Distribution</u></center></td>
                 </tr>
@@ -64,7 +64,7 @@
             </table>
         </td>
         <td style="border:2px double black;">
-            <table>
+            <table align="center">
                 <tr>
                     <td><center><u>Pharmacokinetic Parameters</u></center></td>
                 </tr>
@@ -77,7 +77,7 @@
             </table>
         </td>
         <td style="border:2px double black;">
-            <table>
+            <table align="center">
                 <tr>
                     <td><center><u>Bolus Parameters</u></center></td>
                 </tr>
@@ -90,7 +90,7 @@
             </table>
         </td>
         <td style="border:2px double black;">
-            <table>
+            <table align="center">
                 <tr>
                     <td><div id='tfinalhtml' style='margin-top:2em;'></div><input type='range' min='1' max='10000' value='1000' id='tfinalslider'></input></td>
                 </tr>
@@ -99,22 +99,23 @@
                 </tr>
             </table>
         </td>
-        <td align = "middle">
-            <img src="assets/imgs/twocompartmentmodel.svg" width="100%"></img> 
-            <!--
+    </table>
+    <br>
+    <table width="80%" align="center">
+        <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
+        <td width="50%"><div id="myDiv1"></div></td>
+        <td width="50%"><div id="myDiv2"></div></td>
+    </table>
+    <script src="assets/js/twocompartmentmodel.js"></script>
+    </section>
+    <section>
+        <p>The two compartment model follows the following set of differential equations:</p>
+        <div align="center"><img src="assets/imgs/twocompartmentmodel.svg" width="600px"></img></div>
+        <!--
             $$\begin{align*}
                V_{d,\text{ central}} \frac{d\textbf{c}_{\text{central}}}{dt} &= b - C_l \textbf{c}_{\text{central}} - k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}}) \\
                V_{d,\text{ peripheral}} \frac{d\textbf{c}_{\text{peripheral}}}{dt} &= k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}})
             \end{align*}$$ -->
-        </td>
-    </table>
-    <br>
-    <table>
-        <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
-        <td><div id="myDiv1"></div></td>
-        <td><div id="myDiv2"></div></td>
-    </table>
-    <script src="assets/js/twocompartmentmodel.js"></script>
     </section>
 </body>
 </html>
