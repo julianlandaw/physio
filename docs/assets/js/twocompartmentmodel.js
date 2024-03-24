@@ -34,17 +34,17 @@ function dfsolve() {
     }
 
     function iterate1(t, C1, C2, params) {
-        if (kslider.value == 0 && Clslider.value == 0) {
+        if (params.k == 0 && params.Cl == 0) {
             return C1 + params.dt*params.b/params.Vd1;
         }
-        else if (kslider.value == 0) {
+        else if (params.k == 0) {
             const a1 = -params.Cl/params.Vd1;
             const e = params.b/params.Vd1;
             const dt = params.dt;
             const b1 = e*(expn(dt) - 1);
             return C1*expn(a1*dt) + b1;
         }
-        else if (Clslider.value == 0) {
+        else if (params.Cl == 0) {
             const a2 = params.k/params.Vd1;
             const a3 = params.k/params.Vd2;
             const e = params.b/params.Vd1;
@@ -77,10 +77,10 @@ function dfsolve() {
     }
 
     function iterate2(t, C1, C2, params) {
-        if (kslider.value == 0) {
+        if (params.k == 0) {
             return C2;
         }
-        else if (Clslider.value == 0) {
+        else if (params.Cl == 0) {
             const a2 = params.k/params.Vd1;
             const a3 = params.k/params.Vd2;
             const e = params.b/params.Vd1;
@@ -88,7 +88,7 @@ function dfsolve() {
             const b2 = (a3*dt*e)/(a2 + a3) + (a3*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
 
             const a21 = (a3 - a3*expn(-dt*(a2 + a3)))/(a2 + a3);
-            const a22 = (a2 + a3*exp(-dt*(a2 + a3)))/(a2 + a3);
+            const a22 = (a2 + a3*expn(-dt*(a2 + a3)))/(a2 + a3);
             
             return a21*C1 + a22*C2 + b2;
             
