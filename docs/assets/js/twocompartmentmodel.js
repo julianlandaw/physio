@@ -34,7 +34,10 @@ function dfsolve() {
     }
 
     function iterate1(t, C1, C2, params) {
-        if (kslider.value == 0) {
+        if (kslider.value == 0 && Clslider.value == 0) {
+            return C1 + params.dt*params.b/params.Vd1;
+        }
+        else if (kslider.value == 0) {
             const a1 = -params.Cl/params.Vd1;
             const e = params.b/params.Vd1;
             const dt = params.dt;
