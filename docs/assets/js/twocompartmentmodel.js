@@ -1,30 +1,44 @@
 var Vd1slider = document.getElementById("Vd1slider");
 var Vd1html = document.getElementById("Vd1html");
-Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (L) = " + Vd1slider.value/10;
+Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (L)";
+var Vd1num = document.getElementById("Vd1");
+Vd1num.value = Vd1slider.value/10;
 
 var Vd2slider = document.getElementById("Vd2slider");
 var Vd2html = document.getElementById("Vd2html");
-Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, peripheral</sub> (L) = " + Vd2slider.value/10;
+Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, peripheral</sub> (L)";
+var Vd2num = document.getElementById("Vd2");
+Vd2num.value = Vd2slider.value/10;
 
 var Clslider = document.getElementById("Clslider");
 var Clhtml = document.getElementById("Clhtml");
-Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (L/s) = " + Clslider.value/10;
+Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (L/s)";
+var Clnum = document.getElementById("Cl");
+Clnum.value = Clslider.value/10;
 
 var kslider = document.getElementById("kslider");
 var khtml = document.getElementById("khtml");
-khtml.innerHTML = "<i>k</i> (L/s) = " + kslider.value/10;
+khtml.innerHTML = "<i>k</i> (L/s)";
+var knum = document.getElementById("k");
+knum.value = kslider.value/10;
 
 var bslider = document.getElementById("bslider");
 var bhtml = document.getElementById("bhtml");
-bhtml.innerHTML = "Bolus Amount (mg) = " + bslider.value/10;
+bhtml.innerHTML = "Bolus Amount (mg)";
+var bnum = document.getElementById("b");
+bnum.value = bslider.value/10;
 
 var tbolusslider = document.getElementById("tbolusslider");
 var tbolushtml = document.getElementById("tbolushtml");
-tbolushtml.innerHTML = "Bolus Time (s) = " + tbolusslider.value/10;
+tbolushtml.innerHTML = "Bolus Time (s)";
+var tbolusnum = document.getElementById("tbolus");
+tbolusnum.value = tbolusslider.value/10;
 
 var tfinalslider = document.getElementById("tfinalslider");
 var tfinalhtml = document.getElementById("tfinalhtml");
-tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (s) = " + tfinalslider.value/10;
+tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (s)";
+var tfinalnum = document.getElementById("tfinal");
+tfinalnum.value = tfinalslider.value/10;
 
 function dfsolve() {
     // Exactly computes 
@@ -237,55 +251,89 @@ dfsolve();
 
 function reset() {
     Vd1slider.value = 50;
+    Vd1num.value = 5;
     Vd2slider.value = 40000;
+    Vd2num.value = 4000;
     Clslider.value = 600;
+    Clnum.value = 60;
     kslider.value = 2000;
+    knum.value = 200;
     bslider.value = 2000;
+    bnum.value = 200;
     tbolusslider.value = 200;
+    tbolusnum.value = 20;
     tfinalslider.value = 1000;
-    Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (L) = " + Vd1slider.value/10;
-    Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, peripheral</sub> (L) = " + Vd2slider.value/10;
-    Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (L/s) = " + Clslider.value/10;
-    khtml.innerHTML = "<i>k</i> (L/s) = " + kslider.value/10;
-    bhtml.innerHTML = "Bolus Amount (mg) = " + bslider.value/10;
-    tbolushtml.innerHTML = "Bolus Time (s) = " + tbolusslider.value/10;
-    tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (s) = " + tfinalslider.value/10;
+    tfinalnum.value = 100;
     dfsolve();
 }
 
 //function is called when slider value changes
 Vd1slider.addEventListener("change", function() {
-    Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (L) = " + Vd1slider.value/10;
+    Vd1num.value = Vd1slider.value/10;
+    dfsolve();    
+});
+
+Vd1num.addEventListener("change", function() {
+    Vd1slider.value = Vd1num.value*10;
     dfsolve();    
 });
 
 Vd2slider.addEventListener("change", function() {
-    Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, peripheral</sub> (L) = " + Vd2slider.value/10;
+    Vd2num.value = Vd2slider.value/10;
+    dfsolve();    
+});
+
+Vd2num.addEventListener("change", function() {
+    Vd2slider.value = Vd2num.value*10;
     dfsolve();    
 });
 
 Clslider.addEventListener("change", function() {
-    Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (L/s) = " + Clslider.value/10;
+    Clnum.value = Clslider.value/10;
+    dfsolve();    
+});
+
+Clnum.addEventListener("change", function() {
+    Clslider.value = Clnum.value*10;
     dfsolve();    
 });
 
 kslider.addEventListener("change", function() {
-    khtml.innerHTML = "<i>k</i> (L/s) = " + kslider.value/10;
+    knum.value = kslider.value/10;
+    dfsolve();    
+});
+
+knum.addEventListener("change", function() {
+    kslider.value = knum.value*10;
     dfsolve();    
 });
 
 bslider.addEventListener("change", function() {
-    bhtml.innerHTML = "Bolus Amount (mg) = " + bslider.value/10;
+    bnum.value = bslider.value/10;
+    dfsolve();    
+});
+
+bnum.addEventListener("change", function() {
+    bslider.value = bnum.value*10;
     dfsolve();    
 });
 
 tbolusslider.addEventListener("change", function() {
-    tbolushtml.innerHTML = "Bolus Time (s) = " + tbolusslider.value/10;
+    tbolusnum.value = tbolusslider.value/10;
+    dfsolve();    
+});
+
+tbolusnum.addEventListener("change", function() {
+    tbolusslider.value = tbolusnum.value*10;
     dfsolve();    
 });
 
 tfinalslider.addEventListener("change", function() {
-    tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (s) = " + tfinalslider.value/10;
+    tfinalnum.value = tfinalslider.value/10;
     dfsolve();    
 });
 
+tfinalnum.addEventListener("change", function() {
+    tfinalslider.value = tfinalnum.value*10;
+    dfsolve();    
+});
