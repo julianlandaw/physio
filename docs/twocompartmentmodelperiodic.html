@@ -1,0 +1,171 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Start your development with Steller landing page.">
+    <meta name="author" content="Devcrud">
+    <title>Two Compartment Periodic Bolus Model</title>
+    <!-- font icons -->
+    <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
+    <!-- Bootstrap + Steller main styles -->
+	<link rel="stylesheet" href="assets/css/steller.css">
+    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
+
+    <!-- Include Plotly library -->
+    <script src="assets/css/plotly.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label, input {
+            margin-bottom: 10px;
+            display: block;
+        }
+    </style>
+    <script src="assets/js/math.js" type="text/javascript"></script>
+    <script src="assets/js/plotly.js"></script>
+</head>
+<body>
+    <!-- Page navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top" data-spy="affix" data-offset-top="0">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><img src="assets/imgs/chaos.jpeg" alt=""></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#twocompartmentperiodic">Two Compartment Periodic Bolus Model</a>
+                    </li>
+                </ul>
+            </div>
+        </div>          
+    </nav>
+    <!-- End of page navigation -->
+    <section id="twocompartmentperiodic" class="section mt-3" style="margin:2%;">
+    <h2 style="font-size: 2em; text-align: center;">Two Compartment Periodic Bolus Model</h2>
+    <table align = "center" width="80%">
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td><center><u>Volumes of Distribution</u></center></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Vd1html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='1000' value='50' id='Vd1slider'></input></td>
+                            <td><input type='number' value='5' id='Vd1' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Vd2html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='100000' value='40000' id='Vd2slider'></input></td>
+                            <td><input type='number' value='4000' id='Vd2' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td><center><u>Pharmacokinetic Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Clhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='600' id='Clslider'></input></td>
+                            <td><input type='number' value='60' id='Cl' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='khtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='2000' id='kslider'></input></td>
+                            <td><input type='number' value='200' id='k' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td><center><u>Bolus Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='bhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='2000' id='bslider'></input></td>
+                            <td><input type='number' value='200' id='b' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='tbolushtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='1000' value='200' id='tbolusslider'></input></td>
+                            <td><input type='number' value='20' id='tbolus' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td>
+                        <div id='tperiodhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='10000' value='1000' id='tperiodslider'></input></td>
+                            <td><input type='number' value='100' id='tperiod' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='tfinalhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='10000' value='10000' id='tfinalslider'></input></td>
+                            <td><input type='number' value='1000' id='tfinal' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr align="middle">
+                    <td><a class="btn btn-light rounded" onclick="reset()">Reset</button></td>
+                </tr>
+            </table>
+        </td>
+    </table>
+    <br>
+    <table width="80%" align="center">
+        <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
+        <td width="50%"><div id="myDiv1"></div></td>
+        <td width="50%"><div id="myDiv2"></div></td>
+    </table>
+    <script src="assets/js/twocompartmentmodelperiodic.js"></script>
+    </section>
+    <section>
+        <p>The two compartment model follows the following set of differential equations:</p>
+        <div align="center"><img src="assets/imgs/twocompartmentmodel.svg" width="600px"></img></div>
+        <!--
+            $$\begin{align*}
+               V_{d,\text{ central}} \frac{d\textbf{c}_{\text{central}}}{dt} &= b - C_l \textbf{c}_{\text{central}} - k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}}) \\
+               V_{d,\text{ peripheral}} \frac{d\textbf{c}_{\text{peripheral}}}{dt} &= k(\textbf{c}_{\text{central}} - \textbf{c}_{\text{peripheral}})
+            \end{align*}$$ -->
+    </section>
+</body>
+</html>
