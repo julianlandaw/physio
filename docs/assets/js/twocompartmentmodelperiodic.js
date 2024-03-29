@@ -279,8 +279,8 @@ function reset() {
     tbolusnum.value = 20;
     tperiodslider.value = 1000;
     tperiodnum.value = 100;
-    tfinalslider.value = 1000;
-    tfinalnum.value = 100;
+    tfinalslider.value = 10000;
+    tfinalnum.value = 1000;
     dfsolve();
 }
 
