@@ -61,18 +61,18 @@ function dfsolve() {
             const a1 = -params.Cl/params.Vd1;
             const e = params.b/params.Vd1;
             const dt = params.dt;
-            const b1 = e*(expn(dt) - 1);
-            return C1*expn(a1*dt) + b1;
+            return (expn(a1*dt)*(e + C1*a1) - e)/a1;
         }
         else if (Clslider.value == 0) {
             const a2 = params.k/params.Vd1;
             const a3 = params.k/params.Vd2;
+            const sum = a2 + a3;
             const e = params.b/params.Vd1;
             const dt = params.dt;
-            const b1 = (a3*dt*e)/(a2 + a3) - (a2*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
+            const b1 = (a3*dt*e)/sum - (a2*e*(expn(- sum*dt) - 1.0))/(sum*sum);
 
-            const a11 = (a3 + a2*expn(-dt*(a2 + a3)))/(a2 + a3);
-            const a12 = (a2 - a2*expn(-dt*(a2 + a3)))/(a2 + a3);
+            const a11 = (a3 + a2*expn(-dt*sum))/sum;
+            const a12 = a2*(1.0 - expn(-dt*sum))/sum;
             
             return a11*C1 + a12*C2 + b1;
             
@@ -104,11 +104,12 @@ function dfsolve() {
             const a2 = params.k/params.Vd1;
             const a3 = params.k/params.Vd2;
             const e = params.b/params.Vd1;
+            const sum = a2 + a3;
             const dt = params.dt;
-            const b2 = (a3*dt*e)/(a2 + a3) + (a3*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
+            const b2 = (a3*dt*e)/(sum) + (a3*e*(expn(- sum*dt) - 1.0))/(sum*sum);
 
-            const a21 = (a3 - a3*expn(-dt*(a2 + a3)))/(a2 + a3);
-            const a22 = (a2 + a3*expn(-dt*(a2 + a3)))/(a2 + a3);
+            const a21 = a3*(1.0 - expn(-dt*sum))/sum;
+            const a22 = (a2 + a3*expn(-dt*sum))/sum;
             
             return a21*C1 + a22*C2 + b2;
             
