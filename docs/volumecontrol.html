@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="Start your development with Steller landing page.">
     <meta name="author" content="Devcrud">
-    <title>Two Compartment Periodic Bolus Model</title>
+    <title>Volume Control</title>
     <!-- font icons -->
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
     <!-- Bootstrap + Steller main styles -->
@@ -39,61 +39,36 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav ml-auto align-items-center">
                     <li class="nav-item">
-                        <a class="nav-link" href="#twocompartmentperiodic">Two Compartment Periodic Bolus Model</a>
+                        <a class="nav-link" href="#volumecontrol">Volume Control</a>
                     </li>
                 </ul>
             </div>
         </div>          
     </nav>
     <!-- End of page navigation -->
-    <section id="twocompartmentperiodic" class="section mt-3" style="margin:2%;">
-    <h2 style="font-size: 2em; text-align: center;">Two Compartment Periodic Bolus Model</h2>
+    <section id="volumecontrol" class="section mt-3" style="margin:2%;">
+    <h2 style="font-size: 2em; text-align: center;">Volume Control</h2>
     <table align = "center" width="80%">
         <td style="border:2px double black;">
             <table align="center">
                 <tr>
-                    <td><center><u>Volumes of Distribution</u></center></td>
+                    <td><center><u>Vent Parameters</u></center></td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='Vd1html' style='margin-top:2em;'></div>
+                        <div id='TVhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='1000' value='50' id='Vd1slider'></input></td>
-                            <td><input type='number' value='5' id='Vd1' style='width: 75px'></input></td>
+                            <td><input type='range' min='1' max='10000' value='4000' id='TVslider'></input></td>
+                            <td><input type='number' value='400' id='TV' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='Vd2html' style='margin-top:2em;'></div>
+                        <div id='PEEPhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='100000' value='40000' id='Vd2slider'></input></td>
-                            <td><input type='number' value='4000' id='Vd2' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </td>
-        <td style="border:2px double black;">
-            <table align="center">
-                <tr>
-                    <td><center><u>Pharmacokinetic Parameters</u></center></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='Clhtml' style='margin-top:2em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10000' value='600' id='Clslider'></input></td>
-                            <td><input type='number' value='60' id='Cl' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='khtml' style='margin-top:2em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10000' value='2000' id='kslider'></input></td>
-                            <td><input type='number' value='200' id='k' style='width: 75px'></input></td>
+                            <td><input type='range' min='1' max='1000' value='50' id='PEEPslider'></input></td>
+                            <td><input type='number' value='5' id='PEEP' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
@@ -102,23 +77,32 @@
         <td style="border:2px double black;">
             <table align="center">
                 <tr>
-                    <td><center><u>Bolus Parameters</u></center></td>
+                    <td><center><u>Breath Parameters</u></center></td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='bhtml' style='margin-top:2em;'></div>
+                        <div id='RRhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='2000' id='bslider'></input></td>
-                            <td><input type='number' value='200' id='b' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='1000' value='120' id='RRslider'></input></td>
+                            <td><input type='number' value='12' id='RR' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='tbolushtml' style='margin-top:2em;'></div>
+                        <div id='IFhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='1000' value='200' id='tbolusslider'></input></td>
-                            <td><input type='number' value='20' id='tbolus' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='100' value='25' id='IFslider'></input></td>
+                            <td><input type='number' value='0.25' id='IF' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='IHFhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='100' value='25' id='IHFslider'></input></td>
+                            <td><input type='number' value='0.25' id='IHF' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
@@ -127,25 +111,43 @@
         <td style="border:2px double black;">
             <table align="center">
                 <tr>
+                    <td><center><u>Lung Physiology</u></center></td>
+                </tr>
+                <tr>
                     <td>
-                        <div id='tperiodhtml' style='margin-top:2em;'></div>
+                        <div id='Rhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='10000' value='1000' id='tperiodslider'></input></td>
-                            <td><input type='number' value='100' id='tperiod' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='100' value='30' id='Rslider'></input></td>
+                            <td><input type='number' value='0.003' id='R' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
+                <tr>
+                    <td>
+                        <div id='Chtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='1000' value='500' id='Cslider'></input></td>
+                            <td><input type='number' value='50' id='C' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
                 <tr>
                     <td>
                         <div id='tfinalhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='10000' value='10000' id='tfinalslider'></input></td>
-                            <td><input type='number' value='1000' id='tfinal' style='width: 75px'></input></td>
+                            <td><input type='range' min='1' max='1000' value='600' id='tfinalslider'></input></td>
+                            <td><input type='number' value='60' id='tfinal' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr align="middle">
-                    <td><a class="btn btn-light rounded" onclick="reset()">Reset</button></td>
+                    <td>
+                        <a class="btn btn-light rounded" onclick="reset()">Reset</a>
+                    </td>
                 </tr>
             </table>
         </td>
@@ -153,10 +155,9 @@
     <br>
     <table width="80%" align="center">
         <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
-        <td width="50%"><div id="myDiv1"></div></td>
-        <td width="50%"><div id="myDiv2"></div></td>
+        <td><div id="myDiv1"></div></td>
     </table>
-    <script src="assets/js/twocompartmentmodelperiodic.js"></script>
+    <script src="assets/js/volumecontrol.js"></script>
     </section>
     <section>
         <p>The two compartment model follows the following set of differential equations:</p>

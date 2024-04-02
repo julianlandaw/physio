@@ -1,42 +1,54 @@
 var Vd1slider = document.getElementById("Vd1slider");
 var Vd1html = document.getElementById("Vd1html");
-Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (L)";
+Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (mL/kg)";
 var Vd1num = document.getElementById("Vd1");
 Vd1num.value = Vd1slider.value/10;
 
 var Vd2slider = document.getElementById("Vd2slider");
 var Vd2html = document.getElementById("Vd2html");
-Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, peripheral</sub> (L)";
+Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, peripheral</sub> (L/kg)";
 var Vd2num = document.getElementById("Vd2");
 Vd2num.value = Vd2slider.value/10;
 
 var Clslider = document.getElementById("Clslider");
 var Clhtml = document.getElementById("Clhtml");
-Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (L/s)";
+Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (mL/kg/min)";
 var Clnum = document.getElementById("Cl");
 Clnum.value = Clslider.value/10;
 
 var kslider = document.getElementById("kslider");
 var khtml = document.getElementById("khtml");
-khtml.innerHTML = "<i>k</i> (L/s)";
+khtml.innerHTML = "<i>k</i> (mL/kg/min)";
 var knum = document.getElementById("k");
 knum.value = kslider.value/10;
 
 var bslider = document.getElementById("bslider");
 var bhtml = document.getElementById("bhtml");
-bhtml.innerHTML = "Bolus Amount (mg)";
+bhtml.innerHTML = "Bolus Amount (mg/kg)";
 var bnum = document.getElementById("b");
 bnum.value = bslider.value/10;
 
+var infusionslider = document.getElementById("infusionslider");
+var infusionhtml = document.getElementById("infusionhtml");
+infusionhtml.innerHTML = "Infusion (mg/kg/min)";
+var infusionnum = document.getElementById("infusion");
+infusionnum.value = infusionslider.value/10;
+
 var tbolusslider = document.getElementById("tbolusslider");
 var tbolushtml = document.getElementById("tbolushtml");
-tbolushtml.innerHTML = "Bolus Time (s)";
+tbolushtml.innerHTML = "Bolus Time (min)";
 var tbolusnum = document.getElementById("tbolus");
 tbolusnum.value = tbolusslider.value/10;
 
+var tperiodslider = document.getElementById("tperiodslider");
+var tperiodhtml = document.getElementById("tperiodhtml");
+tperiodhtml.innerHTML = "Bolus Frequency (min)";
+var tperiodnum = document.getElementById("tperiod");
+tperiodnum.value = tperiodslider.value/10;
+
 var tfinalslider = document.getElementById("tfinalslider");
 var tfinalhtml = document.getElementById("tfinalhtml");
-tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (s)";
+tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (min)";
 var tfinalnum = document.getElementById("tfinal");
 tfinalnum.value = tfinalslider.value/10;
 
@@ -55,18 +67,18 @@ function dfsolve() {
             const a1 = -params.Cl/params.Vd1;
             const e = params.b/params.Vd1;
             const dt = params.dt;
-            const b1 = e*(expn(dt) - 1);
-            return C1*expn(a1*dt) + b1;
+            return (expn(a1*dt)*(e + C1*a1) - e)/a1;
         }
         else if (Clslider.value == 0) {
             const a2 = params.k/params.Vd1;
             const a3 = params.k/params.Vd2;
+            const sum = a2 + a3;
             const e = params.b/params.Vd1;
             const dt = params.dt;
-            const b1 = (a3*dt*e)/(a2 + a3) - (a2*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
+            const b1 = (a3*dt*e)/sum - (a2*e*(expn(- sum*dt) - 1.0))/(sum*sum);
 
-            const a11 = (a3 + a2*expn(-dt*(a2 + a3)))/(a2 + a3);
-            const a12 = (a2 - a2*expn(-dt*(a2 + a3)))/(a2 + a3);
+            const a11 = (a3 + a2*expn(-dt*sum))/sum;
+            const a12 = a2*(1.0 - expn(-dt*sum))/sum;
             
             return a11*C1 + a12*C2 + b1;
             
@@ -98,11 +110,12 @@ function dfsolve() {
             const a2 = params.k/params.Vd1;
             const a3 = params.k/params.Vd2;
             const e = params.b/params.Vd1;
+            const sum = a2 + a3;
             const dt = params.dt;
-            const b2 = (a3*dt*e)/(a2 + a3) + (a3*e*(expn(- a2*dt - a3*dt) - 1.0))/((a2 + a3)*(a2 + a3));
+            const b2 = (a3*dt*e)/(sum) + (a3*e*(expn(- sum*dt) - 1.0))/(sum*sum);
 
-            const a21 = (a3 - a3*expn(-dt*(a2 + a3)))/(a2 + a3);
-            const a22 = (a2 + a3*expn(-dt*(a2 + a3)))/(a2 + a3);
+            const a21 = a3*(1.0 - expn(-dt*sum))/sum;
+            const a22 = (a2 + a3*expn(-dt*sum))/sum;
             
             return a21*C1 + a22*C2 + b2;
             
@@ -126,15 +139,16 @@ function dfsolve() {
         }
     }
     
-    let params = { b: [], Cl: [], k: [], Vd1: [], Vd2: []};
+    let params = { b: [], Cl: [], k: [], Vd1: [], Vd2: [], tbolus: [], tperiod: [], tfinal: [], dt: []};
     
-    params.Vd1 = Vd1slider.value/10;
-    params.Vd2 = Vd2slider.value/10;
-    params.Cl = Clslider.value/10;
-    params.k = kslider.value/10;
+    params.Vd1 = Vd1slider.value/10000.0;
+    params.Vd2 = Vd2slider.value/10.0;
+    params.Cl = Clslider.value/10000.0;
+    params.k = kslider.value/10000.0;
     params.b = bslider.value/tbolusslider.value;
-    params.tbolus = tbolusslider.value/10;
-    params.tfinal = tfinalslider.value/10;
+    params.tbolus = tbolusslider.value/10.0;
+    params.tperiod = tperiodslider.value/10.0;
+    params.tfinal = tfinalslider.value/10.0;
     params.dt = 0.1;
 
     let t0 = 0;
@@ -143,6 +157,7 @@ function dfsolve() {
 
     let N = Math.ceil(params.tfinal/params.dt);
     let Nhalf = Math.ceil(params.tbolus/params.dt);
+    let Nperiod = Math.ceil(params.tperiod/params.dt);
 
     let ts = new Array(N + 1);
     let ys1 = new Array(N + 1);
@@ -155,15 +170,22 @@ function dfsolve() {
     ys1[0] = y01;
     ys2[0] = y02;
 
-    for (let i = 0; i < Nhalf; i++) {
-        ys1[i + 1] = iterate1(ts[i], ys1[i], ys2[i], params);
-        ys2[i + 1] = iterate2(ts[i], ys1[i], ys2[i], params);
-    }
-
-    params.b = 0
-    for (let i = Nhalf; i < N + 1; i++) {
-        ys1[i + 1] = iterate1(ts[i], ys1[i], ys2[i], params);
-        ys2[i + 1] = iterate2(ts[i], ys1[i], ys2[i], params);
+    let counter = 0;
+    let counterperiod = 0;
+    while (counter < N) {
+        if (counterperiod < Nhalf) {
+            params.b = bslider.value/tbolusslider.value;
+        }
+        else {
+            params.b = 0;
+        }
+        ys1[counter + 1] = iterate1(ts[counter], ys1[counter], ys2[counter], params);
+        ys2[counter + 1] = iterate2(ts[counter], ys1[counter], ys2[counter], params);
+        counter = counter + 1;
+        counterperiod = counterperiod + 1;
+        if (counterperiod > Nperiod) {
+            counterperiod = 0;
+        }
     }
 
     let trace_u1 = { x: [], y: [], name: 'Central Compartment'};
@@ -191,7 +213,7 @@ function dfsolve() {
         },
         xaxis: {
             title: {
-                text: 'Time (s)',
+                text: 'Time (min)',
                 font: {
                     family: 'Courier New, monospace',
                     size: 18,
@@ -223,7 +245,7 @@ function dfsolve() {
         },
         xaxis: {
             title: {
-                text: 'Time (s)',
+                text: 'Time (min)',
                 font: {
                     family: 'Courier New, monospace',
                     size: 18,
@@ -250,20 +272,58 @@ function dfsolve() {
 dfsolve();
 
 function reset() {
-    Vd1slider.value = 50;
-    Vd1num.value = 5;
-    Vd2slider.value = 40000;
-    Vd2num.value = 4000;
-    Clslider.value = 600;
-    Clnum.value = 60;
-    kslider.value = 2000;
-    knum.value = 200;
+    Vd1slider.value = 700;
+    Vd1num.value = 70;
+    Vd2slider.value = 600;
+    Vd2num.value = 60;
+    Clslider.value = 500;
+    Clnum.value = 50;
+    kslider.value = 10000;
+    knum.value = 1000;
     bslider.value = 2000;
     bnum.value = 200;
     tbolusslider.value = 200;
     tbolusnum.value = 20;
-    tfinalslider.value = 1000;
-    tfinalnum.value = 100;
+    infusionslider.value = 10*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10;
+    tperiodslider.value = 1000;
+    tperiodnum.value = 100;
+    tfinalslider.value = 10000;
+    tfinalnum.value = 1000;
+    dfsolve();
+}
+
+function onecompartment() {
+    kslider.value = 0;
+    knum.value = 0;
+    infusionslider.value = 10*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10;
+    dfsolve();
+}
+
+function continuous() {
+    tperiodnum.value = 0.1;
+    tperiodslider.value = 1;
+    bslider.value = 10*bslider.value/tbolusslider.value;
+    bnum.value = bslider.value/10;
+    tbolusslider.value = 10;
+    tbolusnum.value = 1;
+    infusionslider.value = 10*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10;
+    dfsolve();
+}
+
+function propofol() {
+    Vd1slider.value = 700;
+    Vd1num.value = 70;
+    Vd2slider.value = 600;
+    Vd2num.value = 60;
+    Clslider.value = 500;
+    Clnum.value = 50;
+    kslider.value = 10000;
+    knum.value = 1000;
+    infusionslider.value = 10*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10;
     dfsolve();
 }
 
@@ -310,21 +370,53 @@ knum.addEventListener("change", function() {
 
 bslider.addEventListener("change", function() {
     bnum.value = bslider.value/10;
+    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 bnum.addEventListener("change", function() {
     bslider.value = bnum.value*10;
+    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 tbolusslider.addEventListener("change", function() {
     tbolusnum.value = tbolusslider.value/10;
+    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 tbolusnum.addEventListener("change", function() {
     tbolusslider.value = tbolusnum.value*10;
+    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    infusionnum.value = infusionslider.value/10.0;
+    dfsolve();    
+});
+
+infusionslider.addEventListener("change", function() {
+    infusionnum.value = infusionslider.value/10;
+    bslider.value = infusionslider.value*tbolusslider.value/10.0;
+    bnum.value = bslider.value/10;
+    dfsolve();
+});
+
+infusionnum.addEventListener("change", function() {
+    infusionslider.value = infusionnum.value*10;
+    bslider.value = infusionslider.value*tbolusslider.value/10.0;
+    bnum.value = bslider.value/10;
+    dfsolve();
+});
+
+tperiodslider.addEventListener("change", function() {
+    tperiodnum.value = tperiodslider.value/10;
+    dfsolve();    
+});
+
+tperiodnum.addEventListener("change", function() {
+    tperiodslider.value = tperiodnum.value*10;
     dfsolve();    
 });
 
