@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
     <!-- Bootstrap + Steller main styles -->
 	<link rel="stylesheet" href="assets/css/steller.css">
-    <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style>
+    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
 
     <!-- Include Plotly library -->
     <script src="assets/css/plotly.js"></script>
@@ -50,16 +50,50 @@
     </nav>
     <!-- End of page navigation -->
 
-    <section id="onecompartment" class="section mt-3">
+    <section id="onecompartment" class="section mt-3" style="margin: 20px">
     <h1>One Compartment Model</h1>
-        <a href='onecompartmentmodel.html'>Hi</a>
+        <p>
+            The <a class="btn btn-light rounded" href='onecompartmentmodel.html'>One Compartment Model</a> follows the following differential equation:
+        </p>
+        <div align="center"><img src="assets/imgs/onecompartmentmodel.svg" width="400px"></img></div>
+        <p>
+            where <i>V</i><sub><i>d</i>, central</sub> is the volume of distribution of the central compartment, <i>b</i> is the amount bolused into the compartment (e.g. via an IV infusion), and <i>C<sub>l</sub></i> is the clearance.
+        </p>
     </section>
 
-    <section id="twocompartment" class="section mt-3">
+    <section id="twocompartment" class="section mt-3" style="margin: 20px">
         <h1>Two Compartment Model</h1>
-        <a href='twocompartmentmodel.html'>Hi</a>
+        <p>
+            The <a class="btn btn-light rounded" href='twocompartmentmodel.html'>Two Compartment Model</a> follows the following system of differential equations:
+        </p>
+        <div align="center"><img src="assets/imgs/twocompartmentmodel.svg" width="600px"></img></div>
+        <p>
+            where <i>V</i><sub><i>d</i>, central</sub> is the volume of distribution of the central compartment, <i>V</i><sub><i>d</i>, peripheral</sub> is the volume of distribution of the peripheral compartment, <i>b</i> is the amount bolused into the compartment (e.g. via an IV infusion), <i>C<sub>l</sub></i> is the clearance, and <i>k</i> is the diffusion rate between the two compartments.
+        </p>
     </section>
-        <!-- core  -->
+    <!-- Page Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-sm-6">
+                    <p>Copyright <script>document.write(new Date().getFullYear())</script> &copy; Julian Landaw</p>
+                </div>
+                <!-- 
+                <div class="col-sm-6">
+                    <div class="socials">
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-facebook"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-google"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-github"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-twitter"></i></a>
+                    </div>
+                </div>
+                -->
+            </div>
+        </div>
+    </footer> 
+    <!-- End of page footer -->
+	
+	<!-- core  -->
     <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
     <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
     <!-- bootstrap 3 affix -->
