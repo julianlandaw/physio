@@ -278,8 +278,8 @@ function reset() {
     Vd2num.value = 60;
     Clslider.value = 500;
     Clnum.value = 50;
-    kslider.value = 10000;
-    knum.value = 1000;
+    kslider.value = 2000;
+    knum.value = 200;
     bslider.value = 2000;
     bnum.value = 200;
     tbolusslider.value = 200;
