@@ -89,9 +89,8 @@ function dfsolve() {
             return C2 + C3*dt;
         }
         else {
-            return C*peep + (C2 - C*peep)*expn(-dt/(R*C));
+            return C*peep + (C2 - C*peep)*expn(-dt/(R*C)); 
         }
-        return C2 + C3*dt; //dv/dt = P/R - V/(R*C)
     }
 
     function iterate3(t, C1, C2, C3, params) {
@@ -113,7 +112,7 @@ function dfsolve() {
             return 0;
         }
         else {
-            return peep/R - C2/(R*C)
+            return (peep/R - C2/(R*C))*expn(-dt/(R*C));
         }
     }
     

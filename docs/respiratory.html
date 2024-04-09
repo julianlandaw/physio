@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="Start your development with Steller landing page.">
     <meta name="author" content="Devcrud">
-    <title>Respiratory Physiology</title>
+    <title>Respiratory Ventilator Physiology</title>
     <!-- font icons -->
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
     <!-- Bootstrap + Steller main styles -->
 	<link rel="stylesheet" href="assets/css/steller.css">
-    <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style>
+    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
 
     <!-- Include Plotly library -->
     <script src="assets/css/plotly.js"></script>
@@ -39,10 +39,10 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav ml-auto align-items-center">
                     <li class="nav-item">
-                        <a class="nav-link" href="#pressure">Pressure Control</a>
+                        <a class="nav-link" href="#volumecontrol">Volume Control</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#volume">Volume Control</a>
+                        <a class="nav-link" href="#pressurecontrol">Pressure Control</a>
                     </li>
                 </ul>
             </div>
@@ -50,302 +50,32 @@
     </nav>
     <!-- End of page navigation -->
 
-    <section id="pressure" class="section mt-3">
-    <h1>Pressure Control</h1>
-
-    <table align="center" width="50%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-            <td><label for="pressurecontrolPC">Pressure Control:</label></td>
-            <td><input type="number" id="pressurecontrolPC" value="12"></td>
-        </tr>
-        <tr>
-            <td><label for="peepPC">PEEP:</label></td>
-            <td><input type="number" id="peepPC" value="5"></td>
-        </tr>
-        <tr>
-            <td><label for="RRPC">Respiratory Rate (RR):</label></td>
-            <td><input type="number" id="RRPC" value="12"></td>
-        </tr>
-        <tr>
-            <td><label for="ifractionPC">Inspiratory Fraction</label></td>
-            <td><input type="number" id="ifractionPC" value="0.25"></td>
-        </tr>
-        <tr>
-            <td><label for="RPC">Resistance (R):</label></td>
-            <td><input type="number" id="RPC" value="0.003"></td> 
-        </tr>
-        <tr>
-            <td><label for="CPC">Compliance (C):</label></td>
-            <td><input type="number" id="CPC" value="50"></td>
-        </tr>
-        <tr>
-            <td><label for="stepSizePC">Step Size:</label></td>
-            <td><input type="number" id="stepSizePC" value="0.001"></td>
-        </tr>
-        <tr>
-            <td><label for="secondsPC">Seconds:</label></td> 
-            <td><input type="number" id="secondsPC" value="60"></td>
-        </tr>
-        <tr>
-            <td><a class="btn btn-light rounded" onclick="solveAndPlotPC()">Solve and Plot</a></td>
-        </tr>
-    </table>
-    
-
-    <!-- Plotly plot container -->
-    <div id="plotPC"></div>
-
-    <script>
-        function solveAndPlotPC() {
-            const pressurecontrol = parseFloat(document.getElementById('pressurecontrolPC').value);
-            const peep = parseFloat(document.getElementById('peepPC').value);
-            const RR = parseFloat(document.getElementById('RRPC').value);
-            const ifraction = parseFloat(document.getElementById('ifractionPC').value);
-            const R = parseFloat(document.getElementById('RPC').value);
-            const C = parseFloat(document.getElementById('CPC').value);
-            const stepSize = parseFloat(document.getElementById('stepSizePC').value);
-            const seconds = parseFloat(document.getElementById('secondsPC').value);
-            const breathduration = ifraction*60.0/RR
-
-            const numSteps = (1 + seconds)/stepSize - 1
-            const tValues = [];
-            const vValues = [];
-            const pValues = [];
-            const vpValues = [];
-
-            let t = -1; //start time
-            let v = C*peep;
-            let p = peep
-            let vp = 0
-
-            let timenextbreath = 0
-
-            for (let i = 0; i <= numSteps; i++) {
-                tValues.push(t)
-                vValues.push(v)
-                pValues.push(p)
-
-                if (t > timenextbreath - stepSize/2 & t < timenextbreath + breathduration) {
-                    p = pressurecontrol
-                }
-                else {
-                    p = peep
-                }
-                vp = p/R - v/(R*C) // dv/dt = p/R - v/(R*C)
-                vpValues.push(vp)
-
-                v = v + stepSize*vp
-
-                if (t > timenextbreath + breathduration + stepSize/2) {
-                    timenextbreath = timenextbreath + 60.0/RR
-                }
-                
-                t += stepSize;
-            }
-
-            // Plot the result using Plotly
-            const plotContainer = document.getElementById('plotPC');
-
-            const trace1 = {
-                x: tValues,
-                y: pValues,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Pressure (cm H2O)'
-            };
-
-            const trace2 = {
-                x: tValues,
-                y: vValues,
-                type: 'scatter',
-                mode: 'lines',
-                xaxis: 'x2',
-                yaxis: 'y2',
-                name: 'Volume (mL)'
-            };
-
-            const trace3 = {
-                x: tValues,
-                y: vpValues,
-                type: 'scatter',
-                mode: 'lines',
-                xaxis: 'x3',
-                yaxis: 'y3',
-                name: 'Flow (mL/s)'
-            };
-
-            const layout = {
-                grid: {
-                    rows: 3,
-                    columns: 1,
-                    pattern: 'independent',
-                    roworder: 'top to bottom'
-                },
-                title: 'Pressure Control'
-            };
-
-            Plotly.newPlot(plotContainer, [trace1, trace2, trace3], layout);
-        }
-    </script>
-    </section>
-
-    <section id="volume" class="section mt-3">
+    <section id="volumecontrol" class="section mt-3" style="margin: 20px">
     <h1>Volume Control</h1>
-
-    <table align="center" width="50%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-            <td><label for="tidalvolumeVC">Tidal Volume:</label></td>
-            <td><input type="number" id="tidalvolumeVC" value="400"></td>
-        </tr>
-        <tr>
-            <td><label for="peepVC">PEEP:</label></td>
-            <td><input type="number" id="peepVC" value="5"></td>
-        </tr>
-        <tr>
-            <td><label for="RRVC">Respiratory Rate (RR):</label></td>
-            <td><input type="number" id="RRVC" value="12"></td>
-        </tr>
-        <tr>
-            <td><label for="ifractionVC">Inspiratory Fraction</label></td>
-            <td><input type="number" id="ifractionVC" value="0.25"></td>
-        </tr>
-        <tr>
-            <td><label for="inspiratoryholdfractionVC">Inspiratory Hold Fraction</label></td>
-            <td><input type="number" id="inspiratoryholdfractionVC" value="0.25"></td>
-        </tr>
-        <tr>
-            <td><label for="RVC">Resistance (R):</label></td>
-            <td><input type="number" id="RVC" value="0.01"></td> 
-        </tr>
-        <tr>
-            <td><label for="CVC">Compliance (C):</label></td>
-            <td><input type="number" id="CVC" value="50"></td>
-        </tr>
-        <tr>
-            <td><label for="stepSizeVC">Step Size:</label></td>
-            <td><input type="number" id="stepSizeVC" value="0.001"></td>
-        </tr>
-        <tr>
-            <td><label for="secondsVC">Seconds:</label></td> 
-            <td><input type="number" id="secondsVC" value="60"></td>
-        </tr>
-        <tr>
-            <td><a class="btn btn-light rounded" onclick="solveAndPlotVC()">Solve and Plot</a></td>
-        </tr>
-    </table>
-    
-
-    <!-- Plotly plot container -->
-    <div id="plotVC"></div>
-
-
-
-    
-    <script>
-        function solveAndPlotVC() {
-            const tidalvolume = parseFloat(document.getElementById('tidalvolumeVC').value);
-            const peep = parseFloat(document.getElementById('peepVC').value);
-            const RR = parseFloat(document.getElementById('RRVC').value);
-            const ifraction = parseFloat(document.getElementById('ifractionVC').value);
-            const inspiratoryholdfraction = parseFloat(document.getElementById('inspiratoryholdfractionVC').value);
-            const R = parseFloat(document.getElementById('RVC').value);
-            const C = parseFloat(document.getElementById('CVC').value);
-            const stepSize = parseFloat(document.getElementById('stepSizeVC').value);
-            const seconds = parseFloat(document.getElementById('secondsVC').value);
-            
-            const breathduration = ifraction*60.0/RR
-            const inspiratoryhold = inspiratoryholdfraction*60.0/RR
-
-            const numSteps = (1 + seconds)/stepSize - 1
-            const tValues = [];
-            const vValues = [];
-            const pValues = [];
-            const vpValues = [];
-
-            let t = -1; //start time
-            let v = C*peep;
-            let p = peep
-            let vp = 0
-
-            let timenextbreath = 0
-
-            for (let i = 0; i <= numSteps; i++) {
-                tValues.push(t)
-                vValues.push(v)
-                pValues.push(p)
-
-                if (t > timenextbreath - stepSize/2 & t < timenextbreath + breathduration) {
-                    vp = tidalvolume/breathduration
-                    p = R*vp + v/C
-                    v = v + stepSize*vp 
-                }
-                else if (t > timenextbreath + breathduration - stepSize/2 & t < timenextbreath + breathduration + inspiratoryhold) {
-                    vp = 0
-                    p = v/C
-                    //v=v
-                }
-                else {
-                    p = peep
-                    vp = p/R - v/(R*C)
-                    v = v + stepSize*vp
-                }
-                
-
-                if (t > timenextbreath + breathduration + inspiratoryhold + stepSize/2) {
-                    timenextbreath = timenextbreath + 60.0/RR
-                }
-
-                vpValues.push(vp)
-                
-                t += stepSize;
-            }
-
-            // Plot the result using Plotly
-            const plotContainer = document.getElementById('plotVC');
-
-            const trace1 = {
-                x: tValues,
-                y: pValues,
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Pressure (cm H2O)'
-            };
-
-            const trace2 = {
-                x: tValues,
-                y: vValues,
-                type: 'scatter',
-                mode: 'lines',
-                xaxis: 'x2',
-                yaxis: 'y2',
-                name: 'Volume (mL)'
-            };
-
-            const trace3 = {
-                x: tValues,
-                y: vpValues,
-                type: 'scatter',
-                mode: 'lines',
-                xaxis: 'x3',
-                yaxis: 'y3',
-                name: 'Flow (mL/s)'
-            };
-
-            const layout = {
-                grid: {
-                    rows: 3,
-                    columns: 1,
-                    pattern: 'independent',
-                    roworder: 'top to bottom'
-                },
-                title: 'Volume Control'
-            };
-
-            Plotly.newPlot(plotContainer, [trace1, trace2, trace3], layout);
-        }
-    </script>
+        <p>
+            The respiratory physiology relating volume and pressure in the lungs is modeled via the differential equation 
+        </p>
+        <div align="center"><img src="assets/imgs/respiratorymodel.svg" width="200px"></img></div>
+        <p>
+            In <a class="btn btn-light rounded" href="volumecontrol.html">Volume Control</a>, the flow of volume <i>V'</i> is controlled during a breath, and additionally may be controlled by performing a "breath hold" where by <i>V'</i> = 0. After the breath and breath hold (if performed), then the ventilator allows the lungs to exhale by setting a PEEP.
+        </p>
+        <p>
+            During a breath and breath hold, since the flow of volume is a constant, solving for the volume in the lungs and thereby the pressure is very straightforward. Between two time points <i>t<sub>0</sub></i> and <i>t<sub>f</sub></i>, then the change in volume is
+        </p>
+        <div align="center"><img src="assets/imgs/volumecontrol.svg" width="300px"></img>.</div>
+        <p>
+            Once the breath/breath hold is finished, PEEP is set and the lungs will follow respiratory mechanics similar to pressure control (see below).
+        </p>
     </section>
-<!-- Page Footer -->
+
+    <section id="pressurecontrol" class="section mt-3" style="margin: 20px">
+        <h1>Pressure Control</h1>
+        <p>
+            In <a class="btn btn-light rounded" href='pressurecontrol.html'>Pressure Control</a>, now only the pressure <i>P</i> is controlled. Generally, a set PEEP is set (during exhalation) and a set pressure <i>P<sub>in</sub></i> provides the pressure to allow inhalation. Mathematically, the volume satisfies the following:
+        </p>
+        <div align="center"><img src="assets/imgs/pressurecontrol.svg" width="400px"></img>.</div>
+    </section>
+    <!-- Page Footer -->
     <footer class="page-footer">
         <div class="container">
             <div class="row align-items-center">

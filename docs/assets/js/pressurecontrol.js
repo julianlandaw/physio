@@ -89,7 +89,7 @@ function dfsolve() {
         const breathduration = ifraction*60.0/RR;
         const timenextbreath = params.timenextbreath;
         const dt = params.dt;
-        return C1/R - C2/(R*C); //[R] = [cm H2O*s/mL], [C] = [mL/cm H2O]
+        return (C1/R - C2/(R*C))*expn(-dt/(R*C)); //[R] = [cm H2O*s/mL], [C] = [mL/cm H2O]
     }
     
     let params = { PC: [], PEEP: [], RR: [], IF: [], R: [], C: [], timenextbreath: [], dt: []};
