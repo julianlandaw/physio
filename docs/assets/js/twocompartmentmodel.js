@@ -40,11 +40,19 @@ tbolushtml.innerHTML = "Bolus Time (min)";
 var tbolusnum = document.getElementById("tbolus");
 tbolusnum.value = tbolusslider.value/10;
 
+/*
 var tperiodslider = document.getElementById("tperiodslider");
 var tperiodhtml = document.getElementById("tperiodhtml");
 tperiodhtml.innerHTML = "Bolus Frequency (min)";
 var tperiodnum = document.getElementById("tperiod");
 tperiodnum.value = tperiodslider.value/10;
+*/
+
+var initialpslider = document.getElementById("initialpslider");
+var initialphtml = document.getElementById("initialphtml");
+initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (mg/L)";
+var initialpnum = document.getElementById("initialp");
+initialpnum.value = initialpslider.value/10;
 
 var tfinalslider = document.getElementById("tfinalslider");
 var tfinalhtml = document.getElementById("tfinalhtml");
@@ -139,7 +147,7 @@ function dfsolve() {
         }
     }
     
-    let params = { b: [], Cl: [], k: [], Vd1: [], Vd2: [], tbolus: [], tperiod: [], tfinal: [], dt: []};
+    let params = { b: [], Cl: [], k: [], Vd1: [], Vd2: [], tbolus: [], tperiod: [], initialp: [], tfinal: [], dt: []};
     
     params.Vd1 = Vd1slider.value/10000.0;
     params.Vd2 = Vd2slider.value/10.0;
@@ -147,17 +155,18 @@ function dfsolve() {
     params.k = kslider.value/10000.0;
     params.b = bslider.value/tbolusslider.value;
     params.tbolus = tbolusslider.value/10.0;
-    params.tperiod = tperiodslider.value/10.0;
+    //params.tperiod = tperiodslider.value/10.0;
+    params.initialp = initialpslider.value/10.0;
     params.tfinal = tfinalslider.value/10.0;
     params.dt = 0.1;
 
     let t0 = 0;
-    let y01 = 0;
+    let y01 = params.initialp;
     let y02 = 0;
 
     let N = Math.ceil(params.tfinal/params.dt);
     let Nhalf = Math.ceil(params.tbolus/params.dt);
-    let Nperiod = Math.ceil(params.tperiod/params.dt);
+    //let Nperiod = Math.ceil(params.tperiod/params.dt);
 
     let ts = new Array(N + 1);
     let ys1 = new Array(N + 1);
@@ -171,21 +180,17 @@ function dfsolve() {
     ys2[0] = y02;
 
     let counter = 0;
-    let counterperiod = 0;
+    //let counterperiod = 0;
     while (counter < N) {
-        if (counterperiod < Nhalf) {
-            params.b = bslider.value/tbolusslider.value;
+        if (counter < Nhalf) {
+            params.b = bslider.value/tbolusslider.value;    
         }
         else {
-            params.b = 0;
+            params.b = infusionnum.value;
         }
         ys1[counter + 1] = iterate1(ts[counter], ys1[counter], ys2[counter], params);
         ys2[counter + 1] = iterate2(ts[counter], ys1[counter], ys2[counter], params);
         counter = counter + 1;
-        counterperiod = counterperiod + 1;
-        if (counterperiod > Nperiod) {
-            counterperiod = 0;
-        }
     }
 
     let trace_u1 = { x: [], y: [], name: 'Central Compartment'};
@@ -286,8 +291,10 @@ function reset() {
     tbolusnum.value = 20;
     infusionslider.value = 10*bslider.value/tbolusslider.value;
     infusionnum.value = infusionslider.value/10;
-    tperiodslider.value = 1000;
-    tperiodnum.value = 100;
+    //tperiodslider.value = 1000;
+    //tperiodnum.value = 100;
+    initialpslider.value = 0;
+    initialpnum.value = 0;
     tfinalslider.value = 10000;
     tfinalnum.value = 1000;
     dfsolve();
@@ -296,20 +303,8 @@ function reset() {
 function onecompartment() {
     kslider.value = 0;
     knum.value = 0;
-    infusionslider.value = 10*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10;
-    dfsolve();
-}
-
-function continuous() {
-    tperiodnum.value = 0.1;
-    tperiodslider.value = 1;
-    bslider.value = 10*bslider.value/tbolusslider.value;
-    bnum.value = bslider.value/10;
-    tbolusslider.value = 10;
-    tbolusnum.value = 1;
-    infusionslider.value = 10*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10;
+    //infusionslider.value = 10*bslider.value/tbolusslider.value;
+    //infusionnum.value = infusionslider.value/10;
     dfsolve();
 }
 
@@ -322,8 +317,8 @@ function propofol() {
     Clnum.value = 50;
     kslider.value = 10000;
     knum.value = 1000;
-    infusionslider.value = 10*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10;
+    //infusionslider.value = 10*bslider.value/tbolusslider.value;
+    //infusionnum.value = infusionslider.value/10;
     dfsolve();
 }
 
@@ -370,56 +365,66 @@ knum.addEventListener("change", function() {
 
 bslider.addEventListener("change", function() {
     bnum.value = bslider.value/10;
-    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10.0;
+    //infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    //infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 bnum.addEventListener("change", function() {
     bslider.value = bnum.value*10;
-    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10.0;
+    //infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    //infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 tbolusslider.addEventListener("change", function() {
     tbolusnum.value = tbolusslider.value/10;
-    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10.0;
+    //infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    //infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 tbolusnum.addEventListener("change", function() {
     tbolusslider.value = tbolusnum.value*10;
-    infusionslider.value = 10.0*bslider.value/tbolusslider.value;
-    infusionnum.value = infusionslider.value/10.0;
+    //infusionslider.value = 10.0*bslider.value/tbolusslider.value;
+    //infusionnum.value = infusionslider.value/10.0;
     dfsolve();    
 });
 
 infusionslider.addEventListener("change", function() {
     infusionnum.value = infusionslider.value/10;
-    bslider.value = infusionslider.value*tbolusslider.value/10.0;
-    bnum.value = bslider.value/10;
+    //bslider.value = infusionslider.value*tbolusslider.value/10.0;
+    //bnum.value = bslider.value/10;
     dfsolve();
 });
 
 infusionnum.addEventListener("change", function() {
     infusionslider.value = infusionnum.value*10;
-    bslider.value = infusionslider.value*tbolusslider.value/10.0;
-    bnum.value = bslider.value/10;
+    //bslider.value = infusionslider.value*tbolusslider.value/10.0;
+    //bnum.value = bslider.value/10;
     dfsolve();
 });
 
-tperiodslider.addEventListener("change", function() {
-    tperiodnum.value = tperiodslider.value/10;
+//tperiodslider.addEventListener("change", function() {
+//    tperiodnum.value = tperiodslider.value/10;
+//    dfsolve();    
+//});
+
+//tperiodnum.addEventListener("change", function() {
+//    tperiodslider.value = tperiodnum.value*10;
+//    dfsolve();    
+//});
+
+initialpslider.addEventListener("change", function() {
+    initialpnum.value = initialpslider.value/10;
     dfsolve();    
 });
 
-tperiodnum.addEventListener("change", function() {
-    tperiodslider.value = tperiodnum.value*10;
+initialpnum.addEventListener("change", function() {
+    initialpslider.value = initialpnum.value*10;
     dfsolve();    
 });
-
+    
 tfinalslider.addEventListener("change", function() {
     tfinalnum.value = tfinalslider.value/10;
     dfsolve();    

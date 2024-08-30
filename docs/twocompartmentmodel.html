@@ -102,7 +102,7 @@
         <td style="border:2px double black;">
             <table align="center">
                 <tr>
-                    <td><center><u>Bolus Parameters</u></center></td>
+                    <td><center><u>Bolus and Infusion Parameters</u></center></td>
                 </tr>
                 <tr>
                     <td>
@@ -131,19 +131,19 @@
                         </table>
                     </td>
                 </tr>
-                <tr>
-                    <td>
-                        <div id='tperiodhtml' style='margin-top:2em;'></div>
-                        <table>
-                            <td><input type='range' min='1' max='10000' value='1000' id='tperiodslider'></input></td>
-                            <td><input type='number' value='100' id='tperiod' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
             </table>
         </td>
         <td style="border:2px double black;">
             <table align="center">
+                <tr>
+                    <td>
+                        <div id='initialphtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='0' id='initialpslider'></input></td>
+                            <td><input type='number' value='0' id='initialp' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
                 <tr>
                     <td>
                         <div id='tfinalhtml' style='margin-top:2em;'></div>
@@ -156,9 +156,9 @@
                 <tr align="middle">
                     <td>
                         <a class="btn btn-light rounded" onclick="reset()">Reset</a>
+                        <br>
                         <a class="btn btn-light rounded" onclick="onecompartment()">One Compartment</a>
                         <br>
-                        <a class="btn btn-light rounded" onclick="continuous()">Infusion</a>
                         <a class="btn btn-light rounded" onclick="propofol()">Propofol</a>
                     </td>
                 </tr>
