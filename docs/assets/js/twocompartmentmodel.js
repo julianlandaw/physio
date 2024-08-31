@@ -287,8 +287,8 @@ function reset() {
     knum.value = 200;
     bslider.value = 2000;
     bnum.value = 200;
-    tbolusslider.value = 200;
-    tbolusnum.value = 20;
+    tbolusslider.value = 0;
+    tbolusnum.value = 0;
     infusionslider.value = 10*bslider.value/tbolusslider.value;
     infusionnum.value = infusionslider.value/10;
     //tperiodslider.value = 1000;
