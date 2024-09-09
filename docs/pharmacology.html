@@ -44,6 +44,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#twocompartment">Two Compartment Model</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#threecompartment">Three Compartment Model</a>
+                    </li>
                 </ul>
             </div>
         </div>          
@@ -68,8 +71,17 @@
         </p>
         <div align="center"><img src="assets/imgs/twocompartmentmodel.svg" width="600px"></img></div>
         <p>
-            where <i>V</i><sub><i>d</i>, central</sub> is the volume of distribution of the central compartment, <i>V</i><sub><i>d</i>, peripheral</sub> is the volume of distribution of the peripheral compartment, <i>b</i> is the amount bolused into the compartment (e.g. via an IV infusion), <i>C<sub>l</sub></i> is the clearance, and <i>k</i> is the diffusion rate between the two compartments.
+            where <i>V</i><sub><i>d</i>, central</sub> is the volume of distribution of the central compartment, <i>V</i><sub><i>d</i>, peripheral</sub> is the volume of distribution of the peripheral compartment, <i>b</i> is the amount bolused into the compartment (e.g. via an IV infusion), <i>C<sub>l</sub></i> is the clearance, and <i>k</i> is the distribution rate between the two compartments. 
         </p>
+        <p>
+            In a two compartment model, there are two sources of a drug escaping the central compartment - distribution (i.e. movement to the peripheral compartment) and elimination. The rates of these are governed by <i>k</i> and <i>C<sub>l</sub></i>. It can be shown that the half-lives of distribution and elimination are (<i>k</i> ln(2))/<i>V</i><sub><i>d</i>, central</sub> and (<i>C<sub>l</sub></i> ln(2))/<i>V</i><sub><i>d</i>, central</sub>, respectively, which are termed <i>t</i><sub>1/2,a</sub> and <i>t</i><sub>1/2,b</sub>. 
+        </p>
+    </section>
+
+    <section id="threecompartment" class="section mt-3" style="margin: 20px">
+        <h1>Three Compartment Model</h1>
+        <p>
+            The <a class="btn btn-light rounded" href='threecompartmentmodel.html'>Three Compartment Model</a> follows the same set of differential equations as the two compartment model but with an additional peripheral compartment.
     </section>
     <!-- Page Footer -->
     <footer class="page-footer">

@@ -1,0 +1,227 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Start your development with Steller landing page.">
+    <meta name="author" content="Devcrud">
+    <title>Three Compartment Model</title>
+    <!-- font icons -->
+    <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
+    <!-- Bootstrap + Steller main styles -->
+	<link rel="stylesheet" href="assets/css/steller.css">
+    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
+
+    <!-- Include Plotly library -->
+    <script src="assets/css/plotly.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label, input {
+            margin-bottom: 10px;
+            display: block;
+        }
+    </style>
+    <script src="assets/js/math.js" type="text/javascript"></script>
+    <script src="assets/js/plotly.js"></script>
+</head>
+<body>
+    <!-- Page navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top" data-spy="affix" data-offset-top="0">
+        <div class="container">
+            <a class="navbar-brand" href="pharmacology.html"><img src="assets/imgs/chaos.jpeg" alt=""></a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#threecompartment">Three Compartment Model</a>
+                    </li>
+                </ul>
+            </div>
+        </div>          
+    </nav>
+    <!-- End of page navigation -->
+    <section id="threecompartment" class="section mt-3" style="margin:2%;">
+    <h2 style="font-size: 2em; text-align: center;">Three Compartment Model</h2>
+    <table align = "center" width="80%">
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td><center><u>Volumes of Distribution</u></center></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Vd1html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='10000' value='700' id='Vd1slider'></input></td>
+                            <td><input type='number' value='70' id='Vd1' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Vd2html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='10000' value='600' id='Vd2slider'></input></td>
+                            <td><input type='number' value='60' id='Vd2' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Vd3html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='10000' value='600' id='Vd3slider'></input></td>
+                            <td><input type='number' value='60' id='Vd3' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td><center><u>Pharmacokinetic Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='Clhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='1000' value='500' id='Clslider'></input></td>
+                            <td><input type='number' value='50' id='Cl' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='k1html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='2000' id='k1slider'></input></td>
+                            <td><input type='number' value='200' id='k1' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='k2html' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='2000' id='k2slider'></input></td>
+                            <td><input type='number' value='200' id='k2' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td><center><u>Bolus and Infusion Parameters</u></center></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='infusionhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='100' id='infusionslider'></input></td>
+                            <td><input type='number' value='10' id='infusion' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='bhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='0' id='bslider'></input></td>
+                            <td><input type='number' value='0' id='b' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='tbolushtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='1000' value='0' id='tbolusslider'></input></td>
+                            <td><input type='number' value='0' id='tbolus' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                    <td>
+                        <div id='initialphtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='0' max='10000' value='0' id='initialpslider'></input></td>
+                            <td><input type='number' value='0' id='initialp' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div id='tfinalhtml' style='margin-top:2em;'></div>
+                        <table>
+                            <td><input type='range' min='1' max='100000' value='10000' id='tfinalslider'></input></td>
+                            <td><input type='number' value='1000' id='tfinal' style='width: 75px'></input></td>
+                        </table>
+                    </td>
+                </tr>
+                <tr align="middle">
+                    <td>
+                        <a class="btn btn-light rounded" onclick="reset()">Reset</a>
+                        <br>
+                        <a class="btn btn-light rounded" onclick="onecompartment()">One Compartment</a>
+                        <br>
+                        <a class="btn btn-light rounded" onclick="propofol()">Propofol</a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </table>
+    <br>
+    <table width="80%" align="center">
+        <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
+        <td width="33%"><div id="myDiv1"></div></td>
+        <td width="33%"><div id="myDiv2"></div></td>
+        <td width="33%"><div id="myDiv3"></div></td>
+    </table>
+    <script src="assets/js/threecompartmentmodel.js"></script>
+    </section>
+    <section>
+    <!-- Page Footer -->
+    <footer class="page-footer">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-sm-6">
+                    <p>Copyright <script>document.write(new Date().getFullYear())</script> &copy; Julian Landaw</p>
+                </div>
+                <!-- 
+                <div class="col-sm-6">
+                    <div class="socials">
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-facebook"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-google"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-github"></i></a>
+                        <a class="social-item" href="javascript:void(0)"><i class="ti-twitter"></i></a>
+                    </div>
+                </div>
+                -->
+            </div>
+        </div>
+    </footer> 
+    <!-- End of page footer -->
+	
+	<!-- core  -->
+    <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
+    <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
+    <!-- bootstrap 3 affix -->
+	<script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
+
+    <!-- steller js -->
+    <script src="assets/js/steller.js"></script>
+</body>
+</html>
