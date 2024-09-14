@@ -30,7 +30,7 @@ k1num.value = k1slider.value/10.0;
 
 var k2slider = document.getElementById("k2slider");
 var k2html = document.getElementById("k2html");
-k2html.innerHTML = "<i>k</i><sub>1</sub> (mL/kg/min)";
+k2html.innerHTML = "<i>k</i><sub>2</sub> (mL/kg/min)";
 var k2num = document.getElementById("k2");
 k2num.value = k2slider.value/10.0;
 
@@ -66,158 +66,6 @@ tfinalnum.value = tfinalslider.value/10.0;
 
 function dfsolve() {
     // Exactly computes 
-
-    function expn(x) {
-        return math.exp(x); 
-    }
-
-    function iterate1(t, C1, C2, C3, params) {
-        const thisC2 = iterate2(t, C1, C2, C3, params);
-        const thisC3 = iterate3(t, C1, C2, C3, params);
-        const a1 = -params.Cl/params.Vd1;
-        const e = params.b/params.Vd1;
-        if (Clnum.value == 0) {
-            return C1 - params.Vd2*(thisC2 - C2)/params.Vd1 - params.Vd3*(thisC3 - C3)/params.Vd1 + params.dt*e;
-        }
-        else {
-            return (expn(a1*params.dt)*(e + a1*(C1 - params.Vd2*(thisC2 - C2)/params.Vd1 - params.Vd3*(thisC3 - C3)/params.Vd1)) - e)/a1;
-        }
-        
-        //return C1 + params.dt/params.Vd1*(params.b - params.Cl*C1 - params.k1*(C1 - C2) - params.k2*(C1 - C3));
-        //const a1 = -params.Cl/params.Vd1;
-        //    const e = params.b/params.Vd1;
-        //    const dt = params.dt;
-        //    return (expn(a1*dt)*(e + C1*a1) - e)/a1;
-    }
-
-    function iterate2(t, C1, C2, C3, params) {
-        //return C2 + params.dt/params.Vd2*params.k1*(C1 - C2);
-        return (params.Vd1*C1 + params.Vd2*C2)/(params.Vd1 + params.Vd2) - params.Vd1*expn(-params.k1*params.dt*(params.Vd1+params.Vd2)/(params.Vd1*params.Vd2))*(C1 - C2)/(params.Vd1 + params.Vd2)
-    }
-
-    function iterate3(t, C1, C2, C3, params) {
-        //return C3 + params.dt/params.Vd3*params.k2*(C1 - C3);
-        return (params.Vd1*C1 + params.Vd3*C3)/(params.Vd1 + params.Vd3) - params.Vd1*expn(-params.k2*params.dt*(params.Vd1+params.Vd3)/(params.Vd1*params.Vd3))*(C1 - C3)/(params.Vd1 + params.Vd3)
-    }
-    
-    /*
-    function iterate1(t, C1, C2, C3, params) {
-        if (k1num.value == 0 && Clnum.value == 0) {
-            return C1 + params.dt*params.b/params.Vd1;
-        }
-        else if (k1num.value == 0) {
-            const a1 = -params.Cl/params.Vd1;
-            const e = params.b/params.Vd1;
-            const dt = params.dt;
-            return (expn(a1*dt)*(e + C1*a1) - e)/a1;
-        }
-        else if (Clnum.value == 0) {
-            const a2 = params.k1/params.Vd1;
-            const a3 = params.k1/params.Vd2;
-            const sum = a2 + a3;
-            const e = params.b/params.Vd1;
-            const dt = params.dt;
-            const b1 = (a3*dt*e)/sum - (a2*e*(expn(- sum*dt) - 1.0))/(sum*sum);
-
-            const a11 = (a3 + a2*expn(-dt*sum))/sum;
-            const a12 = a2*(1.0 - expn(-dt*sum))/sum;
-            
-            return a11*C1 + a12*C2 + b1;
-            
-        }
-        else {
-            const a1 = -(params.Cl + params.k1)/params.Vd1;
-            const a2 = params.k1/params.Vd1;
-            const a3 = params.k1/params.Vd2;
-            const a4 = -params.k1/params.Vd2;
-            const e = params.b/params.Vd1;
-            const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
-            const dt = params.dt;
-        
-            const a11 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 + sqrtfun))/2) - a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) + a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
-
-            const a12 = -(a2*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0) - a2*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0))/sqrtfun;
-
-            const b1 = (2.0*e*expn(-(dt*sqrtfun)/2.0)*(a4*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) - 2.0*a4*expn((dt*sqrtfun)/2.0)*sqrtfun - a1*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) + 2.0*a2*a3*expn((a1*dt)/2.0)*expn((a4*dt)/2.0) + a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*sqrtfun - a4*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun) + a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun)*sqrtfun + a1*a4*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun) - 2.0*a2*a3*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(dt*sqrtfun)))/((4.0*a1*a4 - 4.0*a2*a3)*sqrtfun);
-
-            return a11*C1 + a12*C2 + b1;
-        }
-    }
-
-    function iterate2(t, C1, C2, C3, params) {
-        if (k1num.value == 0) {
-            return 1.0*C2;
-        }
-        else if (Clnum.value == 0) {
-            const a2 = params.k1/params.Vd1;
-            const a3 = params.k1/params.Vd2;
-            const e = params.b/params.Vd1;
-            const sum = a2 + a3;
-            const dt = params.dt;
-            const b2 = (a3*dt*e)/(sum) + (a3*e*(expn(- sum*dt) - 1.0))/(sum*sum);
-
-            const a21 = a3*(1.0 - expn(-dt*sum))/sum;
-            const a22 = (a2 + a3*expn(-dt*sum))/sum;
-            
-            return a21*C1 + a22*C2 + b2;
-            
-        }
-        else {
-            const a1 = -(params.Cl + params.k1)/params.Vd1;
-            const a2 = params.k1/params.Vd1;
-            const a3 = params.k1/params.Vd2;
-            const a4 = -params.k1/params.Vd2;
-            const e = params.b/params.Vd1;
-            const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
-            const dt = params.dt;
-        
-            const a22 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 + sqrtfun))/2) + a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) - a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
-
-            const a21 = -(a3*(expn((dt*(a1 + a4 - sqrtfun))/2.0) - expn((dt*(a1 + a4 + sqrtfun))/2.0)))/sqrtfun;
-
-            const b2 = (a3*e*(2.0/(a1 + a4 - sqrtfun) - (2.0*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0))/(a1 + a4 - sqrtfun)))/sqrtfun + (2.0*a3*e*(expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0) - 1.0))/((a1 + a4 + sqrtfun)*sqrtfun);
-
-            return a21*C1 + a22*C2 + b2;
-        }
-    }
-
-    function iterate3(t, C1, C2, C3, params) {
-        if (k1num.value == 0) {
-            return 1.0*C2;
-        }
-        else if (Clnum.value == 0) {
-            const a2 = params.k1/params.Vd1;
-            const a3 = params.k1/params.Vd2;
-            const e = params.b/params.Vd1;
-            const sum = a2 + a3;
-            const dt = params.dt;
-            const b2 = (a3*dt*e)/(sum) + (a3*e*(expn(- sum*dt) - 1.0))/(sum*sum);
-
-            const a21 = a3*(1.0 - expn(-dt*sum))/sum;
-            const a22 = (a2 + a3*expn(-dt*sum))/sum;
-            
-            return a21*C1 + a22*C2 + b2;
-            
-        }
-        else {
-            const a1 = -(params.Cl + params.k1)/params.Vd1;
-            const a2 = params.k1/params.Vd1;
-            const a3 = params.k1/params.Vd2;
-            const a4 = -params.k1/params.Vd2;
-            const e = params.b/params.Vd1;
-            const sqrtfun = math.sqrt(a1*a1 - 2.0*a1*a4 + a4*a4 + 4.0*a2*a3);
-            const dt = params.dt;
-        
-            const a22 = (expn((dt*(a1 + a4 - sqrtfun))/2.0)*sqrtfun - a1*expn((dt*(a1 + a4 + sqrtfun))/2) + a4*expn((dt*(a1 + a4 + sqrtfun))/2) + expn((dt*(a1 + a4 + sqrtfun))/2.0)*sqrtfun + a1*expn((dt*(a1 + a4 - sqrtfun))/2.0) - a4*expn((dt*(a1 + a4 - sqrtfun))/2.0))/(2.0*sqrtfun);
-
-            const a21 = -(a3*(expn((dt*(a1 + a4 - sqrtfun))/2.0) - expn((dt*(a1 + a4 + sqrtfun))/2.0)))/sqrtfun;
-
-            const b2 = (a3*e*(2.0/(a1 + a4 - sqrtfun) - (2.0*expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn(-(dt*sqrtfun)/2.0))/(a1 + a4 - sqrtfun)))/sqrtfun + (2.0*a3*e*(expn((a1*dt)/2.0)*expn((a4*dt)/2.0)*expn((dt*sqrtfun)/2.0) - 1.0))/((a1 + a4 + sqrtfun)*sqrtfun);
-
-            return a21*C1 + a22*C2 + b2;
-        }
-    }
-    */
     
     let params = { b: [], Cl: [], k1: [], k2: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tperiod: [], initialp: [], tfinal: [], dt: []};
     
@@ -231,7 +79,7 @@ function dfsolve() {
     params.tbolus = tbolusnum.value;
     params.initialp = initialpnum.value;
     params.tfinal = tfinalnum.value;
-    params.dt = 0.01;
+    params.dt = 0.1;
 
     let t0 = 0.0;
     let y01 = 1.0*params.initialp;
@@ -255,17 +103,34 @@ function dfsolve() {
     ys3[0] = y03;
 
     let counter = 0;
-    //let counterperiod = 0;
+    
+    const mat = math.matrix([[-params.dt*(params.Cl + params.k1 + params.k2)/params.Vd1, params.dt*params.k1/params.Vd1, params.dt*params.k2/params.Vd1, params.dt],[params.dt*params.k1/params.Vd2, -params.dt*params.k1/params.Vd2, 0, 0],[params.dt*params.k2/params.Vd3, 0, -params.dt*params.k2/params.Vd3, 0],[0,0,0,0]]);
+
+    const matmdt = math.expm(mat);
+
+    const a11 = matmdt.subset(math.index(0,0));
+    const a12 = matmdt.subset(math.index(0,1));
+    const a13 = matmdt.subset(math.index(0,2));
+    const a14 = matmdt.subset(math.index(0,3));
+    const a21 = matmdt.subset(math.index(1,0));
+    const a22 = matmdt.subset(math.index(1,1));
+    const a23 = matmdt.subset(math.index(1,2));
+    const a24 = matmdt.subset(math.index(1,3));
+    const a31 = matmdt.subset(math.index(2,0));
+    const a32 = matmdt.subset(math.index(2,1));
+    const a33 = matmdt.subset(math.index(2,2));
+    const a34 = matmdt.subset(math.index(2,3));
+    
     while (counter < N) {
         if (counter < Nhalf) {
-            params.b = bnum.value/tbolusnum.value;    
+            params.b = bnum.value/tbolusnum.value/params.Vd1;    
         }
         else {
-            params.b = infusionnum.value;
+            params.b = infusionnum.value/params.Vd1;
         }
-        ys1[counter + 1] = iterate1(ts[counter], ys1[counter], ys2[counter], ys3[counter], params);
-        ys2[counter + 1] = iterate2(ts[counter], ys1[counter], ys2[counter], ys3[counter], params);
-        ys3[counter + 1] = iterate3(ts[counter], ys1[counter], ys2[counter], ys3[counter], params);
+        ys1[counter + 1] = a11*ys1[counter] + a12*ys2[counter] + a13*ys3[counter] + params.b*a14;
+        ys2[counter + 1] = a21*ys1[counter] + a22*ys2[counter] + a23*ys3[counter] + params.b*a24;
+        ys3[counter + 1] = a31*ys1[counter] + a32*ys2[counter] + a33*ys3[counter] + params.b*a34;
         counter = counter + 1;
     }
 
@@ -403,11 +268,11 @@ function reset() {
     tbolusslider.value = 0;
     tbolusnum.value = 0;
     infusionslider.value = 100;
-    infusionnum.value = infusionslider.value/10;
+    infusionnum.value = 10;
     initialpslider.value = 0;
     initialpnum.value = 0;
-    tfinalslider.value = 10000;
-    tfinalnum.value = 1000;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
     dfsolve();
 }
 
@@ -416,24 +281,54 @@ function onecompartment() {
     k1num.value = 0;
     k2slider.value = 0;
     k2num.value = 0;
-    //infusionslider.value = 10*bslider.value/tbolusslider.value;
-    //infusionnum.value = infusionslider.value/10;
     dfsolve();
 }
 
 function propofol() {
-    Vd1slider.value = 700;
-    Vd1num.value = 70;
-    Vd2slider.value = 600;
-    Vd2num.value = 60;
-    Vd3slider.value = 600;
-    Vd3num.value = 60;
-    Clslider.value = 500;
-    Clnum.value = 50;
-    k1slider.value = 10000;
-    k1num.value = 1000;
-    k2slider.value = 10000;
-    k2num.value = 1000;
+    Vd1slider.value = 900;
+    Vd1num.value = 90;
+    Vd2slider.value = 3.6;
+    Vd2num.value = 0.36;
+    Vd3slider.value = 39;
+    Vd3num.value = 3.9;
+    Clslider.value = 256;
+    Clnum.value = 25.6;
+    k1slider.value = 250;
+    k1num.value = 25;
+    k2slider.value = 159;
+    k2num.value = 15.9;
+    bslider.value = 20;
+    bnum.value = 2;
+    infusionnum.value = 0.15;
+    infusionslider.value = 1.5;
+    tbolusslider.value = 5;
+    tbolusnum.value = 0.5;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
+    dfsolve();
+}
+
+function precedex() {
+    Vd1slider.value = 3600;
+    Vd1num.value = 360;
+    Vd2slider.value = 4.9;
+    Vd2num.value = 0.49;
+    Vd3slider.value = 9.3;
+    Vd3num.value = 0.93;
+    Clslider.value = 129;
+    Clnum.value = 12.9;
+    k1slider.value = 240;
+    k1num.value = 24;
+    k2slider.value = 89;
+    k2num.value = 8.9;
+    bslider.value = 4;
+    bnum.value = 0.4;
+    infusionnum.value = 0.005;
+    infusionslider.value = 0.05;
+    tbolusslider.value = 150;
+    tbolusnum.value = 15;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
     dfsolve();
 }
 
