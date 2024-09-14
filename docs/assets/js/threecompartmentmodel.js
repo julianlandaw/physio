@@ -332,6 +332,30 @@ function precedex() {
     dfsolve();
 }
 
+function remifentanil() {
+    Vd1slider.value = 830;
+    Vd1num.value = 83;
+    Vd2slider.value = 1.3;
+    Vd2num.value = 0.13;
+    Vd3slider.value = 0.72;
+    Vd3num.value = 0.072;
+    Clslider.value = 369;
+    Clnum.value = 36.9;
+    k1slider.value = 246;
+    k1num.value = 24.6;
+    k2slider.value = 17.7;
+    k2num.value = 1.77;
+    bslider.value = 0;
+    bnum.value = 0;
+    infusionnum.value = 0.2;
+    infusionslider.value = 2;
+    tbolusslider.value = 0;
+    tbolusnum.value = 0;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
+    dfsolve();
+}
+
 //function is called when slider value changes
 Vd1slider.addEventListener("change", function() {
     Vd1num.value = Vd1slider.value/10.0;
