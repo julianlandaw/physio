@@ -1,0 +1,80 @@
+Information coming from bas.bwh.harvard.edu, cheers to Dr. Christopher Connor
+
+Alfentanil
+  Decreased fentanyl and alfentanil dose requirements with age. A simultaneous pharmacokinetic and pharmacodynamic evaluation. Scott JC, Stanski DR. J Pharmacol Exp Ther. 1987 Jan;240(1):159-66. http://www.ncbi.nlm.nih.gov/pubmed/3100765
+
+Atracurium
+  Effect of thermal injury on the pharmacokinetics and pharmacodynamics of atracurium in humans.
+Marathe PH, Dwersteg JF, Pavlin EG, Haschke RH, Heimbach DM, Slattery JT. Anesthesiology. 1989 May;70(5):752-5. http://www.ncbi.nlm.nih.gov/pubmed/2719307
+
+Bupivacaine
+  Pharmacology of local anaesthetic agents. Pharmacokinetics of local anaesthetic agents. Tucker GT, Mather LE. Br J Anaesth. 1975 Feb;47 suppl:213-24. http://www.ncbi.nlm.nih.gov/pubmed/1148097
+
+Cisatracurium
+  Pharmacokinetics and pharmacodynamics of cisatracurium after a short infusion in patients under propofol anesthesia. Tran TV, Fiset P, Varin F. Anesth Analg. 1998 Nov;87(5):1158-63. http://www.ncbi.nlm.nih.gov/pubmed/9806701
+
+D-Tubocurarine
+  Kinetics of the elimination and neuromuscular blocking effect of d-tubocurarine in man. Gibaldi M, Levy G, Hayton W. Anesthesiology. 1972 Mar;36(3):213-8. http://www.ncbi.nlm.nih.gov/pubmed/5011414
+
+Diazepam
+  Pharmacokinetic and electroencephalographic study of intravenous diazepam, midazolam, and placebo. Greenblatt DJ, Ehrenberg BL, Gunderman J, Locniskar A, Scavone JM, Harmatz JS, Shader RI. Clin Pharmacol Ther. 1989 Apr;45(4):356-65. http://www.ncbi.nlm.nih.gov/pubmed/2702793
+
+Etidocaine
+  Pharmacology of local anaesthetic agents. Pharmacokinetics of local anaesthetic agents. Tucker GT, Mather LE. Br J Anaesth. 1975 Feb;47 suppl:213-24. http://www.ncbi.nlm.nih.gov/pubmed/1148097
+
+Fentanyl
+  Pharmacokinetics of fentanyl administered by computer-controlled infusion pump. Shafer SL, Varvel JR, Aziz N, Scott JC. Anesthesiology. 1990 Dec;73(6):1091-102. http://www.ncbi.nlm.nih.gov/pubmed/2248388
+
+Fospropofol
+  Pharmacokinetics and clinical pharmacodynamics of the new propofol prodrug GPI 15715 in volunteers. Fechner J, Ihmsen H, Hatterscheid D, Schiessl C, Vornov JJ, Burak E, Schwilden H, Schuttler J. Anesthesiology. 2003 Aug;99(2):303-13. Erratum in: Anesthesiology. 2008 Nov;109(5):940. http://www.ncbi.nlm.nih.gov/pubmed/12883403
+
+Hydromorphone
+  Comparing the subjective, psychomotor, and physiological effects of intravenous hydromorphone and morphine in healthy volunteers. Hill JL, Zacny JP. Psychopharmacology (Berl). 2000 Sep;152(1):31-9. http://www.ncbi.nlm.nih.gov/pubmed/11041313
+
+Lidocaine
+  Disposition kinetics of lidocaine in normal subjects. Rowland M, Thomson PD, Guichard A, Melmon KL. Ann N Y Acad Sci. 1971 Jul 6;179:383-98. http://www.ncbi.nlm.nih.gov/pubmed/5285383
+
+Lorazepam
+  Pharmacokinetics and bioavailability of intravenous, intramuscular, and oral lorazepam in humans. Greenblatt DJ, Shader RI, Franke K, MacLaughlin DS, Harmatz JS, Allen MD, Werner A, Woo E. J Pharm Sci. 1979 Jan;68(1):57-63. http://www.ncbi.nlm.nih.gov/pubmed/31453
+
+Meperidine
+  Pharmacokinetic-pharmacodynamic modelling of meperidine in goats (II): Modelling. Qiao GL, Fung KF. J Vet Pharmacol Ther. 1994 Apr;17(2):127-34. http://www.ncbi.nlm.nih.gov/pubmed/8040932
+
+Mepivacaine
+  Pharmacology of local anaesthetic agents. Pharmacokinetics of local anaesthetic agents. Tucker GT, Mather LE. Br J Anaesth. 1975 Feb;47 suppl:213-24. http://www.ncbi.nlm.nih.gov/pubmed/1148097
+
+Methadone
+  Pharmacokinetic-pharmacodynamic relationships of methadone infusions in patients with cancer pain. Inturrisi CE, Portenoy RK, Max MB, Colburn WA, Foley KM. Clin Pharmacol Ther. 1990 May;47(5):565-77. http://www.ncbi.nlm.nih.gov/pubmed/2188771
+
+Midazolam
+  Pharmacokinetic and electroencephalographic study of intravenous diazepam, midazolam, and placebo. Greenblatt DJ, Ehrenberg BL, Gunderman J, Locniskar A, Scavone JM, Harmatz JS, Shader RI. Clin Pharmacol Ther. 1989 Apr;45(4):356-65. http://www.ncbi.nlm.nih.gov/pubmed/2702793
+
+Morphine
+  Gender differences in morphine pharmacokinetics and dynamics. Sarton E, Romberg R, Dahan A. Adv Exp Med Biol. 2003;523:71-80. http://www.ncbi.nlm.nih.gov/pubmed/15088841
+
+Pancuronium
+  Pancuronium and vecuronium pharmacokinetics and pharmacodynamics in younger and elderly adults. Rupp SM, Castagnoli KP, Fisher DM, Miller RD. Anesthesiology. 1987 Jul;67(1):45-9. http://www.ncbi.nlm.nih.gov/pubmed/2886080
+
+Propofol
+  The influence of method of administration and covariates on the pharmacokinetics of propofol in adult volunteers. Schnider TW, Minto CF, Gambus PL, Andresen C, Goodale DB, Shafer SL, Youngs EJ. Anesthesiology 1998 May;88(5):1170-82. http://www.ncbi.nlm.nih.gov/pubmed/9605675
+
+Remifentanil
+  Influence of Age and Gender on the Pharmacokinetics and Pharmacodynamics of Remifentanil: I. Model Development. Minto CF, Schnider TW, Egan TD, Youngs E, Lemmens HJ, Gambus PL, Billard V, Hoke JF, Moore KH, Hermann DJ, Muir KT, Mandema JW, Shafer SL. Anesthesiology. 1997 Jan;86(1):10-23. Anesthesiology. 1997 Jan;86(1):10-23. http://www.ncbi.nlm.nih.gov/pubmed/9009935
+
+Rocuronium
+  Pharmacokinetics and pharmacodynamics of rocuronium at the vocal cords and the adductor pollicis in humans. Plaud B, Proost JH, Wierda JM, Barre J, Debaene B, Meistelman C. Clin Pharmacol Ther. 1995 Aug;58(2):185-91. http://www.ncbi.nlm.nih.gov/pubmed/7648768
+
+Ropivacaine
+  Disposition kinetics of ropivacaine in humans. Lee A, Fagan D, Lamont M, Tucker GT, Halldin M, Scott DB. Anesth Analg. 1989 Dec;69(6):736-8. http://www.ncbi.nlm.nih.gov/pubmed/2589653
+
+Succinylcholine
+  Concentration-effect relation of succinylcholine chloride during propofol anesthesia. Roy JJ, Donati F, Boismenu D, Varin F. Anesthesiology. 2002 Nov;97(5):1082-92. http://www.ncbi.nlm.nih.gov/pubmed/12411790
+
+Sufentanil
+  Linearity of pharmacokinetics and model estimation of sufentanil. Gepts E, Shafer SL, Camu F, Stanski DR, Woestenborghs R, Van Peer A, Heykants JJ. Anesthesiology. 1995 Dec;83(6):1194-204. http://www.ncbi.nlm.nih.gov/pubmed/8533912
+
+Thiopental
+  Population pharmacokinetics and pharmacodynamics of thiopental: the effect of age revisited. Stanski DR, Maitre PO. Anesthesiology. 1990 Mar;72(3):412-22. http://www.ncbi.nlm.nih.gov/pubmed/2310020
+
+Vecuronium
+  Pancuronium and vecuronium pharmacokinetics and pharmacodynamics in younger and elderly adults. Rupp SM, Castagnoli KP, Fisher DM, Miller RD. Anesthesiology. 1987 Jul;67(1):45-9. http://www.ncbi.nlm.nih.gov/pubmed/2886080
