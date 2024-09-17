@@ -175,7 +175,8 @@ function dfsolve() {
                     size: 18,
                     color: '#7f7f7f'
                 }
-            }
+            },
+            type: 'log',
         }
     };
 
@@ -207,7 +208,8 @@ function dfsolve() {
                     size: 18,
                     color: '#7f7f7f'
                 }
-            }
+            },
+            type: 'log',
         }
     };
 
@@ -239,7 +241,8 @@ function dfsolve() {
                     size: 18,
                     color: '#7f7f7f'
                 }
-            }
+            },
+            type: 'log',
         }
     };
 
@@ -263,12 +266,12 @@ function reset() {
     k1num.value = 200;
     k2slider.value = 2000;
     k2num.value = 200;
-    bslider.value = 0;
-    bnum.value = 0;
-    tbolusslider.value = 0;
-    tbolusnum.value = 0;
-    infusionslider.value = 100;
-    infusionnum.value = 10;
+    bslider.value = 1;
+    bnum.value = 0.1;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
     initialpslider.value = 0;
     initialpnum.value = 0;
     tfinalslider.value = 2400;
@@ -281,6 +284,30 @@ function onecompartment() {
     k1num.value = 0;
     k2slider.value = 0;
     k2num.value = 0;
+    dfsolve();
+}
+
+function alfentanil() {
+    Vd1slider.value = 10970;
+    Vd1num.value = 1097;
+    Vd2slider.value = 0.4;
+    Vd2num.value = 0.04;
+    Vd3slider.value = 1.5;
+    Vd3num.value = 0.15;
+    Clslider.value = 28;
+    Clnum.value = 2.8;
+    k1slider.value = 181;
+    k1num.value = 18.1;
+    k2slider.value = 32;
+    k2num.value = 3.2;
+    bslider.value = 1;
+    bnum.value = 0.1;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
     dfsolve();
 }
 
@@ -297,12 +324,12 @@ function propofol() {
     k1num.value = 25;
     k2slider.value = 159;
     k2num.value = 15.9;
-    bslider.value = 20;
-    bnum.value = 2;
-    infusionnum.value = 0.15;
-    infusionslider.value = 1.5;
-    tbolusslider.value = 5;
-    tbolusnum.value = 0.5;
+    bslider.value = 1;
+    bnum.value = 0.1;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
     tfinalslider.value = 2400;
     tfinalnum.value = 240;
     dfsolve();
@@ -321,12 +348,12 @@ function precedex() {
     k1num.value = 24;
     k2slider.value = 89;
     k2num.value = 8.9;
-    bslider.value = 4;
-    bnum.value = 0.4;
-    infusionnum.value = 0.005;
-    infusionslider.value = 0.05;
-    tbolusslider.value = 150;
-    tbolusnum.value = 15;
+    bslider.value = 1;
+    bnum.value = 0.1;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
     tfinalslider.value = 2400;
     tfinalnum.value = 240;
     dfsolve();
@@ -345,12 +372,12 @@ function remifentanil() {
     k1num.value = 24.6;
     k2slider.value = 17.7;
     k2num.value = 1.77;
-    bslider.value = 0;
-    bnum.value = 0;
-    infusionnum.value = 0.2;
-    infusionslider.value = 2;
-    tbolusslider.value = 0;
-    tbolusnum.value = 0;
+    bslider.value = 1;
+    bnum.value = 0.1;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
     tfinalslider.value = 2400;
     tfinalnum.value = 240;
     dfsolve();

@@ -126,8 +126,8 @@
                     <td>
                         <div id='infusionhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='100' id='infusionslider'></input></td>
-                            <td><input type='number' value='10' id='infusion' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='10000' value='0' id='infusionslider'></input></td>
+                            <td><input type='number' value='0' id='infusion' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
@@ -135,8 +135,8 @@
                     <td>
                         <div id='bhtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='0' id='bslider'></input></td>
-                            <td><input type='number' value='0' id='b' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='10000' value='1' id='bslider'></input></td>
+                            <td><input type='number' value='0.1' id='b' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
@@ -144,8 +144,8 @@
                     <td>
                         <div id='tbolushtml' style='margin-top:2em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='1000' value='0' id='tbolusslider'></input></td>
-                            <td><input type='number' value='0' id='tbolus' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='1000' value='1' id='tbolusslider'></input></td>
+                            <td><input type='number' value='0.1' id='tbolus' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
@@ -179,6 +179,7 @@
                         <a class="btn btn-light rounded" onclick="propofol()">Propofol</a>
                         <a class="btn btn-warning rounded" onclick="precedex()">Precedex</a>
                         <a class="btn btn-info rounded" onclick="remifentanil()">Remifentanil</a>
+                        <a class="btn btn-info rounded" onclick="alfentanil()">Alfentanil</a>
                     </td>
                 </tr>
             </table>
