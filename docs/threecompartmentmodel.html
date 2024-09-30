@@ -48,35 +48,51 @@
     <!-- End of page navigation -->
     <section id="threecompartment" class="section mt-3" style="margin:2%;">
     <h2 style="font-size: 2em; text-align: center;">Three Compartment Model</h2>
-    <table align = "center" width="80%">
+    <a class="btn btn-light rounded" onclick="reset()">Reset</a>
+    <a class="btn btn-light rounded" onclick="onecompartment()">One Compartment</a>
+    </br>
+    <a class="btn btn-warning rounded" onclick="propofol()">Propofol</a>
+    <a class="btn btn-warning rounded" onclick="precedex()">Precedex</a>
+    <a class="btn btn-info rounded" onclick="fentanyl()">Fentanyl</a>
+    <a class="btn btn-info rounded" onclick="hydromorphone()">Hydromorphone</a>
+    <a class="btn btn-info rounded" onclick="remifentanil()">Remifentanil</a>
+    <a class="btn btn-info rounded" onclick="alfentanil()">Alfentanil</a>
+    <a class="btn btn-info rounded" onclick="methadone()">Methadone</a>
+    <a class="btn btn-danger rounded" onclick="rocuronium()">Rocuronium</a>
+    <a class="btn btn-danger rounded" onclick="vecuronium()">Vecuronium</a>
+    <a class="btn btn-danger rounded" onclick="succinylcholine()">Succinylcholine</a>
+    <a class="btn btn-warning rounded" onclick="midazolam()">Midazolam</a>
+    <a class="btn btn-warning rounded" onclick="diazepam()">Diazepam</a>
+    </br></br>
+    <table align = "center" width="100%">
         <td style="border:2px double black;">
             <table align="center">
                 <tr>
-                    <td><center><u>Volumes of Distribution</u></center></td>
+                    <td><center><u>Volumes</u></center></td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='Vd1html' style='margin-top:2em;'></div>
+                        <div id='Vd1html' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='10000' value='700' id='Vd1slider'></input></td>
+                            <td><input type='range' min='1' max='10000' value='700' id='Vd1slider' style='width: 75px'></input></td>
                             <td><input type='number' value='70' id='Vd1' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='Vd2html' style='margin-top:2em;'></div>
+                        <div id='Vd2html' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='10000' value='600' id='Vd2slider'></input></td>
+                            <td><input type='range' min='1' max='10000' value='600' id='Vd2slider' style='width: 75px'></input></td>
                             <td><input type='number' value='60' id='Vd2' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='Vd3html' style='margin-top:2em;'></div>
+                        <div id='Vd3html' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='10000' value='600' id='Vd3slider'></input></td>
+                            <td><input type='range' min='1' max='10000' value='600' id='Vd3slider' style='width: 75px'></input></td>
                             <td><input type='number' value='60' id='Vd3' style='width: 75px'></input></td>
                         </table>
                     </td>
@@ -90,28 +106,28 @@
                 </tr>
                 <tr>
                     <td>
-                        <div id='Clhtml' style='margin-top:2em;'></div>
+                        <div id='Clhtml' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='1000' value='500' id='Clslider'></input></td>
+                            <td><input type='range' min='0' max='1000' value='500' id='Clslider' style='width: 75px'></input></td>
                             <td><input type='number' value='50' id='Cl' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='k1html' style='margin-top:2em;'></div>
+                        <div id='k12html' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='2000' id='k1slider'></input></td>
-                            <td><input type='number' value='200' id='k1' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='10' value='2' id='k12slider' style='width: 75px'></input></td>
+                            <td><input type='number' value='0.2' id='k12' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='k2html' style='margin-top:2em;'></div>
+                        <div id='k13html' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='2000' id='k2slider'></input></td>
-                            <td><input type='number' value='200' id='k2' style='width: 75px'></input></td>
+                            <td><input type='range' min='0' max='10' value='2' id='k13slider' style='width: 75px'></input></td>
+                            <td><input type='number' value='0.2' id='k13' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
@@ -124,27 +140,27 @@
                 </tr>
                 <tr>
                     <td>
-                        <div id='infusionhtml' style='margin-top:2em;'></div>
+                        <div id='infusionhtml' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='0' id='infusionslider'></input></td>
+                            <td><input type='range' min='0' max='10000' value='0' id='infusionslider' style='width: 75px'></input></td>
                             <td><input type='number' value='0' id='infusion' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='bhtml' style='margin-top:2em;'></div>
+                        <div id='bhtml' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='1' id='bslider'></input></td>
+                            <td><input type='range' min='0' max='10000' value='1' id='bslider' style='width: 75px'></input></td>
                             <td><input type='number' value='0.1' id='b' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='tbolushtml' style='margin-top:2em;'></div>
+                        <div id='tbolushtml' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='1000' value='1' id='tbolusslider'></input></td>
+                            <td><input type='range' min='0' max='1000' value='1' id='tbolusslider' style='width: 75px'></input></td>
                             <td><input type='number' value='0.1' id='tbolus' style='width: 75px'></input></td>
                         </table>
                     </td>
@@ -155,42 +171,70 @@
             <table align="center">
                 <tr>
                     <td>
-                        <div id='initialphtml' style='margin-top:2em;'></div>
+                        <div id='initialphtml' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='0' max='10000' value='0' id='initialpslider'></input></td>
+                            <td><input type='range' min='0' max='10000' value='0' id='initialpslider' style='width: 75px'></input></td>
                             <td><input type='number' value='0' id='initialp' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
                 <tr>
                     <td>
-                        <div id='tfinalhtml' style='margin-top:2em;'></div>
+                        <div id='tfinalhtml' style='margin-top:1em;'></div>
                         <table>
-                            <td><input type='range' min='1' max='100000' value='2400' id='tfinalslider'></input></td>
+                            <td><input type='range' min='1' max='100000' value='2400' id='tfinalslider' style='width: 75px'></input></td>
                             <td><input type='number' value='240' id='tfinal' style='width: 75px'></input></td>
                         </table>
                     </td>
                 </tr>
-                <tr align="middle">
-                    <td>
-                        <a class="btn btn-light rounded" onclick="reset()">Reset</a>
-                        <a class="btn btn-light rounded" onclick="onecompartment()">One Compartment</a>
-                        <br>
-                        <a class="btn btn-light rounded" onclick="propofol()">Propofol</a>
-                        <a class="btn btn-warning rounded" onclick="precedex()">Precedex</a>
-                        <a class="btn btn-info rounded" onclick="remifentanil()">Remifentanil</a>
-                        <a class="btn btn-info rounded" onclick="alfentanil()">Alfentanil</a>
-                    </td>
-                </tr>
+            </table>
+        </td>
+        <td style="border:2px double black;">
+            <table align="center">
+                <tr>
+                        <td>[<i>P</i>]<sub>final</sub></td>
+                        <td><div id='pfinalhtml'></div></td>
+                        <td>mg/L</td>
+                    </tr>
+                    <tr>
+                        <td>[<i>P</i>]<sub>ss</sub></td>
+                        <td><div id='psshtml'></div></td>
+                        <td>mg/L</td>
+                    </tr>
+                    <tr>
+                        <td>&alpha;</td>
+                        <td><div id='alphahtml'></div></td>
+                        <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                        <td>&beta;</td>
+                        <td><div id='betahtml'></div></td>
+                        <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                        <td>&gamma;</td>
+                        <td><div id='gammahtml'></div></td>
+                        <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                        <td>t<sub>1/2 term</sub></td>
+                        <td><div id='termhalflifehtml'></div></td>
+                        <td>min</td>
+                    </tr>
+                    <tr>
+                        <td>t<sub>1/2 CSHL</sub></td>
+                        <td><div id='contextsensitivehalflifehtml'></div></td>
+                        <td>min</td>
+                    </tr>
             </table>
         </td>
     </table>
     <br>
+    <div id="myDiv1"></div>
     <table width="80%" align="center">
         <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
-        <td width="33%"><div id="myDiv1"></div></td>
-        <td width="33%"><div id="myDiv2"></div></td>
-        <td width="33%"><div id="myDiv3"></div></td>
+        <td width="50%"><div id="myDiv2"></div></td>
+        <td width="50%"><div id="myDiv3"></div></td>
     </table>
     <script src="assets/js/threecompartmentmodel.js"></script>
     </section>

@@ -1,18 +1,18 @@
 var Vd1slider = document.getElementById("Vd1slider");
 var Vd1html = document.getElementById("Vd1html");
-Vd1html.innerHTML = "<i>V</i><sub><i>d</i>, central</sub> (mL/kg)";
+Vd1html.innerHTML = "<i>V</i><sub>1</sub> (mL/kg)";
 var Vd1num = document.getElementById("Vd1");
 Vd1num.value = Vd1slider.value/10.0;
 
 var Vd2slider = document.getElementById("Vd2slider");
 var Vd2html = document.getElementById("Vd2html");
-Vd2html.innerHTML = "<i>V</i><sub><i>d</i>, p1</sub> (L/kg)";
+Vd2html.innerHTML = "<i>V</i><sub>2</sub> (L/kg)";
 var Vd2num = document.getElementById("Vd2");
 Vd2num.value = Vd2slider.value/10.0;
 
 var Vd3slider = document.getElementById("Vd3slider");
 var Vd3html = document.getElementById("Vd3html");
-Vd3html.innerHTML = "<i>V</i><sub><i>d</i>, p2</sub> (L/kg)";
+Vd3html.innerHTML = "<i>V</i><sub>3</sub> (L/kg)";
 var Vd3num = document.getElementById("Vd3");
 Vd3num.value = Vd3slider.value/10.0;
 
@@ -22,17 +22,17 @@ Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (mL/kg/min)";
 var Clnum = document.getElementById("Cl");
 Clnum.value = Clslider.value/10.0;
 
-var k1slider = document.getElementById("k1slider");
-var k1html = document.getElementById("k1html");
-k1html.innerHTML = "<i>k</i><sub>1</sub> (mL/kg/min)";
-var k1num = document.getElementById("k1");
-k1num.value = k1slider.value/10.0;
+var k12slider = document.getElementById("k12slider");
+var k12html = document.getElementById("k12html");
+k12html.innerHTML = "<i>k</i><sub>12</sub> (min<sup>-1</sup>)";
+var k12num = document.getElementById("k12");
+k12num.value = k12slider.value/10.0;
 
-var k2slider = document.getElementById("k2slider");
-var k2html = document.getElementById("k2html");
-k2html.innerHTML = "<i>k</i><sub>2</sub> (mL/kg/min)";
-var k2num = document.getElementById("k2");
-k2num.value = k2slider.value/10.0;
+var k13slider = document.getElementById("k13slider");
+var k13html = document.getElementById("k13html");
+k13html.innerHTML = "<i>k</i><sub>13</sub> (min<sup>-1</sup>)";
+var k13num = document.getElementById("k13");
+k13num.value = k13slider.value/10.0;
 
 var bslider = document.getElementById("bslider");
 var bhtml = document.getElementById("bhtml");
@@ -64,47 +64,77 @@ tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (min)";
 var tfinalnum = document.getElementById("tfinal");
 tfinalnum.value = tfinalslider.value/10.0;
 
+var pfinalhtml = document.getElementById("pfinalhtml");
+pfinalhtml.innerHTML = 0;
+
+var psshtml = document.getElementById("psshtml");
+pfinalhtml.innerHTML = 0;
+
+var betahtml = document.getElementById("betahtml");
+betahtml.innerHTML = 0;
+
+var termhalflifehtml = document.getElementById("termhalflifehtml");
+termhalflifehtml.innerHTML = 0;
+
+function roundToSignificantFigures(num, sigFigs) {
+  if (num === 0) return 0; // Handle the 0 case separately
+
+  const magnitude = math.floor(math.log10(math.abs(num)));
+  const factor = 10 ** (sigFigs - magnitude - 1);
+  return math.round(num * factor) / factor;
+}
+
 function dfsolve() {
     // Exactly computes 
     
-    let params = { b: [], Cl: [], k1: [], k2: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tperiod: [], initialp: [], tfinal: [], dt: []};
+    let params = { b: [], Cl: [], k12: [], k13: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tperiod: [], initialp: [], tfinal: [], dt: []};
     
     params.Vd1 = Vd1num.value/1000.0; //mL to L conversion
     params.Vd2 = Vd2num.value/1.0;
     params.Vd3 = Vd3num.value/1.0;
     params.Cl = Clnum.value/1000.0;
-    params.k1 = k1num.value/1000.0;
-    params.k2 = k2num.value/1000.0;
+    params.k12 = k12num.value/1.0;
+    params.k13 = k13num.value/1.0;
     params.b = bnum.value/tbolusnum.value;
     params.tbolus = tbolusnum.value;
     params.initialp = initialpnum.value;
     params.tfinal = tfinalnum.value;
     params.dt = 0.1;
 
+    const k12 = params.k12;
+    const k13 = params.k13;
+    const k10 = params.Cl/params.Vd1;
+    const k20 = 0;
+    const k21 = params.Vd1/params.Vd2*k12;
+    const k23 = 0;
+    const k30 = 0;
+    const k31 = params.Vd1/params.Vd3*k13;
+    const k32 = 0;
+
     let t0 = 0.0;
-    let y01 = 1.0*params.initialp;
-    let y02 = 0.0;
-    let y03 = 0.0;
+    let x01 = 1.0*params.initialp/params.Vd1;
+    let x02 = 0.0;
+    let x03 = 0.0;
 
     let N = Math.ceil(params.tfinal/params.dt);
     let Nhalf = Math.ceil(params.tbolus/params.dt);
 
     let ts = new Array(N + 1);
-    let ys1 = new Array(N + 1);
-    let ys2 = new Array(N + 1);
-    let ys3 = new Array(N + 1);
+    let xs1 = new Array(N + 1);
+    let xs2 = new Array(N + 1);
+    let xs3 = new Array(N + 1);
 
     for (let i = 0; i < N+1; i++) {
        ts[i] = 1.0*i*params.dt;
     }
 
-    ys1[0] = y01;
-    ys2[0] = y02;
-    ys3[0] = y03;
+    xs1[0] = x01;
+    xs2[0] = x02;
+    xs3[0] = x03;
 
     let counter = 0;
     
-    const mat = math.matrix([[-params.dt*(params.Cl + params.k1 + params.k2)/params.Vd1, params.dt*params.k1/params.Vd1, params.dt*params.k2/params.Vd1, params.dt],[params.dt*params.k1/params.Vd2, -params.dt*params.k1/params.Vd2, 0, 0],[params.dt*params.k2/params.Vd3, 0, -params.dt*params.k2/params.Vd3, 0],[0,0,0,0]]);
+    const mat = math.matrix([[-params.dt*(k10 + k12 + k13), params.dt*k21, params.dt*k31, params.dt],[params.dt*k12, -params.dt*(k20 + k21 + k23), params.dt*k32, 0],[params.dt*k13, params.dt*k23, -params.dt*(k30 + k31 + k32), 0],[0,0,0,0]]);
 
     const matmdt = math.expm(mat);
 
@@ -123,14 +153,14 @@ function dfsolve() {
     
     while (counter < N) {
         if (counter < Nhalf) {
-            params.b = bnum.value/tbolusnum.value/params.Vd1;    
+            params.b = bnum.value/tbolusnum.value;    
         }
         else {
-            params.b = infusionnum.value/params.Vd1;
+            params.b = infusionnum.value;
         }
-        ys1[counter + 1] = a11*ys1[counter] + a12*ys2[counter] + a13*ys3[counter] + params.b*a14;
-        ys2[counter + 1] = a21*ys1[counter] + a22*ys2[counter] + a23*ys3[counter] + params.b*a24;
-        ys3[counter + 1] = a31*ys1[counter] + a32*ys2[counter] + a33*ys3[counter] + params.b*a34;
+        xs1[counter + 1] = a11*xs1[counter] + a12*xs2[counter] + a13*xs3[counter] + params.b*a14;
+        xs2[counter + 1] = a21*xs1[counter] + a22*xs2[counter] + a23*xs3[counter] + params.b*a24;
+        xs3[counter + 1] = a31*xs1[counter] + a32*xs2[counter] + a33*xs3[counter] + params.b*a34;
         counter = counter + 1;
     }
 
@@ -140,11 +170,11 @@ function dfsolve() {
     
     for (let i = 0; i < N + 1; i++) {
         trace_u1.x.push(ts[i]);  
-        trace_u1.y.push(ys1[i]);
+        trace_u1.y.push(xs1[i]/params.Vd1);
         trace_u2.x.push(ts[i]);
-        trace_u2.y.push(ys2[i]);
+        trace_u2.y.push(xs2[i]/params.Vd2);
         trace_u3.x.push(ts[i]);
-        trace_u3.y.push(ys3[i]);
+        trace_u3.y.push(xs3[i]/params.Vd3);
     }
 
     var layout1 = {
@@ -249,57 +279,122 @@ function dfsolve() {
     Plotly.newPlot('myDiv1', [trace_u1], layout1);
     Plotly.newPlot('myDiv2', [trace_u2], layout2);
     Plotly.newPlot('myDiv3', [trace_u3], layout3);
+
+    const eigs = math.eigs(mat);
+    pfinalhtml.innerHTML = roundToSignificantFigures(xs1[N]/params.Vd1, 3);
+    const pss = params.b/params.Cl;
+    psshtml.innerHTML = roundToSignificantFigures(pss,3);
+    const gamma = -eigs.values._data[1]/params.dt;
+    const beta = -eigs.values._data[2]/params.dt;
+    const alpha = -eigs.values._data[3]/params.dt;
+    let termhalflife = 0;
+    if (gamma != 0) {
+        termhalflife = math.log(2)/gamma;
+    }
+    else if (beta != 0) {
+        termhalflife = math.log(2)/beta;
+    }
+    else if (alpha != 0) {
+        termhalflife = math.log(2)/alpha;
+    }
+    alphahtml.innerHTML = roundToSignificantFigures(alpha, 3);
+    betahtml.innerHTML = roundToSignificantFigures(beta, 3);
+    gammahtml.innerHTML = roundToSignificantFigures(gamma, 3);
+    termhalflifehtml.innerHTML = roundToSignificantFigures(termhalflife, 3);
+
+    //Calculate time to reach half of current concentration, if infusion is off
+    let cshl = 0;
+    let x1start = xs1[N];
+    let x2start = xs2[N];
+    let x3start = xs3[N];
+    let x1 = x1start;
+    let x2 = x2start;
+    let x3 = x3start;
+    while (x1 > x1start/2) {
+        cshl = cshl + params.dt;
+        let x1temp = x1;
+        let x2temp = x2;
+        let x3temp = x3;
+        x1 = a11*x1temp + a12*x2temp + a13*x3temp;
+        x2 = a21*x1temp + a22*x2temp + a23*x3temp;
+        x3 = a31*x1temp + a32*x2temp + a33*x3temp; 
+    }
+    contextsensitivehalflifehtml.innerHTML = roundToSignificantFigures(cshl, 3);
 }
 
-dfsolve();
+//dfsolve();
 
-function reset() {
-    Vd1slider.value = 700;
-    Vd1num.value = 70;
-    Vd2slider.value = 600;
-    Vd2num.value = 60;
-    Vd3slider.value = 600;
-    Vd3num.value = 60;
-    Clslider.value = 500;
-    Clnum.value = 50;
-    k1slider.value = 2000;
-    k1num.value = 200;
-    k2slider.value = 2000;
-    k2num.value = 200;
+function onecompartment() {
+    k12slider.value = 0;
+    k12num.value = 0;
+    k13slider.value = 0;
+    k13num.value = 0;
+    dfsolve();
+}
+
+function alfentanil() {
+    Vd1slider.value = 21.9/70*1000;
+    Vd1num.value = 2.19/70*1000;
+    Vd2slider.value = 0.54;
+    Vd2num.value = 0.054;
+    Vd3slider.value = 219/70 - 21.9/70 - 0.54;
+    Vd3num.value = 21.9/70 - 2.19/70 - 0.054;
+    Clslider.value = 1950/70;
+    Clnum.value = 195/70;
+    k12slider.value = 1266/219;
+    k12num.value = 1266/2190;
+    k13slider.value = 224/219;
+    k13num.value = 224/2190;
     bslider.value = 1;
     bnum.value = 0.1;
     tbolusslider.value = 0.1;
     tbolusnum.value = 0.1;
     infusionslider.value = 0;
     infusionnum.value = 0;
-    initialpslider.value = 0;
-    initialpnum.value = 0;
     tfinalslider.value = 2400;
     tfinalnum.value = 240;
     dfsolve();
 }
 
-function onecompartment() {
-    k1slider.value = 0;
-    k1num.value = 0;
-    k2slider.value = 0;
-    k2num.value = 0;
+function fentanyl() {
+    //Fentanyl.pdf
+    Vd1slider.value = 1050;
+    Vd1num.value = 105;
+    Vd2slider.value = 4.46;
+    Vd2num.value = 0.446;
+    Vd3slider.value = 33.7;
+    Vd3num.value = 3.37;
+    Clslider.value = 83.8;
+    Clnum.value = 8.38;
+    k12slider.value = 0.474/0.105;
+    k12num.value = 0.0474/0.105;
+    k13slider.value = 0.199/0.105;
+    k13num.value = 0.0199/0.105;
+    bslider.value = 1;
+    bnum.value = 0.1;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
     dfsolve();
 }
 
-function alfentanil() {
-    Vd1slider.value = 10970;
-    Vd1num.value = 1097;
-    Vd2slider.value = 0.4;
-    Vd2num.value = 0.04;
-    Vd3slider.value = 1.5;
-    Vd3num.value = 0.15;
-    Clslider.value = 28;
-    Clnum.value = 2.8;
-    k1slider.value = 181;
-    k1num.value = 18.1;
-    k2slider.value = 32;
-    k2num.value = 3.2;
+function hydromorphone() {
+    //hydromorphone2.pdf
+    Vd1slider.value = 244/70*1000;
+    Vd1num.value = 24.4/70*1000;
+    Vd2slider.value = 244/70*(0.131/0.296);
+    Vd2num.value = 24.4/70*(0.131/0.296);
+    Vd3slider.value = 244/70*(0.179/0.018);
+    Vd3num.value = 24.4/70*(0.179/0.018);
+    Clslider.value = 16.6/70*1000;
+    Clnum.value = 1.66/70*1000;
+    k12slider.value = 2.96;
+    k12num.value = 0.296;
+    k13slider.value = 1.79;
+    k13num.value = 0.179;
     bslider.value = 1;
     bnum.value = 0.1;
     tbolusslider.value = 0.1;
@@ -312,20 +407,20 @@ function alfentanil() {
 }
 
 function propofol() {
-    Vd1slider.value = 900;
-    Vd1num.value = 90;
-    Vd2slider.value = 3.6;
-    Vd2num.value = 0.36;
-    Vd3slider.value = 39;
-    Vd3num.value = 3.9;
-    Clslider.value = 256;
-    Clnum.value = 25.6;
-    k1slider.value = 250;
-    k1num.value = 25;
-    k2slider.value = 159;
-    k2num.value = 15.9;
-    bslider.value = 1;
-    bnum.value = 0.1;
+    Vd1slider.value = 6.28/70*10000;
+    Vd1num.value = 6.28/70*1000;
+    Vd2slider.value = 255/70;
+    Vd2num.value = 25.5/70;
+    Vd3slider.value = 2730/70;
+    Vd3num.value = 273/70;
+    Clslider.value = 1.79/70*10000;
+    Clnum.value = 1.79/70*1000;
+    k12slider.value = 17.5/6.28;
+    k12num.value = 1.75/6.28;
+    k13slider.value = 11.1/6.28;
+    k13num.value = 1.11/6.28;
+    bslider.value = 20;
+    bnum.value = 2;
     tbolusslider.value = 0.1;
     tbolusnum.value = 0.1;
     infusionslider.value = 0;
@@ -336,18 +431,43 @@ function propofol() {
 }
 
 function precedex() {
-    Vd1slider.value = 3600;
-    Vd1num.value = 360;
-    Vd2slider.value = 4.9;
-    Vd2num.value = 0.49;
-    Vd3slider.value = 9.3;
-    Vd3num.value = 0.93;
-    Clslider.value = 129;
-    Clnum.value = 12.9;
-    k1slider.value = 240;
-    k1num.value = 24;
-    k2slider.value = 89;
-    k2num.value = 8.9;
+    Vd1slider.value = 252/70*1000.0;
+    Vd1num.value = 25.2/70*1000.0;
+    Vd2slider.value = 344/70;
+    Vd2num.value = 34.4/70;
+    Vd3slider.value = 654/70;
+    Vd3num.value = 65.4/70;
+    Clslider.value = 8.97/70*1000.0;
+    Clnum.value = 0.897/70*1000.0;
+    k12slider.value = 16.8/25.2;
+    k12num.value = 1.68/25.2;
+    k13slider.value = 6.2/25.2;
+    k13num.value = 0.62/25.2;
+    bslider.value = 0.4;
+    bnum.value = 0.04;
+    tbolusslider.value = 150;
+    tbolusnum.value = 15;
+    infusionslider.value = 0.3/60;
+    infusionnum.value = 0.03/60;
+    tfinalslider.value = 2400;
+    tfinalnum.value = 240;
+    dfsolve();
+}
+
+function remifentanil() {
+    //Remifentanil3.pdf
+    Vd1slider.value = 76000/70;
+    Vd1num.value = 7600/70;
+    Vd2slider.value = 94/70;
+    Vd2num.value = 9.4/70;
+    Vd3slider.value = 47/70;
+    Vd3num.value = 4.7/70;
+    Clslider.value = 29.2/70*1000;
+    Clnum.value = 2.92/70*1000;
+    k12slider.value = 2.569;
+    k12num.value = 0.2569;
+    k13slider.value = 0.128;
+    k13num.value = 0.0128;
     bslider.value = 1;
     bnum.value = 0.1;
     tbolusslider.value = 0.1;
@@ -359,19 +479,20 @@ function precedex() {
     dfsolve();
 }
 
-function remifentanil() {
-    Vd1slider.value = 830;
-    Vd1num.value = 83;
-    Vd2slider.value = 1.3;
-    Vd2num.value = 0.13;
-    Vd3slider.value = 0.72;
-    Vd3num.value = 0.072;
-    Clslider.value = 369;
-    Clnum.value = 36.9;
-    k1slider.value = 246;
-    k1num.value = 24.6;
-    k2slider.value = 17.7;
-    k2num.value = 1.77;
+function methadone() {
+    //methadone2.pdf
+    Vd1slider.value = 1600;
+    Vd1num.value = 160;
+    Vd2slider.value = 10;
+    Vd2num.value = 1;
+    Vd3slider.value = 24.3;
+    Vd3num.value = 2.43;
+    Clslider.value = 1060/70;
+    Clnum.value = 106/70;
+    k12slider.value = 1.45;
+    k12num.value = 0.145;
+    k13slider.value = 0.8;
+    k13num.value = 0.08;
     bslider.value = 1;
     bnum.value = 0.1;
     tbolusslider.value = 0.1;
@@ -381,6 +502,133 @@ function remifentanil() {
     tfinalslider.value = 2400;
     tfinalnum.value = 240;
     dfsolve();
+}
+
+function vecuronium() {
+    //vecuronium.pdf
+    Vd1slider.value = 520;
+    Vd1num.value = 52;
+    Vd2slider.value = 1.92;
+    Vd2num.value = 0.192;
+    Vd3slider.value = 10;
+    Vd3num.value = 1;
+    Clslider.value = 52;
+    Clnum.value = 5.2;
+    k12slider.value = 0.615;
+    k12num.value = 0.0615;
+    k13slider.value = 0;
+    k13num.value = 0;
+    bslider.value = 5000;
+    bnum.value = 500;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 3000;
+    tfinalnum.value = 300;
+    dfsolve();
+}
+
+function rocuronium() {
+    Vd1slider.value = 560;
+    Vd1num.value = 56;
+    Vd2slider.value = 2.29;
+    Vd2num.value = 0.229;
+    Vd3slider.value = 10;
+    Vd3num.value = 1;
+    Clslider.value = 97.8;
+    Clnum.value = 9.78;
+    k12slider.value = 1.005;
+    k12num.value = 0.1005;
+    k13slider.value = 0;
+    k13num.value = 0;
+    bslider.value = 5000;
+    bnum.value = 500;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 3000;
+    tfinalnum.value = 300;
+    dfsolve();
+}
+
+function succinylcholine() {
+    Vd1slider.value = 110;
+    Vd1num.value = 11;
+    Vd2slider.value = 0.110*(3.02/1.43);
+    Vd2num.value = 0.011*(3.02/1.43);
+    Vd3slider.value = 10;
+    Vd3num.value = 1;
+    Clslider.value = 341;
+    Clnum.value = 34.1;
+    k12slider.value = 30.2;
+    k12num.value = 3.02;
+    k13slider.value = 0;
+    k13num.value = 0;
+    bslider.value = 5000;
+    bnum.value = 500;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 3000;
+    tfinalnum.value = 300;
+    dfsolve();
+}
+
+function midazolam() {
+    //midazolam.pdf
+    Vd1slider.value = 7300;
+    Vd1num.value = 730;
+    Vd2slider.value = 15.9;
+    Vd2num.value = 1.59;
+    Vd3slider.value = 10;
+    Vd3num.value = 1;
+    Clslider.value = 110;
+    Clnum.value = 11;
+    k12slider.value = 0.52;
+    k12num.value = 0.052;
+    k13slider.value = 0;
+    k13num.value = 0;
+    bslider.value = 5000;
+    bnum.value = 500;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 3000;
+    tfinalnum.value = 300;
+    dfsolve();
+}
+
+function diazepam() {
+    //midazolam.pdf - is an article about both midaz + diazepam
+    Vd1slider.value = 1300;
+    Vd1num.value = 130;
+    Vd2slider.value = 11.1;
+    Vd2num.value = 1.11;
+    Vd3slider.value = 10;
+    Vd3num.value = 1;
+    Clslider.value = 5;
+    Clnum.value = 0.5;
+    k12slider.value = 0.21;
+    k12num.value = 0.021;
+    k13slider.value = 0;
+    k13num.value = 0;
+    bslider.value = 5000;
+    bnum.value = 500;
+    tbolusslider.value = 0.1;
+    tbolusnum.value = 0.1;
+    infusionslider.value = 0;
+    infusionnum.value = 0;
+    tfinalslider.value = 3000;
+    tfinalnum.value = 300;
+    dfsolve();
+}
+
+function reset() {
+    propofol();
 }
 
 //function is called when slider value changes
@@ -424,23 +672,23 @@ Clnum.addEventListener("change", function() {
     dfsolve();    
 });
 
-k1slider.addEventListener("change", function() {
-    k1num.value = k1slider.value/10.0;
+k12slider.addEventListener("change", function() {
+    k12num.value = k12slider.value/10.0;
     dfsolve();    
 });
 
-k1num.addEventListener("change", function() {
-    k1slider.value = k1num.value*10;
+k12num.addEventListener("change", function() {
+    k12slider.value = k12num.value*10;
     dfsolve();    
 });
 
-k2slider.addEventListener("change", function() {
-    k2num.value = k2slider.value/10.0;
+k13slider.addEventListener("change", function() {
+    k13num.value = k13slider.value/10.0;
     dfsolve();    
 });
 
-k2num.addEventListener("change", function() {
-    k2slider.value = k2num.value*10;
+k13num.addEventListener("change", function() {
+    k13slider.value = k13num.value*10;
     dfsolve();    
 });
 
@@ -493,3 +741,5 @@ tfinalnum.addEventListener("change", function() {
     tfinalslider.value = tfinalnum.value*10;
     dfsolve();    
 });
+
+reset();

@@ -1,0 +1,13 @@
+Morse, Cortinez and Anderson used a three-compartment PK model:
+CL = 0.9 L/min/70 kg (36% population parameter variability)
+
+intercompartmental clearances:
+Q2 = 1.68 L/min/70 kg (63)
+Q3 = 0.62 L/min/70 kg (90)
+
+Volumes of Distribution:
+V1 = 25.2 L/70 kg (103.9)
+V2 = 34.4 L/70 kg (41.8) - rapidly equilibrating peripheral compartment
+V3 = 65.4 L/70 kg (62)   - slow equilibrating peripheral compartment
+
+
