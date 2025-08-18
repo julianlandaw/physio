@@ -2,30 +2,100 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Start your development with Steller landing page.">
-    <meta name="author" content="Devcrud">
+    <meta name="description" content="Three Compartment Pharmacokinetic Model">
+    <meta name="author" content="Julian Landaw">
     <title>Three Compartment Model</title>
     <!-- font icons -->
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
     <!-- Bootstrap + Steller main styles -->
 	<link rel="stylesheet" href="assets/css/steller.css">
-    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
-
-    <!-- Include Plotly library -->
-    <script src="assets/css/plotly.js"></script>
+    <script src="assets/js/math.js" type="text/javascript"></script>
+    <script src="assets/js/plotly.js"></script>
 
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
         }
-        label, input {
-            margin-bottom: 10px;
+        .card {
+            border-radius: 1rem;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-size: 1.1em;
+            text-align: center;
+            cursor: pointer;
+        }
+        .card-body.collapse {
+            display: none;
+        }
+        input.form-control {
+            text-align: right;
+        }
+        body.dark-mode {
+            background-color: #121212;
+            color: #e9ecef;
+        }
+        body.dark-mode .card {
+            background-color: #1e1e1e;
+            color: #e9ecef;
+        }
+        body.dark-mode .card-header {
+            background-color: #2a2a2a;
+        }
+        body.dark-mode table {
+            color: #e9ecef;
+        }
+        /* Sidebar styles */
+        .sidebar {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            width: 220px;
+            height: 100%;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-right: 1px solid #dee2e6;
+            z-index: 1030;
+        }
+        .sidebar a {
             display: block;
+            margin-bottom: 8px;
+            text-align: left;
+            width: 100%;
+        }
+        body.dark-mode .sidebar {
+            background-color: #1e1e1e;
+            border-right: 1px solid #444;
+        }
+        .content-with-sidebar {
+            margin-left: 240px;
+        }
+        /* Collapsible sidebar on small screens */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -240px;
+                transition: left 0.3s ease;
+                height: 100%;
+                z-index: 1040;
+            }
+            .sidebar.active {
+                left: 0;
+            }
+            .content-with-sidebar {
+                margin-left: 0;
+            }
+            .sidebar-toggle-btn {
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                z-index: 1050;
+            }
         }
     </style>
-    <script src="assets/js/math.js" type="text/javascript"></script>
-    <script src="assets/js/plotly.js"></script>
 </head>
 <body>
     <!-- Page navigation -->
@@ -46,228 +116,249 @@
         </div>          
     </nav>
     <!-- End of page navigation -->
-    <section id="threecompartment" class="section mt-3" style="margin:2%;">
-    <h2 style="font-size: 2em; text-align: center;">Three Compartment Model</h2>
-    <a class="btn btn-light rounded" onclick="reset()">Reset</a>
-    <a class="btn btn-light rounded" onclick="onecompartment()">One Compartment</a>
-    </br>
-    <a class="btn btn-warning rounded" onclick="propofol()">Propofol</a>
-    <a class="btn btn-warning rounded" onclick="precedex()">Precedex</a>
-    <a class="btn btn-info rounded" onclick="fentanyl()">Fentanyl</a>
-    <a class="btn btn-info rounded" onclick="hydromorphone()">Hydromorphone</a>
-    <a class="btn btn-info rounded" onclick="remifentanil()">Remifentanil</a>
-    <a class="btn btn-info rounded" onclick="alfentanil()">Alfentanil</a>
-    <a class="btn btn-info rounded" onclick="methadone()">Methadone</a>
-    <a class="btn btn-danger rounded" onclick="rocuronium()">Rocuronium</a>
-    <a class="btn btn-danger rounded" onclick="vecuronium()">Vecuronium</a>
-    <a class="btn btn-danger rounded" onclick="succinylcholine()">Succinylcholine</a>
-    <a class="btn btn-warning rounded" onclick="midazolam()">Midazolam</a>
-    <a class="btn btn-warning rounded" onclick="diazepam()">Diazepam</a>
-    </br></br>
-    <table align = "center" width="100%">
-        <td style="border:2px double black;">
-            <table align="center">
-                <tr>
-                    <td><center><u>Volumes</u></center></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='Vd1html' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='1' max='10000' value='700' id='Vd1slider' style='width: 75px'></input></td>
-                            <td><input type='number' value='70' id='Vd1' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='Vd2html' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='1' max='10000' value='600' id='Vd2slider' style='width: 75px'></input></td>
-                            <td><input type='number' value='60' id='Vd2' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='Vd3html' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='1' max='10000' value='600' id='Vd3slider' style='width: 75px'></input></td>
-                            <td><input type='number' value='60' id='Vd3' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </td>
-        <td style="border:2px double black;">
-            <table align="center">
-                <tr>
-                    <td><center><u>Pharmacokinetic Parameters</u></center></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='Clhtml' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='1000' value='500' id='Clslider' style='width: 75px'></input></td>
-                            <td><input type='number' value='50' id='Cl' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='k12html' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10' value='2' id='k12slider' style='width: 75px'></input></td>
-                            <td><input type='number' value='0.2' id='k12' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='k13html' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10' value='2' id='k13slider' style='width: 75px'></input></td>
-                            <td><input type='number' value='0.2' id='k13' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </td>
-        <td style="border:2px double black;">
-            <table align="center">
-                <tr>
-                    <td><center><u>Bolus and Infusion Parameters</u></center></td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='infusionhtml' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10000' value='0' id='infusionslider' style='width: 75px'></input></td>
-                            <td><input type='number' value='0' id='infusion' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='bhtml' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10000' value='1' id='bslider' style='width: 75px'></input></td>
-                            <td><input type='number' value='0.1' id='b' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='tbolushtml' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='1000' value='1' id='tbolusslider' style='width: 75px'></input></td>
-                            <td><input type='number' value='0.1' id='tbolus' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </td>
-        <td style="border:2px double black;">
-            <table align="center">
-                <tr>
-                    <td>
-                        <div id='initialphtml' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='0' max='10000' value='0' id='initialpslider' style='width: 75px'></input></td>
-                            <td><input type='number' value='0' id='initialp' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <div id='tfinalhtml' style='margin-top:1em;'></div>
-                        <table>
-                            <td><input type='range' min='1' max='100000' value='2400' id='tfinalslider' style='width: 75px'></input></td>
-                            <td><input type='number' value='240' id='tfinal' style='width: 75px'></input></td>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </td>
-        <td style="border:2px double black;">
-            <table align="center">
-                <tr>
-                        <td>[<i>P</i>]<sub>final</sub></td>
-                        <td><div id='pfinalhtml'></div></td>
-                        <td>mg/L</td>
-                    </tr>
-                    <tr>
-                        <td>[<i>P</i>]<sub>ss</sub></td>
-                        <td><div id='psshtml'></div></td>
-                        <td>mg/L</td>
-                    </tr>
-                    <tr>
-                        <td>&alpha;</td>
-                        <td><div id='alphahtml'></div></td>
-                        <td>min<sup>-1</sup></td>
-                    </tr>
-                    <tr>
-                        <td>&beta;</td>
-                        <td><div id='betahtml'></div></td>
-                        <td>min<sup>-1</sup></td>
-                    </tr>
-                    <tr>
-                        <td>&gamma;</td>
-                        <td><div id='gammahtml'></div></td>
-                        <td>min<sup>-1</sup></td>
-                    </tr>
-                    <tr>
-                        <td>t<sub>1/2 term</sub></td>
-                        <td><div id='termhalflifehtml'></div></td>
-                        <td>min</td>
-                    </tr>
-                    <tr>
-                        <td>t<sub>1/2 CSHL</sub></td>
-                        <td><div id='contextsensitivehalflifehtml'></div></td>
-                        <td>min</td>
-                    </tr>
-            </table>
-        </td>
-    </table>
-    <br>
-    <div id="myDiv1"></div>
-    <table width="80%" align="center">
-        <!-- <td><div id="myDiv1" style="width:500px; height:500px"></div></td> -->
-        <td width="50%"><div id="myDiv2"></div></td>
-        <td width="50%"><div id="myDiv3"></div></td>
-    </table>
-    <script src="assets/js/threecompartmentmodel.js"></script>
+
+    <!-- Sidebar toggle button (mobile) -->
+    <button class="btn btn-primary sidebar-toggle-btn d-md-none" onclick="toggleSidebar()">☰ Drugs</button>
+
+    <!-- Sidebar with drug buttons -->
+    <div class="sidebar" id="sidebar">
+        <a class="btn btn-light rounded" onclick="reset(); closeSidebarOnMobile()">Reset</a>
+        <a class="btn btn-light rounded" onclick="onecompartment(); closeSidebarOnMobile()">One Compartment</a>
+        <a class="btn btn-warning rounded" onclick="propofol(); closeSidebarOnMobile()">Propofol</a>
+        <a class="btn btn-warning rounded" onclick="precedex(); closeSidebarOnMobile()">Precedex</a>
+        <a class="btn btn-info rounded" onclick="fentanyl(); closeSidebarOnMobile()">Fentanyl</a>
+        <a class="btn btn-info rounded" onclick="hydromorphone(); closeSidebarOnMobile()">Hydromorphone</a>
+        <a class="btn btn-info rounded" onclick="remifentanil(); closeSidebarOnMobile()">Remifentanil</a>
+        <a class="btn btn-info rounded" onclick="alfentanil(); closeSidebarOnMobile()">Alfentanil</a>
+        <a class="btn btn-info rounded" onclick="methadone(); closeSidebarOnMobile()">Methadone</a>
+        <a class="btn btn-danger rounded" onclick="rocuronium(); closeSidebarOnMobile()">Rocuronium</a>
+        <a class="btn btn-danger rounded" onclick="vecuronium(); closeSidebarOnMobile()">Vecuronium</a>
+        <a class="btn btn-danger rounded" onclick="succinylcholine(); closeSidebarOnMobile()">Succinylcholine</a>
+        <a class="btn btn-warning rounded" onclick="midazolam(); closeSidebarOnMobile()">Midazolam</a>
+        <a class="btn btn-warning rounded" onclick="diazepam(); closeSidebarOnMobile()">Diazepam</a>
+    </div>
+
+    <section id="threecompartment" class="section mt-3 content-with-sidebar" style="margin:2%;">
+        <h2 class="text-center mb-4">Three Compartment Model</h2>
+
+        <!-- Parameter cards -->
+        <div class="container my-4">
+            <div class="row">
+                <!-- Volumes -->
+                <div class="col-md-3">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header" onclick="toggleCollapse(this)">Volumes</div>
+                        <div class="card-body">
+                            <div id="Vd1html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="Vd1" value="70">
+                            <div id="Vd2html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="Vd2" value="60">
+                            <div id="Vd3html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control" id="Vd3" value="60">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pharmacokinetic Parameters -->
+                <div class="col-md-3">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics</div>
+                        <div class="card-body">
+                            <div id="Clhtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="Cl" value="50">
+                            <div id="k12html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="k12" value="0.2">
+                            <div id="k13html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control" id="k13" value="0.2">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bolus and Infusion Parameters -->
+                <div class="col-md-3">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion</div>
+                        <div class="card-body">
+                            <div id="infusionhtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="infusion" value="0">
+                            <div id="bhtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="b" value="0.1">
+                            <div id="tbolushtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control" id="tbolus" value="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Parameters -->
+                <div class="col-md-3">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header" onclick="toggleCollapse(this)">Simulation</div>
+                        <div class="card-body">
+                            <div id="initialphtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="initialp" value="0">
+                            <div id="tfinalhtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control" id="tfinal" value="240">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results table -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header" onclick="toggleCollapse(this)">Results</div>
+                        <div class="card-body">
+                            <table class="table table-bordered table-sm text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Value</th>
+                                        <th>Units</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>[P]<sub>final</sub></td><td><div id='pfinalhtml'></div></td><td>mg/L</td></tr>
+                                    <tr><td>[P]<sub>ss</sub></td><td><div id='psshtml'></div></td><td>mg/L</td></tr>
+                                    <tr><td>&alpha;</td><td><div id='alphahtml'></div></td><td>min<sup>-1</sup></td></tr>
+                                    <tr><td>&beta;</td><td><div id='betahtml'></div></td><td>min<sup>-1</sup></td></tr>
+                                    <tr><td>&gamma;</td><td><div id='gammahtml'></div></td><td>min<sup>-1</sup></td></tr>
+                                    <tr><td>t<sub>1/2 term</sub></td><td><div id='termhalflifehtml'></div></td><td>min</td></tr>
+                                    <tr><td>t<sub>1/2 CSHL</sub></td><td><div id='contextsensitivehalflifehtml'></div></td><td>min</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plots -->
+        <div class="container my-4">
+            <div class="card shadow-sm">
+                <div class="card-header" onclick="toggleCollapse(this)">Plots</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-12 mb-4">
+                            <div id="myDiv1" style="height:500px;"></div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div id="myDiv2" style="height:400px;"></div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div id="myDiv3" style="height:400px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Default layout for light mode
+            const lightLayout = {
+                font: {family: 'Arial, sans-serif', size: 14, color: '#333'},
+                paper_bgcolor: '#ffffff',
+                plot_bgcolor: '#f8f9fa',
+                margin: {l: 60, r: 30, t: 50, b: 50},
+                xaxis: {
+                    gridcolor: '#e9ecef',
+                    zerolinecolor: '#dee2e6',
+                    linecolor: '#adb5bd',
+                    mirror: true
+                },
+                yaxis: {
+                    gridcolor: '#e9ecef',
+                    zerolinecolor: '#dee2e6',
+                    linecolor: '#adb5bd',
+                    mirror: true
+                },
+                title: { font: {family: 'Arial, sans-serif', size: 20, color: '#212529'} }
+            };
+
+            // Layout for dark mode
+            const darkLayout = {
+                font: {family: 'Arial, sans-serif', size: 14, color: '#e9ecef'},
+                paper_bgcolor: '#121212',
+                plot_bgcolor: '#1e1e1e',
+                margin: {l: 60, r: 30, t: 50, b: 50},
+                xaxis: {
+                    gridcolor: '#2a2a2a',
+                    zerolinecolor: '#444',
+                    linecolor: '#666',
+                    mirror: true
+                },
+                yaxis: {
+                    gridcolor: '#2a2a2a',
+                    zerolinecolor: '#444',
+                    linecolor: '#666',
+                    mirror: true
+                },
+                title: { font: {family: 'Arial, sans-serif', size: 20, color: '#e9ecef'} }
+            };
+
+            // Apply correct defaults based on body class
+            function applyPlotTheme() {
+                if (document.body.classList.contains('dark-mode')) {
+                    Plotly.defaults = { layout: darkLayout };
+                } else {
+                    Plotly.defaults = { layout: lightLayout };
+                }
+            }
+
+            // Initialize
+            applyPlotTheme();
+
+            // Optional: toggle dark mode button
+            function toggleDarkMode() {
+                document.body.classList.toggle('dark-mode');
+                applyPlotTheme();
+                // Redraw existing plots to apply new style
+                if (window.dfsolve) { dfsolve(); }
+            }
+
+            // Sidebar toggle for mobile
+            function toggleSidebar() {
+                document.getElementById('sidebar').classList.toggle('active');
+            }
+
+            function closeSidebarOnMobile() {
+                if (window.innerWidth <= 768) {
+                    document.getElementById('sidebar').classList.remove('active');
+                }
+            }
+
+            // Collapse card sections
+            function toggleCollapse(header) {
+                const body = header.nextElementSibling;
+                if (body.style.display === "none") {
+                    body.style.display = "block";
+                } else {
+                    body.style.display = "none";
+                }
+            }
+        </script>
+
+        <div class="text-center mb-4">
+            <button class="btn btn-secondary" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        </div>
+
+        <script src="assets/js/threecompartmentmodel.js"></script>
     </section>
-    <section>
-    <!-- Page Footer -->
+
     <footer class="page-footer">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-sm-6">
                     <p>Copyright <script>document.write(new Date().getFullYear())</script> &copy; Julian Landaw</p>
                 </div>
-                <!-- 
-                <div class="col-sm-6">
-                    <div class="socials">
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-facebook"></i></a>
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-google"></i></a>
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-github"></i></a>
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-twitter"></i></a>
-                    </div>
-                </div>
-                -->
             </div>
         </div>
-    </footer> 
-    <!-- End of page footer -->
-	
-	<!-- core  -->
+    </footer>
+
+    <!-- core  -->
     <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
     <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
-    <!-- bootstrap 3 affix -->
-	<script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
-
-    <!-- steller js -->
+    <script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
     <script src="assets/js/steller.js"></script>
 </body>
 </html>
