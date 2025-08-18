@@ -34,6 +34,10 @@ var tbolushtml = document.getElementById("tbolushtml");
 tbolushtml.innerHTML = "Bolus Time (min)";
 var tbolusnum = document.getElementById("tbolus");
 
+var tinfusionhtml = document.getElementById("tinfusionhtml");
+tinfusionhtml.innerHTML = "Infusion Time (min)";
+var tinfusionnum = document.getElementById("tinfusion");
+
 var initialphtml = document.getElementById("initialphtml");
 initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (mg/L)";
 var initialpnum = document.getElementById("initialp");
@@ -75,6 +79,7 @@ function dfsolve() {
     params.k13 = k13num.value/1.0;
     params.b = bnum.value/tbolusnum.value;
     params.tbolus = tbolusnum.value;
+    params.tinfusion = tinfusionnum.value;
     params.initialp = initialpnum.value;
     params.tfinal = tfinalnum.value;
     params.dt = 0.1;
@@ -95,7 +100,8 @@ function dfsolve() {
     let x03 = 0.0;
 
     let N = Math.ceil(params.tfinal/params.dt);
-    let Nhalf = Math.ceil(params.tbolus/params.dt);
+    let Nhalf1 = Math.ceil(params.tbolus/params.dt);
+    let Nhalf2 = Nhalf1 + Math.ceil(params.tinfusion/params.dt);
 
     let ts = new Array(N + 1);
     let xs1 = new Array(N + 1);
@@ -130,11 +136,14 @@ function dfsolve() {
     const a34 = matmdt.subset(math.index(2,3));
     
     while (counter < N) {
-        if (counter < Nhalf) {
+        if (counter < Nhalf1) {
             params.b = bnum.value/tbolusnum.value;    
         }
-        else {
+        else if (counter < Nhalf2) {
             params.b = infusionnum.value;
+        }
+        else {
+            params.b = 0;
         }
         xs1[counter + 1] = a11*xs1[counter] + a12*xs2[counter] + a13*xs3[counter] + params.b*a14;
         xs2[counter + 1] = a21*xs1[counter] + a22*xs2[counter] + a23*xs3[counter] + params.b*a24;
@@ -518,6 +527,10 @@ bnum.addEventListener("change", function() {
 });
 
 tbolusnum.addEventListener("change", function() {
+    dfsolve();    
+});
+
+tinfusionnum.addEventListener("change", function() {
     dfsolve();    
 });
 
