@@ -245,6 +245,25 @@
         .btn-blue.btn-active { outline: 3px solid black; }
         .btn-red.btn-active { outline: 3px solid black; }
         .btn-orange.btn-active { outline: 3px solid black; }
+
+        /* Parameter rows: label + input inline with aligned columns */
+        .param-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .param-row .label {
+            flex: 0 0 140px;   /* fixed width for all labels */
+            font-weight: bold;
+            margin-right: 10px;
+            text-align: left;  /* keep labels left-aligned */
+        }
+        
+        .param-row input {
+            flex: 1;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -302,54 +321,78 @@
         <div class="right-sidebar">
             <!-- Bolus and Infusion Parameters -->
             <div class="card shadow-sm mb-3">
-                <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
-                <div class="card-body">
-                    <div id="infusionhtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="infusion" value="0">
-                    <div id="bhtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="b" value="0.1">
-                    <div id="tbolushtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control" id="tbolus" value="0.1">
+              <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
+              <div class="card-body">
+                <div class="param-row">
+                  <div id="infusionhtml" class="label"></div>
+                  <input type="number" class="form-control" id="infusion" value="0">
                 </div>
+                <div class="param-row">
+                  <div id="bhtml" class="label"></div>
+                  <input type="number" class="form-control" id="b" value="0.1">
+                </div>
+                <div class="param-row">
+                  <div id="tbolushtml" class="label"></div>
+                  <input type="number" class="form-control" id="tbolus" value="0.1">
+                </div>
+              </div>
             </div>
         
             <!-- Simulation Parameters -->
             <div class="card shadow-sm mb-3">
-                <div class="card-header" onclick="toggleCollapse(this)">Simulation <span class="toggle-icon">▼</span></div>
-                <div class="card-body">
-                    <div id="initialphtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="initialp" value="0">
-                    <div id="tinfusionhtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control" id="tinfusion" value="240">
-                    <div id="tfinalhtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control" id="tfinal" value="240">
+              <div class="card-header" onclick="toggleCollapse(this)">Simulation <span class="toggle-icon">▼</span></div>
+              <div class="card-body">
+                <div class="param-row">
+                  <div id="initialphtml" class="label"></div>
+                  <input type="number" class="form-control" id="initialp" value="0">
                 </div>
+                <div class="param-row">
+                  <div id="tinfusionhtml" class="label"></div>
+                  <input type="number" class="form-control" id="tinfusion" value="240">
+                </div>
+                <div class="param-row">
+                  <div id="tfinalhtml" class="label"></div>
+                  <input type="number" class="form-control" id="tfinal" value="240">
+                </div>
+              </div>
             </div>
         
             <!-- Volumes -->
             <div class="card shadow-sm mb-3">
-                <div class="card-header" onclick="toggleCollapse(this)">Volumes <span class="toggle-icon">▲</span></div>
-                <div class="card-body hidden">
-                    <div id="Vd1html" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="Vd1" value="70">
-                    <div id="Vd2html" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="Vd2" value="60">
-                    <div id="Vd3html" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control" id="Vd3" value="60">
+              <div class="card-header" onclick="toggleCollapse(this)">Volumes <span class="toggle-icon">▲</span></div>
+              <div class="card-body hidden">
+                <div class="param-row">
+                  <div id="Vd1html" class="label"></div>
+                  <input type="number" class="form-control" id="Vd1" value="70">
                 </div>
+                <div class="param-row">
+                  <div id="Vd2html" class="label"></div>
+                  <input type="number" class="form-control" id="Vd2" value="60">
+                </div>
+                <div class="param-row">
+                  <div id="Vd3html" class="label"></div>
+                  <input type="number" class="form-control" id="Vd3" value="60">
+                </div>
+              </div>
             </div>
         
             <!-- Pharmacokinetics -->
             <div class="card shadow-sm mb-3">
-                <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics <span class="toggle-icon">▲</span></div>
-                <div class="card-body hidden">
-                    <div id="Clhtml" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="Cl" value="50">
-                    <div id="k12html" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control mb-3" id="k12" value="0.2">
-                    <div id="k13html" class="fw-bold mb-1"></div>
-                    <input type="number" class="form-control" id="k13" value="0.2">
+              <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics <span class="toggle-icon">▲</span></div>
+              <div class="card-body hidden">
+                <div class="param-row">
+                  <div id="Clhtml" class="label"></div>
+                  <input type="number" class="form-control" id="Cl" value="50">
                 </div>
+                <div class="param-row">
+                  <div id="k12html" class="label"></div>
+                  <input type="number" class="form-control" id="k12" value="0.2">
+                </div>
+                <div class="param-row">
+                  <div id="k13html" class="label"></div>
+                  <input type="number" class="form-control" id="k13" value="0.2">
+                </div>
+              </div>
             </div>
         </div>
 
