@@ -15,7 +15,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 200px;
         }
         .card {
             border-radius: 1rem;
@@ -59,12 +59,12 @@
             position: fixed;
             top: 80px;
             left: 0;
-            width: 220px;
-            height: 100vh;          /* full height */
+            width: 200px;
+            height: 80vh;          /* full height */
             overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
             padding: 10px;
-            border-right: 1px solid #dee2e6;
+            border-right: 5px solid #dee2e6;
             z-index: 1030;
         }
         .sidebar a {
@@ -104,14 +104,16 @@
         }
     
         /* On laptop-sized screens, sidebar pushes content instead of covering */
-        @media (max-width: 1200px) {
+        @media (max-width: 1200px) and (min-width: 769px) {
             .sidebar {
-                position: relative;
+                position: static;   /* let it flow in the page */
+                width: 220px;
                 height: auto;
-                max-height: 80vh;   /* scroll if taller */
+                max-height: 80vh;
+                float: left;        /* align to the left */
             }
             .content-with-sidebar {
-                margin-left: 240px;
+                margin-left: 240px; /* pushes content to the right */
             }
         }
     
