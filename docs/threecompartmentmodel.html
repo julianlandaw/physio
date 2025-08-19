@@ -25,8 +25,15 @@
             font-size: 1.1em;
             text-align: center;
             cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .card-body.collapse {
+        .card-header .toggle-icon {
+            font-size: 0.9em;
+        }
+        .card-body.collapse,
+        .card-body.hidden {
             display: none;
         }
         input.form-control {
@@ -95,6 +102,15 @@
                 z-index: 1050;
             }
         }
+        /* Ensure Plotly charts are fully responsive */
+        .plot-container {
+            width: 100%;
+            height: 100%;
+        }
+        .plot {
+            width: 100% !important;
+            height: 100% !important;
+        }
     </style>
 </head>
 <body>
@@ -144,40 +160,10 @@
         <!-- Parameter cards -->
         <div class="container my-4">
             <div class="row">
-                <!-- Volumes -->
-                <div class="col-md-3">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Volumes</div>
-                        <div class="card-body">
-                            <div id="Vd1html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="Vd1" value="70">
-                            <div id="Vd2html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="Vd2" value="60">
-                            <div id="Vd3html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="Vd3" value="60">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pharmacokinetic Parameters -->
-                <div class="col-md-3">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics</div>
-                        <div class="card-body">
-                            <div id="Clhtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="Cl" value="50">
-                            <div id="k12html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="k12" value="0.2">
-                            <div id="k13html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="k13" value="0.2">
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Bolus and Infusion Parameters -->
                 <div class="col-md-3">
                     <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion</div>
+                        <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
                         <div class="card-body">
                             <div id="infusionhtml" class="fw-bold mb-1"></div>
                             <input type="number" class="form-control mb-3" id="infusion" value="0">
@@ -192,7 +178,7 @@
                 <!-- Simulation Parameters -->
                 <div class="col-md-3">
                     <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Simulation</div>
+                        <div class="card-header" onclick="toggleCollapse(this)">Simulation <span class="toggle-icon">▼</span></div>
                         <div class="card-body">
                             <div id="initialphtml" class="fw-bold mb-1"></div>
                             <input type="number" class="form-control mb-3" id="initialp" value="0">
@@ -203,13 +189,65 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Results table -->
+                <!-- Volumes -->
+                <div class="col-md-3">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header" onclick="toggleCollapse(this)">Volumes <span class="toggle-icon">▲</span></div>
+                        <div class="card-body hidden">
+                            <div id="Vd1html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="Vd1" value="70">
+                            <div id="Vd2html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="Vd2" value="60">
+                            <div id="Vd3html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control" id="Vd3" value="60">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pharmacokinetic Parameters -->
+                <div class="col-md-3">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics <span class="toggle-icon">▲</span></div>
+                        <div class="card-body hidden">
+                            <div id="Clhtml" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="Cl" value="50">
+                            <div id="k12html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control mb-3" id="k12" value="0.2">
+                            <div id="k13html" class="fw-bold mb-1"></div>
+                            <input type="number" class="form-control" id="k13" value="0.2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plots -->
+        <div class="container my-4">
+            <div class="card shadow-sm">
+                <div class="card-header" onclick="toggleCollapse(this)">Plots <span class="toggle-icon">▼</span></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-12 mb-4">
+                            <div id="myDiv1" class="plot-container"></div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div id="myDiv2" class="plot-container"></div>
+                        </div>
+                        <div class="col-lg-6 mb-4">
+                            <div id="myDiv3" class="plot-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results table -->
+        <div class="container my-4">
             <div class="row">
                 <div class="col-md-12">
                     <div class="card shadow-sm">
-                        <div class="card-header" onclick="toggleCollapse(this)">Results</div>
+                        <div class="card-header" onclick="toggleCollapse(this)">Results <span class="toggle-icon">▼</span></div>
                         <div class="card-body">
                             <table class="table table-bordered table-sm text-center">
                                 <thead class="table-light">
@@ -229,26 +267,6 @@
                                     <tr><td>t<sub>1/2 CSHL</sub></td><td><div id='contextsensitivehalflifehtml'></div></td><td>min</td></tr>
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Plots -->
-        <div class="container my-4">
-            <div class="card shadow-sm">
-                <div class="card-header" onclick="toggleCollapse(this)">Plots</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-lg-12 mb-4">
-                            <div id="myDiv1" style="height:500px;"></div>
-                        </div>
-                        <div class="col-lg-6 mb-4">
-                            <div id="myDiv2" style="height:400px;"></div>
-                        </div>
-                        <div class="col-lg-6 mb-4">
-                            <div id="myDiv3" style="height:400px;"></div>
                         </div>
                     </div>
                 </div>
@@ -310,6 +328,13 @@
             // Initialize
             applyPlotTheme();
 
+            // Make plots resize automatically when window changes
+            window.addEventListener('resize', () => {
+                Plotly.Plots.resize(document.getElementById('myDiv1'));
+                Plotly.Plots.resize(document.getElementById('myDiv2'));
+                Plotly.Plots.resize(document.getElementById('myDiv3'));
+            });
+
             // Optional: toggle dark mode button
             function toggleDarkMode() {
                 document.body.classList.toggle('dark-mode');
@@ -329,13 +354,16 @@
                 }
             }
 
-            // Collapse card sections
+            // Collapse card sections with icon toggle
             function toggleCollapse(header) {
                 const body = header.nextElementSibling;
+                const icon = header.querySelector('.toggle-icon');
                 if (body.style.display === "none") {
                     body.style.display = "block";
+                    if (icon) icon.textContent = "▼";
                 } else {
                     body.style.display = "none";
+                    if (icon) icon.textContent = "▲";
                 }
             }
         </script>
