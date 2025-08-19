@@ -13,9 +13,12 @@
     <script src="assets/js/plotly.js"></script>
 
     <style>
+        /* Prevent content from hiding behind the fixed navbar */
         body {
             font-family: Arial, sans-serif;
-            margin: 200px;
+            margin: 0;
+            padding: 0;
+            padding-top: 100px; /* height of navbar + breathing room */
         }
         .card {
             border-radius: 1rem;
@@ -101,6 +104,47 @@
         }
         .content-with-sidebar {
             margin-left: 240px;
+        }
+
+        /* Right sidebar styles */
+        .right-sidebar {
+            position: fixed;
+            top: 80px;
+            right: 0;
+            width: 280px;
+            height: 80vh;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-left: 5px solid #dee2e6;
+            z-index: 1030;
+        }
+        body.dark-mode .right-sidebar {
+            background-color: #1e1e1e;
+            border-left: 1px solid #444;
+        }
+        /* Main content adapts dynamically between sidebars */
+        .content-with-sidebars {
+            margin-left: 240px;   /* left sidebar width */
+            margin-right: 300px;  /* right sidebar width */
+            padding: 20px;
+            width: auto;          /* expand to remaining space */
+        }
+        
+        /* Medium screens: narrower sidebars */
+        @media (max-width: 1200px) {
+            .content-with-sidebars {
+                margin-left: 220px;
+                margin-right: 280px;
+            }
+        }
+        
+        /* Small screens: sidebars collapse, content takes full width */
+        @media (max-width: 768px) {
+            .content-with-sidebars {
+                margin-left: 0;
+                margin-right: 0;
+            }
         }
     
         /* On laptop-sized screens, sidebar pushes content instead of covering */
@@ -250,70 +294,61 @@
         <a class="btn btn-black rounded" onclick="onecompartment(); closeSidebarOnMobile()">One Compartment</a>
     </div>
 
-    <section id="threecompartment" class="section mt-3 content-with-sidebar" style="margin:2%;">
+    <section id="threecompartment" class="section mt-3 content-with-sidebars">
         <h2 class="text-center mb-4">Three Compartment Model</h2>
 
         <!-- Parameter cards -->
-        <div class="container my-4">
-            <div class="row">
-                <!-- Bolus and Infusion Parameters -->
-                <div class="col-md-3">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
-                        <div class="card-body">
-                            <div id="infusionhtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="infusion" value="0">
-                            <div id="bhtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="b" value="0.1">
-                            <div id="tbolushtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="tbolus" value="0.1">
-                        </div>
-                    </div>
+        <!-- Right Sidebar with parameter cards -->
+        <div class="right-sidebar">
+            <!-- Bolus and Infusion Parameters -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
+                <div class="card-body">
+                    <div id="infusionhtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="infusion" value="0">
+                    <div id="bhtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="b" value="0.1">
+                    <div id="tbolushtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control" id="tbolus" value="0.1">
                 </div>
-
-                <!-- Simulation Parameters -->
-                <div class="col-md-3">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Simulation <span class="toggle-icon">▼</span></div>
-                        <div class="card-body">
-                            <div id="initialphtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="initialp" value="0">
-                            <div id="tinfusionhtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="tinfusion" value="240">
-                            <div id="tfinalhtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="tfinal" value="240">
-                        </div>
-                    </div>
+            </div>
+        
+            <!-- Simulation Parameters -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header" onclick="toggleCollapse(this)">Simulation <span class="toggle-icon">▼</span></div>
+                <div class="card-body">
+                    <div id="initialphtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="initialp" value="0">
+                    <div id="tinfusionhtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control" id="tinfusion" value="240">
+                    <div id="tfinalhtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control" id="tfinal" value="240">
                 </div>
-
-                <!-- Volumes -->
-                <div class="col-md-3">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Volumes <span class="toggle-icon">▲</span></div>
-                        <div class="card-body hidden">
-                            <div id="Vd1html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="Vd1" value="70">
-                            <div id="Vd2html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="Vd2" value="60">
-                            <div id="Vd3html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="Vd3" value="60">
-                        </div>
-                    </div>
+            </div>
+        
+            <!-- Volumes -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header" onclick="toggleCollapse(this)">Volumes <span class="toggle-icon">▲</span></div>
+                <div class="card-body hidden">
+                    <div id="Vd1html" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="Vd1" value="70">
+                    <div id="Vd2html" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="Vd2" value="60">
+                    <div id="Vd3html" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control" id="Vd3" value="60">
                 </div>
-
-                <!-- Pharmacokinetic Parameters -->
-                <div class="col-md-3">
-                    <div class="card shadow-sm mb-3">
-                        <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics <span class="toggle-icon">▲</span></div>
-                        <div class="card-body hidden">
-                            <div id="Clhtml" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="Cl" value="50">
-                            <div id="k12html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control mb-3" id="k12" value="0.2">
-                            <div id="k13html" class="fw-bold mb-1"></div>
-                            <input type="number" class="form-control" id="k13" value="0.2">
-                        </div>
-                    </div>
+            </div>
+        
+            <!-- Pharmacokinetics -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header" onclick="toggleCollapse(this)">Pharmacokinetics <span class="toggle-icon">▲</span></div>
+                <div class="card-body hidden">
+                    <div id="Clhtml" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="Cl" value="50">
+                    <div id="k12html" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control mb-3" id="k12" value="0.2">
+                    <div id="k13html" class="fw-bold mb-1"></div>
+                    <input type="number" class="form-control" id="k13" value="0.2">
                 </div>
             </div>
         </div>
