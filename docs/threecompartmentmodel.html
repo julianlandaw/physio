@@ -111,7 +111,7 @@
             position: fixed;
             top: 80px;
             right: 0;
-            width: 280px;
+            width: 320px;
             height: 80vh;
             overflow-y: auto;
             background-color: #f8f9fa;
@@ -263,6 +263,12 @@
         .param-row input {
             flex: 1;
             text-align: right;
+        }
+        /* Ensure parameter input boxes can always show 4 digits comfortably */
+        .param-row input {
+            flex: 1;
+            text-align: right;
+            min-width: 100px;   /* enough space for ~4 digits + padding */
         }
     </style>
 </head>
