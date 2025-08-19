@@ -59,8 +59,8 @@
             position: fixed;
             top: 80px;
             left: 0;
-            width: 200px;
-            height: 80vh;          /* full height */
+            width: 220px;
+            height: 80vh;          /* 80% height */
             overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
             padding: 10px;
@@ -70,7 +70,7 @@
         .sidebar a {
             display: block;
             margin-bottom: 8px;
-            text-align: left;
+            text-align: center;
             width: 100%;
             transition: background-color 0.3s ease, filter 0.3s ease, transform 0.2s ease;
         }
@@ -162,6 +162,12 @@
         }
     
         /* Custom button colors */
+        .btn-black {
+            background-color: black !important;
+            color: white !important;
+            border: none;
+        }
+        
         .btn-yellow {
             background-color: #f1c40f !important;
             color: white !important;
@@ -184,6 +190,7 @@
         }
     
         /* Hover states */
+        .btn-black:hover { background-color: black !important; }
         .btn-yellow:hover { background-color: #d4ac0d !important; }
         .btn-blue:hover { background-color: #2e86c1 !important; }
         .btn-red:hover { background-color: #c0392b !important; }
@@ -227,8 +234,6 @@
             <div class="legend-item"><div class="legend-color" style="background:#e74c3c;"></div> Paralytics</div>
             <div class="legend-item"><div class="legend-color" style="background:orange;"></div> Benzodiazepines</div>
         </div>
-        <a class="btn btn-light rounded" onclick="reset(); closeSidebarOnMobile()">Reset</a>
-        <a class="btn btn-light rounded" onclick="onecompartment(); closeSidebarOnMobile()">One Compartment</a>
         <a class="btn btn-yellow rounded" onclick="setActive(this); propofol(); closeSidebarOnMobile()">Propofol</a>
         <a class="btn btn-yellow rounded" onclick="setActive(this); precedex(); closeSidebarOnMobile()">Precedex</a>
         <a class="btn btn-blue rounded" onclick="setActive(this); fentanyl(); closeSidebarOnMobile()">Fentanyl</a>
@@ -241,6 +246,8 @@
         <a class="btn btn-red rounded" onclick="setActive(this); succinylcholine(); closeSidebarOnMobile()">Succinylcholine</a>
         <a class="btn btn-orange rounded" onclick="setActive(this); midazolam(); closeSidebarOnMobile()">Midazolam</a>
         <a class="btn btn-orange rounded" onclick="setActive(this); diazepam(); closeSidebarOnMobile()">Diazepam</a>
+        <a class="btn btn-black rounded" onclick="setActive(this); reset(); closeSidebarOnMobile()">Reset</a>
+        <a class="btn btn-black rounded" onclick="onecompartment(); closeSidebarOnMobile()">One Compartment</a>
     </div>
 
     <section id="threecompartment" class="section mt-3 content-with-sidebar" style="margin:2%;">
