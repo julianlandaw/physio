@@ -53,14 +53,15 @@
         body.dark-mode table {
             color: #e9ecef;
         }
+    
         /* Sidebar styles */
         .sidebar {
             position: fixed;
             top: 80px;
             left: 0;
             width: 220px;
-            height: 100%;
-            overflow-y: auto;
+            height: 100vh;          /* full height */
+            overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
             padding: 10px;
             border-right: 1px solid #dee2e6;
@@ -101,6 +102,19 @@
         .content-with-sidebar {
             margin-left: 240px;
         }
+    
+        /* On laptop-sized screens, sidebar pushes content instead of covering */
+        @media (max-width: 1200px) {
+            .sidebar {
+                position: relative;
+                height: auto;
+                max-height: 80vh;   /* scroll if taller */
+            }
+            .content-with-sidebar {
+                margin-left: 240px;
+            }
+        }
+    
         /* Collapsible sidebar on small screens */
         @media (max-width: 768px) {
             .sidebar {
@@ -124,6 +138,7 @@
                 z-index: 1050;
             }
         }
+    
         /* Ensure Plotly charts are fully responsive */
         .plot-container {
             width: 100%;
@@ -131,6 +146,7 @@
         .plot {
             width: 100% !important;
         }
+    
         /* Adaptive plot heights */
         #myDiv1 { height: 500px; }
         #myDiv2, #myDiv3 { height: 400px; }
@@ -142,6 +158,7 @@
             #myDiv1 { height: 300px; }
             #myDiv2, #myDiv3 { height: 250px; }
         }
+    
         /* Custom button colors */
         .btn-yellow {
             background-color: #f1c40f !important;
@@ -163,24 +180,18 @@
             color: white !important;
             border: none;
         }
+    
         /* Hover states */
         .btn-yellow:hover { background-color: #d4ac0d !important; }
         .btn-blue:hover { background-color: #2e86c1 !important; }
         .btn-red:hover { background-color: #c0392b !important; }
         .btn-orange:hover { background-color: #e67e22 !important; }
+    
         /* Active state matching class */
-        .btn-yellow.btn-active {
-            outline: 3px solid #f1c40f;
-        }
-        .btn-blue.btn-active {
-            outline: 3px solid #3498db;
-        }
-        .btn-red.btn-active {
-            outline: 3px solid #e74c3c;
-        }
-        .btn-orange.btn-active {
-            outline: 3px solid orange;
-        }
+        .btn-yellow.btn-active { outline: 3px solid #f1c40f; }
+        .btn-blue.btn-active { outline: 3px solid #3498db; }
+        .btn-red.btn-active { outline: 3px solid #e74c3c; }
+        .btn-orange.btn-active { outline: 3px solid orange; }
     </style>
 </head>
 <body>
