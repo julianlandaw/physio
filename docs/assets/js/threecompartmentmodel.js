@@ -95,7 +95,8 @@ function dfsolve() {
     const k32 = 0;
 
     let t0 = 0.0;
-    let x01 = 1.0*params.initialp/params.Vd1;
+    //let x01 = 1.0*params.initialp/params.Vd1;
+    let x01 = 1.0*params.initialp*params.Vd1;
     let x02 = 0.0;
     let x03 = 0.0;
 
@@ -309,63 +310,100 @@ function dfsolve() {
 function addEventMarkers(layout) {
     const bolusTime = parseFloat(document.getElementById('tbolus').value);
     const infusionStop = parseFloat(document.getElementById('tinfusion').value) + bolusTime
+    const finalTime = parseFloat(document.getElementById('tfinal').value);
         
     layout.shapes = [];
 
     // Bolus marker
-    layout.shapes.push({
-        type: "line",
-        x0: bolusTime,
-        x1: bolusTime,
-        y0: 0,
-        y1: 1,
-        xref: "x",
-        yref: "paper",
-        line: {
-            color: "red",
-            width: 2,
-            dash: "dot"
-        }
-    });
+    if (bolusTime > 0 && bolusTime < finalTime) {
+        layout.shapes.push({
+            type: "line",
+            x0: bolusTime,
+            x1: bolusTime,
+            y0: 0,
+            y1: 1,
+            xref: "x",
+            yref: "paper",
+            line: {
+                color: "red",
+                width: 2,
+                dash: "dot"
+            }
+        });
+    }
 
     // Infusion stop marker
-    layout.shapes.push({
-        type: "line",
-        x0: infusionStop,
-        x1: infusionStop,
-        y0: 0,
-        y1: 1,
-        xref: "x",
-        yref: "paper",
-        line: {
-            color: "blue",
-            width: 2,
-            dash: "dot"
-        }
-    });
+    if (infusionStop < finalTime) {
+        layout.shapes.push({
+            type: "line",
+            x0: infusionStop,
+            x1: infusionStop,
+            y0: 0,
+            y1: 1,
+            xref: "x",
+            yref: "paper",
+            line: {
+                color: "blue",
+                width: 2,
+                dash: "dot"
+            }
+        });
+    }
 
-    layout.annotations = [
-      {
-        x: bolusTime,
-        y: 1,
-        xref: "x",
-        yref: "paper",
-        text: "Bolus",
-        showarrow: false,
-        yanchor: "bottom",
-        font: {color: "red"}
-      },
-      {
-        x: infusionStop,
-        y: 1,
-        xref: "x",
-        yref: "paper",
-        text: "Infusion End",
-        showarrow: false,
-        yanchor: "bottom",
-        font: {color: "blue"}
-      }
-    ];
+    if (bolusTime > 0 && bolusTime < finalTime && infusionStop < finalTime) {    
+        layout.annotations = [
+          {
+            x: bolusTime,
+            y: 1,
+            xref: "x",
+            yref: "paper",
+            text: "Bolus",
+            showarrow: false,
+            yanchor: "bottom",
+            font: {color: "red"}
+          },
+          {
+            x: infusionStop,
+            y: 1,
+            xref: "x",
+            yref: "paper",
+            text: "Infusion End",
+            showarrow: false,
+            yanchor: "bottom",
+            font: {color: "blue"}
+          }
+        ];
+    }
+
+    else if (bolusTime > 0 && bolusTime < finalTime) {
+        layout.annotations = [
+          {
+            x: bolusTime,
+            y: 1,
+            xref: "x",
+            yref: "paper",
+            text: "Bolus",
+            showarrow: false,
+            yanchor: "bottom",
+            font: {color: "red"}
+          }
+        ];
+    }
+
+    else if (infusionStop < finalTime) {
+        layout.annotations = [
+          {
+            x: infusionStop,
+            y: 1,
+            xref: "x",
+            yref: "paper",
+            text: "Infusion End",
+            showarrow: false,
+            yanchor: "bottom",
+            font: {color: "blue"}
+          }
+        ];
+    }
 
     return layout;
 }
