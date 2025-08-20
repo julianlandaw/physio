@@ -63,7 +63,7 @@
             top: 80px;
             left: 0;
             width: 300px;
-            height: 80vh;          /* 80% height */
+            height: 75vh;          /* 80% height */
             overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
             padding: 10px;
@@ -112,7 +112,7 @@
             top: 80px;
             right: 0;
             width: 300px;
-            height: 80vh;
+            height: 75vh;
             overflow-y: auto;
             background-color: #f8f9fa;
             padding: 10px;
@@ -178,7 +178,7 @@
                 position: static;   /* let it flow in the page */
                 width: 300px;
                 height: auto;
-                max-height: 80vh;
+                max-height: 75vh;
                 float: left;        /* align to the left */
             }
             .content-with-sidebar {
@@ -294,6 +294,20 @@
             flex: 1;
             text-align: right;
             min-width: 100px;   /* enough space for ~4 digits + padding */
+        }
+
+        .fixed-btn {
+            position: fixed;
+            bottom: 20px;
+            z-index: 2000; /* stays above most elements */
+        }
+
+        #darkModeBtn {
+            left: 20px;  /* bottom-left */
+        }
+        
+        #scaleToggleBtn {
+            right: 20px; /* bottom-right */
         }
     </style>
 </head>
@@ -430,9 +444,10 @@
             </div>
         </div>
 
-        <div class="text-center mb-3">
-          <button id="scaleToggleBtn" class="btn btn-secondary" onclick="toggleScale()">Switch to Log Scale</button>
-        </div>
+        <!-- Fixed bottom-right scale toggle -->
+        <button id="scaleToggleBtn" class="btn btn-secondary fixed-btn" onclick="toggleScale()">
+            Switch to Log Scale
+        </button>
 
         <!-- Plots -->
         <div class="container my-4">
@@ -610,9 +625,10 @@
             }
         </script>
 
-        <div class="text-center mb-4">
-            <button class="btn btn-secondary" onclick="toggleDarkMode()">Toggle Dark Mode</button>
-        </div>
+        <!-- Fixed bottom-left dark mode toggle -->
+        <button id="darkModeBtn" class="btn btn-secondary fixed-btn" onclick="toggleDarkMode()">
+            Toggle Dark Mode
+        </button>
 
         <script src="assets/js/threecompartmentmodel.js"></script>
     </section>
