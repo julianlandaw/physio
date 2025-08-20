@@ -62,7 +62,7 @@
             position: fixed;
             top: 80px;
             left: 0;
-            width: 220px;
+            width: 300px;
             height: 80vh;          /* 80% height */
             overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
@@ -111,7 +111,7 @@
             position: fixed;
             top: 80px;
             right: 0;
-            width: 320px;
+            width: 300px;
             height: 80vh;
             overflow-y: auto;
             background-color: #f8f9fa;
@@ -150,7 +150,7 @@
         }
         /* Main content adapts dynamically between sidebars */
         .content-with-sidebars {
-            margin-left: 240px;   /* left sidebar width */
+            margin-left: 300px;   /* left sidebar width */
             margin-right: 300px;  /* right sidebar width */
             padding: 20px;
             width: auto;          /* expand to remaining space */
@@ -430,6 +430,10 @@
             </div>
         </div>
 
+        <div class="text-center mb-3">
+          <button id="scaleToggleBtn" class="btn btn-secondary" onclick="toggleScale()">Switch to Log Scale</button>
+        </div>
+
         <!-- Plots -->
         <div class="container my-4">
             <div class="card shadow-sm">
@@ -554,6 +558,20 @@
                 applyPlotTheme();
                 // Redraw existing plots to apply new style
                 if (window.dfsolve) { dfsolve(); }
+            }
+
+            let isLogScale = false; // default is linear
+
+            function toggleScale() {
+                isLogScale = !isLogScale;
+                const newType = isLogScale ? 'log' : 'linear';
+                const btn = document.querySelector('#scaleToggleBtn');
+                
+                Plotly.relayout('myDiv1', { 'yaxis.type': newType });
+                Plotly.relayout('myDiv2', { 'yaxis.type': newType });
+                Plotly.relayout('myDiv3', { 'yaxis.type': newType });
+            
+                btn.textContent = isLogScale ? "Switch to Linear Scale" : "Switch to Log Scale";
             }
 
             // Sidebar toggle for mobile

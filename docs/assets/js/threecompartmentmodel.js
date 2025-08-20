@@ -171,8 +171,6 @@ function dfsolve() {
                 family: 'Courier New, monospace',
                 size: 24
             },
-            //xref: 'paper',
-            //x: 0.05,
         },
         xaxis: {
             title: {
@@ -193,7 +191,7 @@ function dfsolve() {
                     color: '#7f7f7f'
                 }
             },
-            type: 'log',
+            //type: 'log',
         }
     };
 
@@ -204,8 +202,6 @@ function dfsolve() {
                 family: 'Courier New, monospace',
                 size: 24
             },
-            //xref: 'paper',
-            //x: 0.05,
         },
         xaxis: {
             title: {
@@ -226,7 +222,7 @@ function dfsolve() {
                     color: '#7f7f7f'
                 }
             },
-            type: 'log',
+            //type: 'log',
         }
     };
 
@@ -237,8 +233,6 @@ function dfsolve() {
                 family: 'Courier New, monospace',
                 size: 24
             },
-            //xref: 'paper',
-            //x: 0.05,
         },
         xaxis: {
             title: {
@@ -259,7 +253,7 @@ function dfsolve() {
                     color: '#7f7f7f'
                 }
             },
-            type: 'log',
+            //type: 'log',
         }
     };
 
@@ -308,8 +302,6 @@ function dfsolve() {
     }
     contextsensitivehalflifehtml.innerHTML = roundToSignificantFigures(cshl, 3);
 }
-
-//dfsolve();
 
 function onecompartment() {
     k12num.value = 0;
