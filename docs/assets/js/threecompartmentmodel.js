@@ -23,7 +23,7 @@ k13html.innerHTML = "<i>k</i><sub>13</sub> (min<sup>-1</sup>)";
 var k13num = document.getElementById("k13");
 
 var bhtml = document.getElementById("bhtml");
-bhtml.innerHTML = "Bolus Amount (mg/kg)";
+bhtml.innerHTML = "Bolus (mg/kg)";
 var bnum = document.getElementById("b");
 
 var infusionhtml = document.getElementById("infusionhtml");
