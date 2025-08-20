@@ -103,7 +103,7 @@
             border-right: 1px solid #444;
         }
         .content-with-sidebar {
-            margin-left: 240px;
+            margin-left: 300px;
         }
 
         /* Right sidebar styles */
@@ -159,8 +159,8 @@
         /* Medium screens: narrower sidebars */
         @media (max-width: 1200px) {
             .content-with-sidebars {
-                margin-left: 220px;
-                margin-right: 280px;
+                margin-left: 300px;
+                margin-right: 300px;
             }
         }
         
@@ -176,13 +176,13 @@
         @media (max-width: 1200px) and (min-width: 769px) {
             .sidebar {
                 position: static;   /* let it flow in the page */
-                width: 220px;
+                width: 300px;
                 height: auto;
                 max-height: 80vh;
                 float: left;        /* align to the left */
             }
             .content-with-sidebar {
-                margin-left: 240px; /* pushes content to the right */
+                margin-left: 300px; /* pushes content to the right */
             }
         }
     
@@ -191,7 +191,7 @@
             .sidebar {
                 position: fixed;
                 top: 0;
-                left: -240px;
+                left: -300px;
                 transition: left 0.3s ease;
                 height: 100%;
                 z-index: 1040;
@@ -219,8 +219,8 @@
         }
     
         /* Adaptive plot heights */
-        #myDiv1 { height: 500px; }
-        #myDiv2, #myDiv3 { height: 400px; }
+        #myDiv1 { height: 400px; }
+        #myDiv2, #myDiv3 { height: 300px; }
         @media (max-width: 992px) {
             #myDiv1 { height: 400px; }
             #myDiv2, #myDiv3 { height: 300px; }
