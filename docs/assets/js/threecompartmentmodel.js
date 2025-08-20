@@ -257,8 +257,11 @@ function dfsolve() {
         }
     };
 
+    layout1 = addEventMarkers(layout1);
     Plotly.newPlot('myDiv1', [trace_u1], layout1);
+    layout2 = addEventMarkers(layout2);
     Plotly.newPlot('myDiv2', [trace_u2], layout2);
+    layout3 = addEventMarkers(layout3);
     Plotly.newPlot('myDiv3', [trace_u3], layout3);
 
     const eigs = math.eigs(mat);
@@ -303,6 +306,70 @@ function dfsolve() {
     contextsensitivehalflifehtml.innerHTML = roundToSignificantFigures(cshl, 3);
 }
 
+function addEventMarkers(layout) {
+    const bolusTime = parseFloat(document.getElementById('tbolus').value);
+    const infusionStop = parseFloat(document.getElementById('tinfusion').value) + bolusTime
+        
+    layout.shapes = [];
+
+    // Bolus marker
+    layout.shapes.push({
+        type: "line",
+        x0: bolusTime,
+        x1: bolusTime,
+        y0: 0,
+        y1: 1,
+        xref: "x",
+        yref: "paper",
+        line: {
+            color: "red",
+            width: 2,
+            dash: "dot"
+        }
+    });
+
+    // Infusion stop marker
+    layout.shapes.push({
+        type: "line",
+        x0: infusionStop,
+        x1: infusionStop,
+        y0: 0,
+        y1: 1,
+        xref: "x",
+        yref: "paper",
+        line: {
+            color: "blue",
+            width: 2,
+            dash: "dot"
+        }
+    });
+
+    layout.annotations = [
+      {
+        x: bolusTime,
+        y: 1,
+        xref: "x",
+        yref: "paper",
+        text: "Bolus",
+        showarrow: false,
+        yanchor: "bottom",
+        font: {color: "red"}
+      },
+      {
+        x: infusionStop,
+        y: 1,
+        xref: "x",
+        yref: "paper",
+        text: "Infusion End",
+        showarrow: false,
+        yanchor: "bottom",
+        font: {color: "blue"}
+      }
+    ];
+
+    return layout;
+}
+
 function onecompartment() {
     k12num.value = 0;
     k13num.value = 0;
@@ -316,10 +383,11 @@ function alfentanil() {
     Clnum.value = 195/70;
     k12num.value = 1266/2190;
     k13num.value = 224/2190;
-    bnum.value = 0.1;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -331,10 +399,11 @@ function fentanyl() {
     Clnum.value = 8.38;
     k12num.value = 0.0474/0.105;
     k13num.value = 0.0199/0.105;
-    bnum.value = 0.1;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -346,10 +415,11 @@ function hydromorphone() {
     Clnum.value = 1.66/70*1000;
     k12num.value = 0.296;
     k13num.value = 0.179;
-    bnum.value = 0.1;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -360,10 +430,11 @@ function propofol() {
     Clnum.value = 1.79/70*1000;
     k12num.value = 1.75/6.28;
     k13num.value = 1.11/6.28;
-    bnum.value = 2;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -376,8 +447,9 @@ function precedex() {
     k13num.value = 0.62/25.2;
     bnum.value = 0.4;
     tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0.3/60;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -389,10 +461,11 @@ function remifentanil() {
     Clnum.value = 2.92/70*1000;
     k12num.value = 0.2569;
     k13num.value = 0.0128;
-    bnum.value = 0.1;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -404,10 +477,11 @@ function methadone() {
     Clnum.value = 106/70;
     k12num.value = 0.145;
     k13num.value = 0.08;
-    bnum.value = 0.1;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 240;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -419,10 +493,11 @@ function vecuronium() {
     Clnum.value = 5.2;
     k12num.value = 0.0615;
     k13num.value = 0;
-    bnum.value = 500;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 300;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -433,10 +508,11 @@ function rocuronium() {
     Clnum.value = 9.78;
     k12num.value = 0.1005;
     k13num.value = 0;
-    bnum.value = 500;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 300;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -447,10 +523,11 @@ function succinylcholine() {
     Clnum.value = 34.1;
     k12num.value = 3.02;
     k13num.value = 0;
-    bnum.value = 500;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 300;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -462,10 +539,11 @@ function midazolam() {
     Clnum.value = 11;
     k12num.value = 0.052;
     k13num.value = 0;
-    bnum.value = 500;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 300;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
@@ -477,10 +555,11 @@ function diazepam() {
     Clnum.value = 0.5;
     k12num.value = 0.021;
     k13num.value = 0;
-    bnum.value = 500;
-    tbolusnum.value = 0.1;
+    bnum.value = 1;
+    tbolusnum.value = 15;
+    tinfusionnum.value = 225;
     infusionnum.value = 0;
-    tfinalnum.value = 300;
+    tfinalnum.value = 400;
     dfsolve();
 }
 
