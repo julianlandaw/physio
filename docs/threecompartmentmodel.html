@@ -119,6 +119,31 @@
             border-left: 5px solid #dee2e6;
             z-index: 1030;
         }
+
+        /* Collapsible right sidebar on small screens */
+        @media (max-width: 768px) {
+            .right-sidebar {
+                position: fixed;
+                top: 0;
+                right: -300px;           /* hide off-screen */
+                transition: right 0.3s ease;
+                height: 100%;
+                z-index: 1040;
+            }
+            .right-sidebar.active {
+                right: 0;                /* slide in */
+            }
+            .right-sidebar-toggle-btn {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 1050;
+            }
+            .content-with-sidebars {
+                margin-right: 0;         /* no space on mobile */
+            }
+        }
+        
         body.dark-mode .right-sidebar {
             background-color: #1e1e1e;
             border-left: 1px solid #444;
@@ -294,6 +319,9 @@
 
     <!-- Sidebar toggle button (mobile) -->
     <button class="btn btn-primary sidebar-toggle-btn d-md-none" onclick="toggleSidebar()">☰ Drugs</button>
+
+    <!-- Right Sidebar toggle button (mobile) -->
+    <button class="btn btn-primary right-sidebar-toggle-btn d-md-none" onclick="toggleRightSidebar()">☰ Parameters</button>
 
     <!-- Sidebar with drug buttons -->
     <div class="sidebar" id="sidebar">
