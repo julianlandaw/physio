@@ -352,7 +352,7 @@
 
         <!-- Parameter cards -->
         <!-- Right Sidebar with parameter cards -->
-        <div class="right-sidebar">
+        <div class="right-sidebar" id="right-sidebar">
             <!-- Bolus and Infusion Parameters -->
             <div class="card shadow-sm mb-3">
               <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
@@ -559,6 +559,17 @@
             // Sidebar toggle for mobile
             function toggleSidebar() {
                 document.getElementById('sidebar').classList.toggle('active');
+            }
+
+            // Toggle right sidebar for mobile
+            function toggleRightSidebar() {
+                document.getElementById('right-sidebar').classList.toggle('active');
+            }
+            
+            function closeRightSidebarOnMobile() {
+                if (window.innerWidth <= 768) {
+                    document.getElementById('right-sidebar').classList.remove('active');
+                }
             }
 
             function closeSidebarOnMobile() {
