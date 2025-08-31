@@ -1,0 +1,38 @@
+
+% !TeX program = pdflatex
+\documentclass[10pt,landscape]{article}
+\usepackage[margin=0.6in]{geometry}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\sisetup{detect-all}
+\usepackage{multicol}
+\usepackage{array}
+\begin{document}
+\centering
+{\Large\textbf{Quick Reference: Context-sensitive Metrics (Adults, 70 kg reference)}}\\[4pt]
+\footnotesize Values are model-derived for comparative illustration and weight-normalized.\\[6pt]
+\scriptsize
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Drug & ke$_0$ (min$^{-1}$) & CSHT-50 (10m) & CSHT-50 (1h) & CSHT-50 (4h) & CSHT-50 (8h) & Effect 80\% (1h) & Effect 50\% (1h) & Effect 25\% (1h) \\
+\midrule
+ Propofol & 0.26 & 45 & 83.7 & 90.2 & 91 & 29.8 & 94.4 & 190 \\
+ Dexmedetomidine & 0.28 & 64.2 & 179 & 201 & 204 & 54.6 & 198 & 411 \\
+ Fentanyl & 0.11 & 1.62 & 134 & 191 & 200 & 30.8 & 178 & 400 \\
+ Hydromorphone & 0.07 & 2.2 & 193 & 293 & 311 & 71.5 & 302 & 645 \\
+ Remifentanil & 0.59 & 7.92 & 20.7 & 22.2 & 22.2 & 4.9 & 22.9 & 50.7 \\
+ Alfentanil & 0.46 & 2.9 & 238 & 318 & 333 & 16.1 & 254 & 611 \\
+ Methadone & 0.02 & 3.84 & 140 & 1.72e+03 & 2.09e+03 & 1.37e+03 & 3.09e+03 & 5.62e+03 \\
+ Rocuronium & 0.14 & 2.27 & 258 & 344 & 359 & 58.3 & 318 & 702 \\
+ Vecuronium & 0.1 & 2.18 & 281 & 418 & 443 & 60.2 & 384 & 864 \\
+ Succinylcholine & 1.39 & 27.1 & 61.3 & 67.1 & 67.6 & 13.6 & 62.9 & 136 \\
+ Midazolam & 0.07 & 7.19 & 171 & 207 & 213 & 97.4 & 251 & 477 \\
+ Diazepam & 0.02 & 4.72 & 233 & 5.7e+03 & 6.94e+03 & 2.91e+03 & 8.57e+03 & 1.69e+04 \\
+
+\bottomrule
+\end{tabular}
+\vspace{6pt}
+
+\normalsize\textbf{Models used:} Propofol (Schnider), Remifentanil (Minto), Fentanyl/Alfentanil (Shafer/Scott), Dexmedetomidine (Ebert/Talke), Hydromorphone (Rose/Lötsch), Methadone (Ferrari/Eap), NMBAs (Miller's + primary).\\
+\scriptsize These values are illustrative unless exact coefficients are extracted from the cited models for the specified covariates.
+\end{document}

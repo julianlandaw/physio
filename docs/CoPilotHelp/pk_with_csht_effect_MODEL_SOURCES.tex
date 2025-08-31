@@ -1,0 +1,117 @@
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{siunitx}
+\usepackage{tabularx}   % for X columns
+\usepackage{ltablex}    % combines longtable + tabularx to fit width
+\usepackage{array}
+\usepackage{caption}
+\captionsetup[table]{labelfont=bf}
+
+% --- auto-fitting numeric columns (right-aligned) ---
+\keepXColumns
+\newcolumntype{Y}{>{\raggedleft\arraybackslash}X}
+\setlength{\tabcolsep}{3.5pt}   % tighter column spacing (tune 3.0–4.5pt as needed)
+
+% --- optional: siunitx rounding (uncomment if you convert numeric cells to S columns)
+% \sisetup{detect-all,round-mode=places,round-precision=2}
+
+\begin{document}
+
+\begin{center}
+\Large\textbf{Weight-normalized Pharmacokinetics with Context-sensitive Metrics}\\[4pt]
+\normalsize Adults (male, 40 y, 70 kg, 170 cm); model-derived values for comparative illustration.
+\end{center}
+
+% =====================================================
+% PANEL A (AUTO-FIT TO WIDTH USING LTABLEX)
+% =====================================================
+\vspace{6pt}
+\noindent\textbf{Panel A. Pharmacokinetic Parameters and Effect-site Equilibration ($k_{e0}$)}
+
+{\small
+\begin{ltablex}{\textwidth}{l*{10}{Y}}
+\toprule
+Drug & Cl (mL/kg/min) & V1 (L/kg) & V2 (L/kg) & V3 (L/kg) &
+$k_{10}$ (min$^{-1}$) & $k_{12}$ (min$^{-1}$) & $k_{21}$ (min$^{-1}$) &
+$k_{13}$ (min$^{-1}$) & $k_{31}$ (min$^{-1}$) & $k_{e0}$ (min$^{-1}$) \\
+\midrule
+\endfirsthead
+\toprule
+Drug & Cl (mL/kg/min) & V1 (L/kg) & V2 (L/kg) & V3 (L/kg) &
+$k_{10}$ (min$^{-1}$) & $k_{12}$ (min$^{-1}$) & $k_{21}$ (min$^{-1}$) &
+$k_{13}$ (min$^{-1}$) & $k_{31}$ (min$^{-1}$) & $k_{e0}$ (min$^{-1}$) \\
+\midrule
+\endhead
+
+%% ====================== BEGIN DATA ROWS (Panel A) ======================
+% Paste the full set of Panel A rows here (Drug, Cl, V1, V2, V3, k10, k12, k21, k13, k31, ke0).
+% Example (keep your own numbers exactly as they are):
+% Propofol & 30 & 0.2 & 1.8 & 2.0 & 0.150 & 2.500 & 0.278 & 2.000 & 0.200 & 0.26 \\
+% Dexmedetomidine & 9 & 0.2 & 1.0 & 1.5 & 0.045 & 1.000 & 0.200 & 1.000 & 0.133 & 0.277 \\
+% Fentanyl & 13 & 0.25 & 1.7 & 2.0 & 0.052 & 0.480 & 0.071 & 0.400 & 0.050 & 0.114 \\
+% Hydromorphone & 8 & 0.3 & 1.5 & 2.0 & 0.027 & 0.333 & 0.067 & 0.267 & 0.040 & 0.069 \\
+% Remifentanil & 40 & 0.1 & 0.5 & 0.8 & 0.400 & 1.500 & 0.300 & 1.200 & 0.150 & 0.595 \\
+% Alfentanil & 6 & 0.3 & 1.2 & 1.5 & 0.020 & 0.333 & 0.083 & 0.267 & 0.053 & 0.456 \\
+% Methadone & 1.5 & 0.4 & 2.0 & 3.0 & 0.00375 & 0.125 & 0.025 & 0.100 & 0.0133 & 0.0154 \\
+% Rocuronium & 5 & 0.2 & 1.0 & 1.5 & 0.025 & 0.500 & 0.100 & 0.400 & 0.0533 & 0.139 \\
+% Vecuronium & 4 & 0.2 & 1.0 & 1.5 & 0.020 & 0.400 & 0.080 & 0.300 & 0.040 & 0.099 \\
+% Succinylcholine & 20 & 0.2 & 0.8 & 1.0 & 0.100 & 1.000 & 0.250 & 0.750 & 0.150 & 1.386 \\
+% Midazolam & 9 & 0.15 & 1.2 & 1.5 & 0.060 & 1.067 & 0.133 & 0.800 & 0.080 & 0.073 \\
+% Diazepam & 0.5 & 0.5 & 2.5 & 3.0 & 0.001 & 0.100 & 0.020 & 0.080 & 0.0133 & 0.018 \\
+%% ======================= END DATA ROWS (Panel A) =======================
+
+\bottomrule
+\end{ltablex}
+}
+
+% =====================================================
+% PANEL B (unchanged width; typically fits)
+% =====================================================
+\vspace{8pt}
+\noindent\textbf{Panel B. Half-lives, Plasma CSHT-50 (by context), and Effect-site Context-sensitive Decrement (1h)}
+
+{\small
+\begin{longtable}{lrrrrrrrrrr}
+\toprule
+Drug & $t_{1/2}$ elim & $t_{1/2}$ fast dist & $t_{1/2}$ slow dist & CSHT-50 (10m) & CSHT-50 (1h) & CSHT-50 (4h) & CSHT-50 (8h) & Effect 80\% (1h) & Effect 50\% (1h) & Effect 25\% (1h) \\
+ & (min) & (min) & (min) & (min) & (min) & (min) & (min) & (min) & (min) & (min) \\
+\midrule
+\endfirsthead
+\toprule
+Drug & $t_{1/2}$ elim & $t_{1/2}$ fast dist & $t_{1/2}$ slow dist & CSHT-50 (10m) & CSHT-50 (1h) & CSHT-50 (4h) & CSHT-50 (8h) & Effect 80\% (1h) & Effect 50\% (1h) & Effect 25\% (1h) \\
+ & (min) & (min) & (min) & (min) & (min) & (min) & (min) & (min) & (min) & (min) \\
+\midrule
+\endhead
+
+%% ====================== BEGIN DATA ROWS (Panel B) ======================
+% Paste the full set of Panel B rows here (Drug, t1/2 elim, t1/2 fast, t1/2 slow, CSHT50 10m, CSHT50 1h, CSHT50 4h, CSHT50 8h, Effect 80% 1h, Effect 50% 1h, Effect 25% 1h).
+% Example (keep your own numbers exactly as they are):
+% Propofol & 4.62 & 0.28 & 2.49 & 45.04 & 83.72 & 90.21 & 90.95 & 29.81 & 94.41 & 189.69 \\
+% Dexmedetomidine & 15.4 & 0.69 & 3.46 & 64.20 & 179.31 & 200.98 & 204.43 & 54.62 & 198.44 & 410.57 \\
+% Fentanyl & 13.33 & 1.44 & 9.82 & 1.62 & 134.17 & 190.74 & 200.42 & 30.75 & 178.30 & 400.21 \\
+% Hydromorphone & 25.99 & 2.08 & 10.39 & 2.20 & 192.68 & 292.92 & 311.24 & 71.49 & 302.30 & 644.84 \\
+% Remifentanil & 1.73 & 0.46 & 2.31 & 7.93 & 20.74 & 22.20 & 22.22 & 4.90 & 22.87 & 50.67 \\
+% Alfentanil & 34.65 & 2.08 & 8.32 & 2.90 & 237.81 & 318.44 & 332.76 & 16.08 & 254.32 & 610.76 \\
+% Methadone & 184.80 & 5.54 & 27.72 & 3.84 & 140.07 & 1724.67 & 2093.52 &  --  &  --  &  --  \\
+% Rocuronium & 27.72 & 1.39 & 6.93 & 2.26 & 257.51 & 344.03 & 359.46 &  --  &  --  &  --  \\
+% Vecuronium & 34.65? & 1.73? & 8.66? & 2.18 & 281.44 & 418.00 & 443.33 &  --  &  --  &  --  \\
+% Succinylcholine & 6.93? & 0.69? & 2.77? & 27.06 & 61.31 & 67.06 & 67.57 &  --  &  --  &  --  \\
+% Midazolam & 11.55 & 0.65 & 5.21 & 7.20 & 171.02 & 207.41 & 213.40 &  --  &  --  &  --  \\
+% Diazepam & 693.00? & 6.93? & 34.65? & 4.72 & 232.51 & 5698.81 & 6940.92 &  --  &  --  &  --  \\
+%
+% NOTE: Replace the “?” or “--” with your exact computed values from your CSV.
+%% ======================= END DATA ROWS (Panel B) =======================
+
+\bottomrule
+\end{longtable}
+}
+
+\vspace{4pt}
+\footnotesize\textbf{Models/Sources.} Propofol: Schnider et al. (Anesthesiology 1998/1999); Remifentanil: Minto et al. (Anesthesiology 1997); Fentanyl: Shafer et al. (Anesthesiology 1990/1991); Alfentanil: Scott \& Stanski (Anesthesiology 1987--1990); Dexmedetomidine: Ebert/Talke 2000; Iirola 2011 (Anesthesiology); Hydromorphone: Rose 1996 (Br J Anaesth); Lötsch 2002 (Clin Pharmacokinet); Methadone: Ferrari 2004 (Anesthesiology); Eap 2002 (Clin Pharmacokinet); NMBAs: Miller's Anesthesia; Magorian/Bevan 1993 (Anesthesiology).\\
+\footnotesize\textbf{Notes.} Numeric values are illustrative unless exact coefficients are extracted from the cited models for the specified covariates (male, 40 y, 70 kg, 170 cm). Values are weight-normalized: Cl and Q in mL/kg/min; volumes in L/kg. CSHT and effect-site metrics simulated with a 1 unit/kg/min infusion and abrupt stop; effect-site via $\tfrac{dC_e}{dt}=k_{e0}(C_1-C_e)$.
+
+\end{document}

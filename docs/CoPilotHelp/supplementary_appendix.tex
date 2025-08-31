@@ -1,0 +1,38 @@
+
+% !TeX program = pdflatex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{siunitx}
+\sisetup{detect-all}
+\begin{document}
+\section*{Supplementary Appendix: Model Parameters and Sources (Adults, 70 kg reference)}
+Values are weight-normalized. For publication, replace these with exact coefficients from the cited models and recompute.
+
+\begin{longtable}{lrrrrrrrrl}
+\toprule
+Drug & Cl (mL/kg/min) & V1 (L/kg) & V2 (L/kg) & V3 (L/kg) & Q2 (mL/kg/min) & Q3 (mL/kg/min) & ke$_0$ (min$^{-1}$) & Notes & Model/Source \\
+\midrule
+\endfirsthead
+\toprule
+Drug & Cl (mL/kg/min) & V1 (L/kg) & V2 (L/kg) & V3 (L/kg) & Q2 (mL/kg/min) & Q3 (mL/kg/min) & ke$_0$ (min$^{-1}$) & Notes & Model/Source \\
+\midrule
+\endhead
+ Propofol & 30 & 0.2 & 1.8 & 2 & 500 & 400 & 0.26 & Adults; defaults 40 y, 70 kg, 170 cm & Schnider et al., Anesthesiology 1998/1999 \\
+ Dexmedetomidine & 9 & 0.2 & 1 & 1.5 & 200 & 200 & 0.28 & Adults; defaults 40 y, 70 kg, 170 cm & Ebert/Talke 2000; Iirola 2011 (Anesthesiology) \\
+ Fentanyl & 13 & 0.25 & 1.7 & 2 & 120 & 100 & 0.11 & Adults; defaults 40 y, 70 kg, 170 cm & Shafer et al., Anesthesiology 1990/1991 \\
+ Hydromorphone & 8 & 0.3 & 1.5 & 2 & 100 & 80 & 0.07 & Adults; defaults 40 y, 70 kg, 170 cm & Rose 1996 BJA; Lötsch 2002 Clin Pharmacokinet \\
+ Remifentanil & 40 & 0.1 & 0.5 & 0.8 & 150 & 120 & 0.59 & Adults; defaults 40 y, 70 kg, 170 cm & Minto et al., Anesthesiology 1997 \\
+ Alfentanil & 6 & 0.3 & 1.2 & 1.5 & 100 & 80 & 0.46 & Adults; defaults 40 y, 70 kg, 170 cm & Scott \& Stanski, Anesthesiology 1987–1990 \\
+ Methadone & 1.5 & 0.4 & 2 & 3 & 50 & 40 & 0.02 & Adults; defaults 40 y, 70 kg, 170 cm & Ferrari 2004 Anesthesiology; Eap 2002 Clin Pharmacokinet \\
+ Rocuronium & 5 & 0.2 & 1 & 1.5 & 100 & 80 & 0.14 & Adults; defaults 40 y, 70 kg, 170 cm & Miller’s Anesthesia; Magorian/Bevan 1993 Anesthesiology \\
+ Vecuronium & 4 & 0.2 & 1 & 1.5 & 80 & 60 & 0.1 & Adults; defaults 40 y, 70 kg, 170 cm & Miller’s Anesthesia; Magorian/Bevan 1993 Anesthesiology \\
+ Succinylcholine & 20 & 0.2 & 0.8 & 1 & 200 & 150 & 1.39 & Adults; defaults 40 y, 70 kg, 170 cm & Miller’s Anesthesia; standard pharmacology texts \\
+ Midazolam & 9 & 0.15 & 1.2 & 1.5 & 160 & 120 & 0.07 & Adults; defaults 40 y, 70 kg, 170 cm & Miller’s; clinical PK/PD literature (adult) \\
+ Diazepam & 0.5 & 0.5 & 2.5 & 3 & 50 & 40 & 0.02 & Adults; defaults 40 y, 70 kg, 170 cm & Miller’s; clinical PK/PD literature (adult) \\
+
+\bottomrule
+\end{longtable}
+
+\end{document}
