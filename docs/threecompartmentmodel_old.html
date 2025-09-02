@@ -219,14 +219,14 @@
         }
     
         /* Adaptive plot heights */
-        #myDiv1, #myDiv4 { height: 400px; }
+        #myDiv1 { height: 400px; }
         #myDiv2, #myDiv3 { height: 300px; }
         @media (max-width: 992px) {
-            #myDiv1, #myDiv4 { height: 400px; }
+            #myDiv1 { height: 400px; }
             #myDiv2, #myDiv3 { height: 300px; }
         }
         @media (max-width: 576px) {
-            #myDiv1, #myDiv4 { height: 300px; }
+            #myDiv1 { height: 300px; }
             #myDiv2, #myDiv3 { height: 250px; }
         }
     
@@ -257,11 +257,6 @@
             color: white !important;
             border: none;
         }
-        .btn-success {
-            background-color: #28a745 !important;
-            color: white !important;
-            border: none;
-        }
     
         /* Hover states */
         .btn-black:hover { background-color: black !important; }
@@ -269,14 +264,12 @@
         .btn-blue:hover { background-color: #2e86c1 !important; }
         .btn-red:hover { background-color: #c0392b !important; }
         .btn-orange:hover { background-color: #e67e22 !important; }
-        .btn-success:hover { background-color: #218838 !important; }
     
         /* Active state matching class */
         .btn-yellow.btn-active { outline: 3px solid black; } 
         .btn-blue.btn-active { outline: 3px solid black; }
         .btn-red.btn-active { outline: 3px solid black; }
         .btn-orange.btn-active { outline: 3px solid black; }
-        .btn-success.btn-active { outline: 3px solid black; }
 
         /* Parameter rows: label + input inline with aligned columns */
         .param-row {
@@ -351,32 +344,19 @@
             <div class="legend-item"><div class="legend-color" style="background:#3498db;"></div> Opioids</div>
             <div class="legend-item"><div class="legend-color" style="background:#e74c3c;"></div> Paralytics</div>
             <div class="legend-item"><div class="legend-color" style="background:orange;"></div> Benzodiazepines</div>
-            <div class="legend-item"><div class="legend-color" style="background:green;"></div> Vasoactive Medications</div>
         </div>
         <a class="btn btn-yellow rounded" onclick="setActive(this); propofol(); closeSidebarOnMobile()">Propofol</a>
-        <a class="btn btn-yellow rounded" onclick="setActive(this); etomidate(); closeSidebarOnMobile()">Etomidate</a>
-        <a class="btn btn-yellow rounded" onclick="setActive(this); ketamine(); closeSidebarOnMobile()">Ketamine</a>
-        <a class="btn btn-yellow rounded" onclick="setActive(this); dexmedetomidine(); closeSidebarOnMobile()">Dexmedetomidine</a>
-        <a class="btn btn-orange rounded" onclick="setActive(this); midazolam(); closeSidebarOnMobile()">Midazolam</a>
-        <a class="btn btn-orange rounded" onclick="setActive(this); diazepam(); closeSidebarOnMobile()">Diazepam</a>
+        <a class="btn btn-yellow rounded" onclick="setActive(this); precedex(); closeSidebarOnMobile()">Precedex</a>
         <a class="btn btn-blue rounded" onclick="setActive(this); fentanyl(); closeSidebarOnMobile()">Fentanyl</a>
         <a class="btn btn-blue rounded" onclick="setActive(this); hydromorphone(); closeSidebarOnMobile()">Hydromorphone</a>
         <a class="btn btn-blue rounded" onclick="setActive(this); remifentanil(); closeSidebarOnMobile()">Remifentanil</a>
-        <a class="btn btn-blue rounded" onclick="setActive(this); sufentanil(); closeSidebarOnMobile()">Sufentanil</a>
         <a class="btn btn-blue rounded" onclick="setActive(this); alfentanil(); closeSidebarOnMobile()">Alfentanil</a>
         <a class="btn btn-blue rounded" onclick="setActive(this); methadone(); closeSidebarOnMobile()">Methadone</a>
         <a class="btn btn-red rounded" onclick="setActive(this); rocuronium(); closeSidebarOnMobile()">Rocuronium</a>
         <a class="btn btn-red rounded" onclick="setActive(this); vecuronium(); closeSidebarOnMobile()">Vecuronium</a>
-        <a class="btn btn-red rounded" onclick="setActive(this); cisatracurium(); closeSidebarOnMobile()">Cisatracurium</a>
-        <a class="btn btn-red rounded" onclick="setActive(this); pancuronium(); closeSidebarOnMobile()">Pancuronium</a>
         <a class="btn btn-red rounded" onclick="setActive(this); succinylcholine(); closeSidebarOnMobile()">Succinylcholine</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); phenylephrine(); closeSidebarOnMobile()">Phenylephrine</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); ephedrine(); closeSidebarOnMobile()">Ephedrine</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); epinephrine(); closeSidebarOnMobile()">Epinephrine</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); dobutamine(); closeSidebarOnMobile()">Dobutamine</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); dopamine(); closeSidebarOnMobile()">Dopamine</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); milrinone(); closeSidebarOnMobile()">Milrinone</a>
-        <a class="btn btn-success rounded" onclick="setActive(this); vasopressin(); closeSidebarOnMobile()">Vasopressin</a>
+        <a class="btn btn-orange rounded" onclick="setActive(this); midazolam(); closeSidebarOnMobile()">Midazolam</a>
+        <a class="btn btn-orange rounded" onclick="setActive(this); diazepam(); closeSidebarOnMobile()">Diazepam</a>
         <a class="btn btn-black rounded" onclick="setActive(this); reset(); closeSidebarOnMobile()">Reset</a>
         <a class="btn btn-black rounded" onclick="onecompartment(); closeSidebarOnMobile()">One Compartment</a>
     </div>
@@ -453,16 +433,12 @@
                   <input type="number" class="form-control" id="Cl" value="50">
                 </div>
                 <div class="param-row">
-                  <div id="Q2html" class="label"></div>
-                  <input type="number" class="form-control" id="Q2" value="0.2">
+                  <div id="k12html" class="label"></div>
+                  <input type="number" class="form-control" id="k12" value="0.2">
                 </div>
                 <div class="param-row">
-                  <div id="Q3html" class="label"></div>
-                  <input type="number" class="form-control" id="Q3" value="0.2">
-                </div>
-                <div class="param-row">
-                  <div id="ke0html" class="label"></div>
-                  <input type="number" class="form-control" id="ke0" value="0.2">
+                  <div id="k13html" class="label"></div>
+                  <input type="number" class="form-control" id="k13" value="0.2">
                 </div>
               </div>
             </div>
@@ -481,9 +457,6 @@
                     <div class="row">
                         <div class="col-lg-12 mb-4">
                             <div id="myDiv1" class="plot-container"></div>
-                        </div>
-                        <div class="col-lg-12 mb-4">
-                            <div id="myDiv4" class="plot-container"></div>
                         </div>
                         <div class="col-lg-6 mb-4">
                             <div id="myDiv2" class="plot-container"></div>
@@ -512,16 +485,11 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr><td>[P]<sub>final</sub></td><td><div id='pfinalhtml'></div></td><td>mg/mL</td></tr>
-                                    <tr><td>[P]<sub>ss</sub></td><td><div id='psshtml'></div></td><td>mg/mL</td></tr>
+                                    <tr><td>[P]<sub>final</sub></td><td><div id='pfinalhtml'></div></td><td>mg/L</td></tr>
+                                    <tr><td>[P]<sub>ss</sub></td><td><div id='psshtml'></div></td><td>mg/L</td></tr>
                                     <tr><td>&alpha;</td><td><div id='alphahtml'></div></td><td>min<sup>-1</sup></td></tr>
                                     <tr><td>&beta;</td><td><div id='betahtml'></div></td><td>min<sup>-1</sup></td></tr>
                                     <tr><td>&gamma;</td><td><div id='gammahtml'></div></td><td>min<sup>-1</sup></td></tr>
-                                    <tr><td>k<sub>10</sub></td><td><div id='k10html'></div></td><td>min<sup>-1</sup></td></tr>
-                                    <tr><td>k<sub>12</sub></td><td><div id='k12html'></div></td><td>min<sup>-1</sup></td></tr>
-                                    <tr><td>k<sub>21</sub></td><td><div id='k21html'></div></td><td>min<sup>-1</sup></td></tr>
-                                    <tr><td>k<sub>13</sub></td><td><div id='k13html'></div></td><td>min<sup>-1</sup></td></tr>
-                                    <tr><td>k<sub>31</sub></td><td><div id='k31html'></div></td><td>min<sup>-1</sup></td></tr>
                                     <tr><td>t<sub>1/2 term</sub></td><td><div id='termhalflifehtml'></div></td><td>min</td></tr>
                                     <tr><td>t<sub>1/2 CSHL</sub></td><td><div id='contextsensitivehalflifehtml'></div></td><td>min</td></tr>
                                 </tbody>
@@ -597,7 +565,6 @@
                 Plotly.Plots.resize(document.getElementById('myDiv1'));
                 Plotly.Plots.resize(document.getElementById('myDiv2'));
                 Plotly.Plots.resize(document.getElementById('myDiv3'));
-                Plotly.Plots.resize(document.getElementById('myDiv4'));
             });
 
             // Optional: toggle dark mode button
@@ -618,7 +585,6 @@
                 Plotly.relayout('myDiv1', { 'yaxis.type': newType });
                 Plotly.relayout('myDiv2', { 'yaxis.type': newType });
                 Plotly.relayout('myDiv3', { 'yaxis.type': newType });
-                Plotly.relayout('myDiv4', { 'yaxis.type': newType });
             
                 btn.textContent = isLogScale ? "Switch to Linear Scale" : "Switch to Log Scale";
             }
@@ -664,7 +630,7 @@
             Toggle Dark Mode
         </button>
 
-        <script src="assets/js/threecompartmentmodel.js"></script>
+        <script src="assets/js/threecompartmentmodel_old.js"></script>
     </section>
 
     <footer class="page-footer">

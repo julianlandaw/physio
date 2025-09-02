@@ -1,0 +1,262 @@
+{
+  "units": {
+    "Vd": "mL/kg",
+    "Cl": "mL/kg/min",
+    "Q": "mL/kg/min",
+    "bolus": "mg/kg",
+    "infusion": "mg/kg/min",
+    "concentration": "mg/mL",
+    "time": "min",
+    "ke0": "min^-1"
+  },
+  "defaults": {
+    "bolus": 0.4,
+    "tbolus": 15,
+    "infusion": 0.005,
+    "tinfusion": 60,
+    "tfinal": 135,
+    "initialp": 0
+  },
+  "drugs": [
+    {
+      "id": "propofol",
+      "name": "Propofol",
+      "class": "Anesthetic/Sedative",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 61, "Vd2": 270, "Vd3": 3400, "Cl": 26.571, "Q2": 18.429, "Q3": 11.943 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "etomidate",
+      "name": "Etomidate",
+      "class": "Anesthetic/Sedative",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 150, "Vd2": 300, "Vd3": 1200, "Cl": 14, "Q2": 20, "Q3": 10 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "ketamine",
+      "name": "Ketamine",
+      "class": "Anesthetic/Sedative",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 250, "Vd2": 500, "Vd3": 1500, "Cl": 20, "Q2": 30, "Q3": 15 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+
+    {
+      "id": "dexmedetomidine",
+      "name": "Dexmedetomidine",
+      "class": "Anesthetic/Sedative",
+      "model": "Generic 3-compartment (Ebert/Talke-aligned approximation)",
+      "params": { "Vd1": 30, "Vd2": 50, "Vd3": 120, "Cl": 0.7, "Q2": 0.5, "Q3": 0.3 },
+      "ke0": null,
+      "source": "Approximation aligned with Ebert/Talke; scaled to adult mL/kg units"
+    },
+    {
+      "id": "midazolam",
+      "name": "Midazolam",
+      "class": "Benzodiazepine",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 142.857, "Vd2": 714.286, "Vd3": 1428.571, "Cl": 8.571, "Q2": 11.429, "Q3": 7.143 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+
+    {
+      "id": "diazepam",
+      "name": "Diazepam",
+      "class": "Benzodiazepine",
+      "model": "Generic 3-compartment (long-acting BZD approximation)",
+      "params": { "Vd1": 100, "Vd2": 900, "Vd3": 3000, "Cl": 0.25, "Q2": 0.5, "Q3": 0.2 },
+      "ke0": null,
+      "source": "Approximation reflecting large peripheral distribution; adult mL/kg units"
+    },
+
+    {
+      "id": "fentanyl",
+      "name": "Fentanyl",
+      "class": "Opioid",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 185.714, "Vd2": 342.857, "Vd3": 4800, "Cl": 0.643, "Q2": 5, "Q3": 1.857 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "hydromorphone",
+      "name": "Hydromorphone",
+      "class": "Opioid",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 150, "Vd2": 350, "Vd3": 1200, "Cl": 5, "Q2": 10, "Q3": 5 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+
+    {
+      "id": "remifentanil",
+      "name": "Remifentanil",
+      "class": "Opioid",
+      "model": "Generic 3-compartment (Minto-aligned approximation)",
+      "params": { "Vd1": 100, "Vd2": 300, "Vd3": 500, "Cl": 3, "Q2": 2, "Q3": 1 },
+      "ke0": null,
+      "source": "Approximation aligned with Minto model ranges; adult mL/kg units"
+    },
+
+    {
+      "id": "sufentanil",
+      "name": "Sufentanil",
+      "class": "Opioid",
+      "model": "Generic 3-compartment (Shafer/Scott-aligned approximation)",
+      "params": { "Vd1": 20, "Vd2": 150, "Vd3": 800, "Cl": 0.35, "Q2": 0.5, "Q3": 0.2 },
+      "ke0": null,
+      "source": "Approximation aligned with Shafer/Scott ranges; adult mL/kg units"
+    },
+
+    {
+      "id": "alfentanil",
+      "name": "Alfentanil",
+      "class": "Opioid",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 200, "Vd2": 342.857, "Vd3": 1428.571, "Cl": 14.286, "Q2": 17.143, "Q3": 7.143 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "methadone",
+      "name": "Methadone",
+      "class": "Opioid",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 160, "Vd2": 1000, "Vd3": 2430, "Cl": 1.514, "Q2": 23.2, "Q3": 12.8 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "rocuronium",
+      "name": "Rocuronium",
+      "class": "Neuromuscular Blocker",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 142.857, "Vd2": 357.143, "Vd3": 571.429, "Cl": 5, "Q2": 11.429, "Q3": 7.143 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "vecuronium",
+      "name": "Vecuronium",
+      "class": "Neuromuscular Blocker",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 142.857, "Vd2": 314.286, "Vd3": 571.429, "Cl": 4, "Q2": 10, "Q3": 6.429 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "cisatracurium",
+      "name": "Cisatracurium",
+      "class": "Neuromuscular Blocker",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 128.571, "Vd2": 285.714, "Vd3": 500, "Cl": 2.857, "Q2": 8.571, "Q3": 5.714 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "pancuronium",
+      "name": "Pancuronium",
+      "class": "Neuromuscular Blocker",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 171.429, "Vd2": 428.571, "Vd3": 714.286, "Cl": 2.571, "Q2": 8.571, "Q3": 5.714 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "succinylcholine",
+      "name": "Succinylcholine",
+      "class": "Neuromuscular Blocker",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 200, "Vd2": 285.714, "Vd3": 428.571, "Cl": 20, "Q2": 21.429, "Q3": 14.286 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "lidocaine",
+      "name": "Lidocaine",
+      "class": "Local Anesthetic",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 171.429, "Vd2": 571.429, "Vd3": 1428.571, "Cl": 15.714, "Q2": 21.429, "Q3": 14.286 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "bupivacaine",
+      "name": "Bupivacaine",
+      "class": "Local Anesthetic",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 142.857, "Vd2": 714.286, "Vd3": 2857.143, "Cl": 3.571, "Q2": 11.429, "Q3": 7.143 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "phenylephrine",
+      "name": "Phenylephrine",
+      "class": "Vasoactive",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 214.286, "Vd2": 357.143, "Vd3": 714.286, "Cl": 17.143, "Q2": 17.143, "Q3": 11.429 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "ephedrine",
+      "name": "Ephedrine",
+      "class": "Vasoactive",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 285.714, "Vd2": 857.143, "Vd3": 1714.286, "Cl": 5.714, "Q2": 10, "Q3": 7.143 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "epinephrine",
+      "name": "Epinephrine",
+      "class": "Vasoactive",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 171.429, "Vd2": 357.143, "Vd3": 571.429, "Cl": 21.429, "Q2": 21.429, "Q3": 14.286 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "dobutamine",
+      "name": "Dobutamine",
+      "class": "Vasoactive",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 214.286, "Vd2": 428.571, "Vd3": 714.286, "Cl": 14.286, "Q2": 14.286, "Q3": 10 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "dopamine",
+      "name": "Dopamine",
+      "class": "Vasoactive",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 228.571, "Vd2": 428.571, "Vd3": 785.714, "Cl": 12.857, "Q2": 12.857, "Q3": 8.571 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "milrinone",
+      "name": "Milrinone",
+      "class": "Vasoactive/Inotrope",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 285.714, "Vd2": 1000, "Vd3": 2142.857, "Cl": 2.857, "Q2": 7.143, "Q3": 4.286 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    },
+    {
+      "id": "vasopressin",
+      "name": "Vasopressin",
+      "class": "Vasoactive",
+      "model": "Generic 3-compartment",
+      "params": { "Vd1": 171.429, "Vd2": 357.143, "Vd3": 571.429, "Cl": 4.286, "Q2": 8.571, "Q3": 5.714 },
+      "ke0": null,
+      "source": "App preset (generic 3-compartment approximation)"
+    }
+  ]
+}
