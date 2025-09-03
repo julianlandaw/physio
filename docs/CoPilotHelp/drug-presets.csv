@@ -1,0 +1,27 @@
+Drug,Class,V1,V2,V3,Cl,Q2,Q3,ke0
+Propofol,Anesthetic/Sedative,61.0,270.0,3400.0,26.571,18.429,11.943,0.26
+Etomidate,Anesthetic/Sedative,150.0,300.0,1200.0,14.0,20.0,10.0,0.3
+Ketamine,Anesthetic/Sedative,250.0,500.0,1500.0,20.0,30.0,15.0,0.25
+Dexmedetomidine,Anesthetic/Sedative,30.0,50.0,120.0,0.7,0.5,0.3,0.277
+Midazolam,Benzodiazepine,142.857,714.286,1428.571,8.571,11.429,7.143,0.073
+Diazepam,Benzodiazepine,100.0,900.0,3000.0,0.25,0.5,0.2,0.018
+Fentanyl,Opioid,185.714,342.857,4800.0,0.643,5.0,1.857,0.114
+Hydromorphone,Opioid,150.0,350.0,1200.0,5.0,10.0,5.0,0.2
+Remifentanil,Opioid,100.0,300.0,500.0,3.0,2.0,1.0,0.595
+Sufentanil,Opioid,20.0,150.0,800.0,0.35,0.5,0.2,0.12
+Alfentanil,Opioid,200.0,342.857,1428.571,14.286,17.143,7.143,0.456
+Methadone,Opioid,160.0,1000.0,2430.0,1.514,23.2,12.8,0.003
+Rocuronium,Neuromuscular Blocker,142.857,357.143,571.429,5.0,11.429,7.143,0.14
+Vecuronium,Neuromuscular Blocker,142.857,314.286,571.429,4.0,10.0,6.429,0.1
+Cisatracurium,Neuromuscular Blocker,128.571,285.714,500.0,2.857,8.571,5.714,0.12
+Pancuronium,Neuromuscular Blocker,171.429,428.571,714.286,2.571,8.571,5.714,0.08
+Succinylcholine,Neuromuscular Blocker,200.0,285.714,428.571,20.0,21.429,14.286,1.2
+Lidocaine,Local Anesthetic,171.429,571.429,1428.571,15.714,21.429,14.286,0.25
+Bupivacaine,Local Anesthetic,142.857,714.286,2857.143,3.571,11.429,7.143,0.15
+Phenylephrine,Vasoactive,214.286,357.143,714.286,17.143,17.143,11.429,0.4
+Ephedrine,Vasoactive,285.714,857.143,1714.286,5.714,10.0,7.143,0.06
+Epinephrine,Vasoactive,171.429,357.143,571.429,21.429,21.429,14.286,0.8
+Dobutamine,Vasoactive,214.286,428.571,714.286,14.286,14.286,10.0,0.3
+Dopamine,Vasoactive,228.571,428.571,785.714,12.857,12.857,8.571,0.2
+Milrinone,Vasoactive/Inotrope,285.714,1000.0,2142.857,2.857,7.143,4.286,0.03
+Vasopressin,Vasoactive,171.429,357.143,571.429,4.286,8.571,5.714,0.05

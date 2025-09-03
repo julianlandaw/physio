@@ -219,14 +219,14 @@
         }
     
         /* Adaptive plot heights */
-        #myDiv1, #myDiv4 { height: 400px; }
+        #myDiv1 { height: 400px; }
         #myDiv2, #myDiv3 { height: 300px; }
         @media (max-width: 992px) {
-            #myDiv1, #myDiv4 { height: 400px; }
+            #myDiv1 { height: 400px; }
             #myDiv2, #myDiv3 { height: 300px; }
         }
         @media (max-width: 576px) {
-            #myDiv1, #myDiv4 { height: 300px; }
+            #myDiv1 { height: 300px; }
             #myDiv2, #myDiv3 { height: 250px; }
         }
     
@@ -348,9 +348,9 @@
     <div class="sidebar" id="sidebar">
         <div class="legend">
             <div class="legend-item"><div class="legend-color" style="background:#f1c40f;"></div> Anesthetics / Sedatives</div>
+            <div class="legend-item"><div class="legend-color" style="background:orange;"></div> Benzodiazepines</div>
             <div class="legend-item"><div class="legend-color" style="background:#3498db;"></div> Opioids</div>
             <div class="legend-item"><div class="legend-color" style="background:#e74c3c;"></div> Paralytics</div>
-            <div class="legend-item"><div class="legend-color" style="background:orange;"></div> Benzodiazepines</div>
             <div class="legend-item"><div class="legend-color" style="background:green;"></div> Vasoactive Medications</div>
         </div>
         <a class="btn btn-yellow rounded" onclick="setActive(this); propofol(); closeSidebarOnMobile()">Propofol</a>
@@ -482,9 +482,6 @@
                         <div class="col-lg-12 mb-4">
                             <div id="myDiv1" class="plot-container"></div>
                         </div>
-                        <div class="col-lg-12 mb-4">
-                            <div id="myDiv4" class="plot-container"></div>
-                        </div>
                         <div class="col-lg-6 mb-4">
                             <div id="myDiv2" class="plot-container"></div>
                         </div>
@@ -597,7 +594,6 @@
                 Plotly.Plots.resize(document.getElementById('myDiv1'));
                 Plotly.Plots.resize(document.getElementById('myDiv2'));
                 Plotly.Plots.resize(document.getElementById('myDiv3'));
-                Plotly.Plots.resize(document.getElementById('myDiv4'));
             });
 
             // Optional: toggle dark mode button
@@ -618,7 +614,6 @@
                 Plotly.relayout('myDiv1', { 'yaxis.type': newType });
                 Plotly.relayout('myDiv2', { 'yaxis.type': newType });
                 Plotly.relayout('myDiv3', { 'yaxis.type': newType });
-                Plotly.relayout('myDiv4', { 'yaxis.type': newType });
             
                 btn.textContent = isLogScale ? "Switch to Linear Scale" : "Switch to Log Scale";
             }

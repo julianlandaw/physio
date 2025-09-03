@@ -1,0 +1,27 @@
+Drug,Class,Therapeutic Targets
+Propofol,Anesthetic/Sedative,Sedation (plasma): 1–2 µg/mL; General anesthesia (plasma): 3–6 µg/mL; Effect-site hypnosis (Ce): 2.5–4 µg/mL
+Etomidate,Anesthetic/Sedative,Hypnosis (plasma): 0.2–0.4 µg/mL
+Ketamine,Anesthetic/Sedative,Analgesia (plasma): 100–200 ng/mL; Dissociative anesthesia (plasma): 1–2 µg/mL
+Dexmedetomidine,Anesthetic/Sedative,Sedation (plasma): 0.3–1.2 ng/mL; Deep sedation (plasma): 1.2–2 ng/mL
+Midazolam,Benzodiazepine,Sedation (plasma): 0.05–0.15 µg/mL; Anesthesia (plasma): 0.2–0.5 µg/mL
+Diazepam,Benzodiazepine,Anxiolysis/sedation (plasma): 0.2–2 µg/mL
+Fentanyl,Opioid,Analgesia (effect-site Ce): 1–2 ng/mL; Anesthesia (effect-site Ce): 2–4 ng/mL
+Hydromorphone,Opioid,N/A — No widely accepted plasma/effect-site target range; titrate to clinical effect.
+Remifentanil,Opioid,Analgesia (effect-site Ce): 1–3 ng/mL; Anesthesia (effect-site Ce): 3–8 ng/mL
+Sufentanil,Opioid,Analgesia (effect-site Ce): 0.1–0.3 ng/mL; Anesthesia (effect-site Ce): 0.3–0.7 ng/mL
+Alfentanil,Opioid,Analgesia (effect-site Ce): 50–150 ng/mL; Anesthesia (effect-site Ce): 150–300 ng/mL
+Methadone,Opioid,Analgesia (plasma): 30–100 ng/mL
+Rocuronium,Neuromuscular,"N/A — Titrated to neuromuscular monitoring (TOF/PTC), not plasma concentration."
+Vecuronium,Neuromuscular,"N/A — Titrated to neuromuscular monitoring (TOF/PTC), not plasma concentration."
+Cisatracurium,Neuromuscular,"N/A — Titrated to neuromuscular monitoring (TOF/PTC), not plasma concentration."
+Pancuronium,Neuromuscular,"N/A — Titrated to neuromuscular monitoring (TOF/PTC), not plasma concentration."
+Succinylcholine,Neuromuscular,"N/A — Titrated to neuromuscular monitoring (TOF/PTC), not plasma concentration."
+Lidocaine,Local,Antiarrhythmic therapeutic (plasma): 1.5–5 µg/mL
+Bupivacaine,Local,N/A — Regional/neuraxial effect predominates; systemic target plasma concentration not used for analgesia.
+Phenylephrine,Vasoactive,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
+Ephedrine,Vasoactive,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
+Epinephrine,Vasoactive,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
+Dobutamine,Vasoactive,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
+Dopamine,Vasoactive,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
+Milrinone,Vasoactive/Inotrope,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
+Vasopressin,Vasoactive,"N/A — Titrated to hemodynamic endpoints (MAP/HR), not plasma concentration."
