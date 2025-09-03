@@ -1,3 +1,75 @@
+// ====== DOM wiring for labels and inputs ======
+var Vd1html = document.getElementById("Vd1html");
+Vd1html.innerHTML = "<i>V</i><sub>1</sub> (mL/kg)";
+var Vd1num = document.getElementById("Vd1");
+var Vd2html = document.getElementById("Vd2html");
+Vd2html.innerHTML = "<i>V</i><sub>2</sub> (mL/kg)";
+var Vd2num = document.getElementById("Vd2");
+var Vd3html = document.getElementById("Vd3html");
+Vd3html.innerHTML = "<i>V</i><sub>3</sub> (mL/kg)";
+var Vd3num = document.getElementById("Vd3");
+var Clhtml = document.getElementById("Clhtml");
+Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (mL/kg/min)";
+var Clnum = document.getElementById("Cl");
+var Q2html = document.getElementById("Q2html");
+Q2html.innerHTML = "<i>Q</i><sub>2</sub> (mL/kg/min)";
+var Q2num = document.getElementById("Q2");
+var Q3html = document.getElementById("Q3html");
+Q3html.innerHTML = "<i>Q</i><sub>3</sub> (mL/kg/min)";
+var Q3num = document.getElementById("Q3");
+var bhtml = document.getElementById("bhtml");
+bhtml.innerHTML = "Bolus (mg/kg)";
+var bnum = document.getElementById("b");
+var infusionhtml = document.getElementById("infusionhtml");
+infusionhtml.innerHTML = "Infusion (mg/kg/min)";
+var infusionnum = document.getElementById("infusion");
+var tbolushtml = document.getElementById("tbolushtml");
+tbolushtml.innerHTML = "Bolus Time (min)";
+var tbolusnum = document.getElementById("tbolus");
+var tinfusionhtml = document.getElementById("tinfusionhtml");
+tinfusionhtml.innerHTML = "Infusion Time (min)";
+var tinfusionnum = document.getElementById("tinfusion");
+var initialphtml = document.getElementById("initialphtml");
+initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (mg/mL)";
+var initialpnum = document.getElementById("initialp");
+var tfinalhtml = document.getElementById("tfinalhtml");
+tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (min)";
+var tfinalnum = document.getElementById("tfinal");
+var ke0html = document.getElementById("ke0html");
+ke0html.innerHTML = "ke0 (min^-1)";
+var ke0num = document.getElementById("ke0");
+var pfinalhtml = document.getElementById("pfinalhtml");
+pfinalhtml.innerHTML = 0;
+var psshtml = document.getElementById("psshtml");
+psshtml.innerHTML = 0;
+var alphahtml = document.getElementById("alphahtml");
+alphahtml.innerHTML = 0;
+var betahtml = document.getElementById("betahtml");
+betahtml.innerHTML = 0;
+var gammahtml = document.getElementById("gammahtml");
+gammahtml.innerHTML = 0;
+var termhalflifehtml = document.getElementById("termhalflifehtml");
+termhalflifehtml.innerHTML = 0;
+var k10html = document.getElementById("k10html");
+k10html.innerHTML = 0;
+var k12html = document.getElementById("k12html");
+k12html.innerHTML = 0;
+var k13html = document.getElementById("k13html");
+k13html.innerHTML = 0;
+var k21html = document.getElementById("k21html");
+k21html.innerHTML = 0;
+var k31html = document.getElementById("k31html");
+k31html.innerHTML = 0;
+var contextsensitivehalflifehtml = document.getElementById("contextsensitivehalflifehtml");
+contextsensitivehalflifehtml.innerHTML = 0;
+
+function roundToSignificantFigures(num, sigFigs) {
+  if (num === 0) return 0; // Handle 0 separately
+  const magnitude = math.floor(math.log10(Math.abs(num)));
+  const factor = 10 ** (sigFigs - magnitude - 1);
+  return math.round(num * factor) / factor;
+}
+
 // ====== Units (display only; internal math stays mg/mL) ======
 const UNITS = {
   'mg/mL': { name: 'mg/mL', factor: 1 },
@@ -7,6 +79,31 @@ const UNITS = {
 let currentUnit = UNITS['mg/mL'];
 function setDisplayUnit(unitName) {
   currentUnit = UNITS[unitName] || UNITS['mg/mL'];
+}
+
+const BOLUSUNITS = {
+  'mg/kg': { name: 'mg/kg', factor: 1 },
+  'µg/kg': { name: 'µg/kg', factor: 1e3 },
+  'ng/kg': { name: 'ng/kg', factor: 1e6 }
+};
+let currentBolusUnit = BOLUSUNITS['mg/kg']
+function setBolusUnit(unitName) {
+  currentBolusUnit = BOLUSUNITS[unitName] || BOLUSUNITS['mg/kg'];
+  bhtml.innerHTML = 'Bolus (' + unitName + ')' || 'Bolus (mg/kg)';
+}
+
+const INFUSIONUNITS = {
+  'mg/kg/min': { name: 'mg/kg/min', factor: 1 },
+  'µg/kg/min': { name: 'µg/kg/min', factor: 1e3 },
+  'ng/kg/min': { name: 'ng/kg/min', factor: 1e6 },
+  'mg/kg/hr': { name: 'mg/kg/min', factor: 60.0 },
+  'µg/kg/hr': { name: 'µg/kg/min', factor: 1e3*60.0 },
+  'ng/kg/hr': { name: 'ng/kg/min', factor: 1e6*60.0 }      
+};
+let currentInfusionUnit = INFUSIONUNITS['mg/kg/min']
+function setInfusionUnit(unitName) {
+  currentInfusionUnit = INFUSIONUNITS[unitName] || INFUSIONUNITS['mg/kg/min'];
+  infusionhtml.innerHTML = 'Infusion (' + unitName + ')' || 'Infusion (mg/kg/min)';
 }
 
 // Track which drug preset is active
@@ -221,28 +318,46 @@ function valToDisplayY(value, unitName) {
 // Build Plotly traces representing therapeutic Ce ranges for the current drug.
 // Each band is represented by a single trace containing two horizontal segments
 // (low and high) separated by a NaN gap so a single legend entry toggles both.
-function buildTherapeuticTraces(finalTime) {
-  const traces = [];
-  if (!showTherapeutic || !currentDrug) return traces;
+
+function buildTherapeuticShapes(finalTime) {
+  const shapes = [];
+  const legendTraces = [];
+  if (!showTherapeutic || !currentDrug) return { shapes, legendTraces };
+
   const ranges = EFFECT_SITE_RANGES[currentDrug] || [];
-  if (!Array.isArray(ranges) || ranges.length === 0) return traces;
+  if (!Array.isArray(ranges) || ranges.length === 0) return { shapes, legendTraces };
 
   const x0 = 0, x1 = finalTime;
-  ranges.forEach((r, idx) => {
-    const yLow  = valToDisplayY(r.low,  r.unit);
+
+  ranges.forEach((r) => {
+    const yLow = valToDisplayY(r.low, r.unit);
     const yHigh = valToDisplayY(r.high, r.unit);
-    traces.push({
-      x: [x0, x1, null, x0, x1],
-      y: [yLow, yLow, null, yHigh, yHigh],
+
+    shapes.push({
+      type: 'rect',
+      xref: 'x',
+      yref: 'y',
+      x0: x0,
+      x1: x1,
+      y0: yLow,
+      y1: yHigh,
+      fillcolor: r.color,
+      opacity: 0.15,
+      line: { width: 0 }
+    });
+
+    legendTraces.push({
+      x: [null], y: [null],
       mode: 'lines',
-      name: `${r.label}  ${r.low}–${r.high} ${r.unit}`,
-      line: { color: r.color || '#2ca02c', width: 1.8, dash: 'dot' },
+      name: `${r.label} ${r.low}–${r.high} ${r.unit}`,
+      line: { color: r.color, width: 10 },
       hoverinfo: 'skip',
       legendgroup: 'therapeutic',
       legendgrouptitle: { text: 'Therapeutic ranges (Cp/Ce)' }
     });
   });
-  return traces;
+
+  return { shapes, legendTraces };
 }
 
 // Create a simple UI checkbox to show/hide all therapeutic lines.
@@ -282,78 +397,6 @@ function ensureTherapeuticToggle() {
   }
 }
 
-// ====== DOM wiring for labels and inputs ======
-var Vd1html = document.getElementById("Vd1html");
-Vd1html.innerHTML = "<i>V</i><sub>1</sub> (mL/kg)";
-var Vd1num = document.getElementById("Vd1");
-var Vd2html = document.getElementById("Vd2html");
-Vd2html.innerHTML = "<i>V</i><sub>2</sub> (mL/kg)";
-var Vd2num = document.getElementById("Vd2");
-var Vd3html = document.getElementById("Vd3html");
-Vd3html.innerHTML = "<i>V</i><sub>3</sub> (mL/kg)";
-var Vd3num = document.getElementById("Vd3");
-var Clhtml = document.getElementById("Clhtml");
-Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (mL/kg/min)";
-var Clnum = document.getElementById("Cl");
-var Q2html = document.getElementById("Q2html");
-Q2html.innerHTML = "<i>Q</i><sub>2</sub> (mL/kg/min)";
-var Q2num = document.getElementById("Q2");
-var Q3html = document.getElementById("Q3html");
-Q3html.innerHTML = "<i>Q</i><sub>3</sub> (mL/kg/min)";
-var Q3num = document.getElementById("Q3");
-var bhtml = document.getElementById("bhtml");
-bhtml.innerHTML = "Bolus (mg/kg)";
-var bnum = document.getElementById("b");
-var infusionhtml = document.getElementById("infusionhtml");
-infusionhtml.innerHTML = "Infusion (mg/kg/min)";
-var infusionnum = document.getElementById("infusion");
-var tbolushtml = document.getElementById("tbolushtml");
-tbolushtml.innerHTML = "Bolus Time (min)";
-var tbolusnum = document.getElementById("tbolus");
-var tinfusionhtml = document.getElementById("tinfusionhtml");
-tinfusionhtml.innerHTML = "Infusion Time (min)";
-var tinfusionnum = document.getElementById("tinfusion");
-var initialphtml = document.getElementById("initialphtml");
-initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (mg/mL)";
-var initialpnum = document.getElementById("initialp");
-var tfinalhtml = document.getElementById("tfinalhtml");
-tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (min)";
-var tfinalnum = document.getElementById("tfinal");
-var ke0html = document.getElementById("ke0html");
-ke0html.innerHTML = "ke0 (min^-1)";
-var ke0num = document.getElementById("ke0");
-var pfinalhtml = document.getElementById("pfinalhtml");
-pfinalhtml.innerHTML = 0;
-var psshtml = document.getElementById("psshtml");
-psshtml.innerHTML = 0;
-var alphahtml = document.getElementById("alphahtml");
-alphahtml.innerHTML = 0;
-var betahtml = document.getElementById("betahtml");
-betahtml.innerHTML = 0;
-var gammahtml = document.getElementById("gammahtml");
-gammahtml.innerHTML = 0;
-var termhalflifehtml = document.getElementById("termhalflifehtml");
-termhalflifehtml.innerHTML = 0;
-var k10html = document.getElementById("k10html");
-k10html.innerHTML = 0;
-var k12html = document.getElementById("k12html");
-k12html.innerHTML = 0;
-var k13html = document.getElementById("k13html");
-k13html.innerHTML = 0;
-var k21html = document.getElementById("k21html");
-k21html.innerHTML = 0;
-var k31html = document.getElementById("k31html");
-k31html.innerHTML = 0;
-// Missing DOM reference for CSHL value cell (kept)
-var contextsensitivehalflifehtml = document.getElementById("contextsensitivehalflifehtml");
-
-function roundToSignificantFigures(num, sigFigs) {
-  if (num === 0) return 0; // Handle 0 separately
-  const magnitude = math.floor(math.log10(Math.abs(num)));
-  const factor = 10 ** (sigFigs - magnitude - 1);
-  return math.round(num * factor) / factor;
-}
-
 // Defaults
 bnum.value = 0.4;
 tbolusnum.value = 15;
@@ -371,7 +414,7 @@ function dfsolve() {
   params.Cl = parseFloat(Clnum.value);
   params.Q2 = parseFloat(Q2num.value)/1.0;
   params.Q3 = parseFloat(Q3num.value)/1.0;
-  params.b = parseFloat(bnum.value) / parseFloat(tbolusnum.value);
+  params.b = parseFloat(bnum.value) / parseFloat(tbolusnum.value) / currentBolusUnit.factor;
   params.tbolus = parseFloat(tbolusnum.value);
   params.tinfusion= parseFloat(tinfusionnum.value);
   params.initialp = parseFloat(initialpnum.value);
@@ -425,8 +468,8 @@ function dfsolve() {
   let counter = 0;
   while (counter < N) {
     // Piecewise-constant input rate (mg/kg/min)
-    if (counter < Nhalf1) params.b = parseFloat(bnum.value)/parseFloat(tbolusnum.value);
-    else if (counter < Nhalf2) params.b = parseFloat(infusionnum.value);
+    if (counter < Nhalf1) params.b = parseFloat(bnum.value)/parseFloat(tbolusnum.value)/currentBolusUnit.factor;
+    else if (counter < Nhalf2) params.b = parseFloat(infusionnum.value)/currentInfusionUnit.factor;
     else params.b = 0;
 
     // State updates: Ce does NOT feed back into x1/x2/x3
@@ -482,10 +525,10 @@ function dfsolve() {
   layout3 = addEventMarkers(layout3);
 
   // Build therapeutic traces (Ce) for legend toggle
-  const therTraces = buildTherapeuticTraces(params.tfinal);
-
-  // Plot: combine Cp, Ce with optional therapeutic lines
-  const panel1Traces = therTraces.length > 0 ? [trace_cp, trace_ce, ...therTraces] : [trace_cp, trace_ce];
+  
+  const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(params.tfinal);
+  layout1.shapes = therShapes;
+  const panel1Traces = [trace_cp, trace_ce, ...legendTraces];
   Plotly.newPlot('myDiv1', panel1Traces, layout1);
   Plotly.newPlot('myDiv2', [trace_p1], layout2);
   Plotly.newPlot('myDiv3', [trace_p2], layout3);
@@ -589,6 +632,8 @@ function onecompartment() {
 function propofol() {
   currentDrug = 'propofol';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 61;
   Vd2num.value = 270;
   Vd3num.value = 3400;
@@ -601,6 +646,8 @@ function propofol() {
 function etomidate() {
   currentDrug = 'etomidate';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 150;
   Vd2num.value = 300;
   Vd3num.value = 1200;
@@ -613,6 +660,8 @@ function etomidate() {
 function ketamine() {
   currentDrug = 'ketamine';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 250;
   Vd2num.value = 500;
   Vd3num.value = 1500;
@@ -625,6 +674,8 @@ function ketamine() {
 function dexmedetomidine() {
   currentDrug = 'dexmedetomidine';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/hr');
   Vd1num.value = 30; // 25–35
   Vd2num.value = 50; // 40–60
   Vd3num.value = 120; // aligned to presets text
