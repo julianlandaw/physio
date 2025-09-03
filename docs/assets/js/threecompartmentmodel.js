@@ -1,14 +1,3 @@
- 
-// ===== threecompartmentmodel.js (fully patched with therapeutic ranges & legend toggle) ===== 
-// Changes added in this patch:
-// - Cp and Ce plotted together (existing)
-// - Unit-aware display helpers (existing; fixed setDisplayUnit fallback)
-// - Therapeutic ranges (Ce) rendered as horizontal dotted lines using Plotly traces
-//   * Lines appear in the legend as one entry per therapeutic band (low+high combined)
-//   * Master checkbox to show/hide all therapeutic lines (added dynamically)
-// - currentDrug is set by every preset function (all drugs) so ranges can be applied
-// - Event markers (bolus / infusion end) preserved
-
 // ====== Units (display only; internal math stays mg/mL) ======
 const UNITS = {
   'mg/mL': { name: 'mg/mL', factor: 1 },
@@ -25,60 +14,200 @@ let currentDrug = null;
 // Master toggle for showing therapeutic ranges (Ce)
 let showTherapeutic = true;
 
-// Map of effect-site therapeutic ranges (Ce only), hard-coded
+// Map of therapeutic ranges (Cp & Ce), hard-coded
 // Values are entered in their display units (see `unit` per band), not mg/mL.
 // If a drug has no effect-site ranges, leave its array empty.
+// Map of therapeutic ranges for both Cp (plasma) and Ce (effect-site).
+// Values are entered in their display units (see `unit` per band), not mg/mL.
+// Colors: Cp bands default to Cp line color (#1f77b4), Ce bands to Ce line color (#ff7f0e).
 const EFFECT_SITE_RANGES = {
-  // Anesthetic/Sedative
-  propofol: [
-    { label: 'Effect-site hypnosis (Ce)', unit: 'µg/mL', low: 2.5, high: 4.0, color: '#2ca02c' }
+  "propofol": [
+    {
+      "label": "Sedation (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 1.0,
+      "high": 2.0,
+      "color": "#1f77b4"
+    },
+    {
+      "label": "General anesthesia (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 3.0,
+      "high": 6.0,
+      "color": "#1f77b4"
+    },
+    {
+      "label": "Effect-site hypnosis (Ce)",
+      "unit": "\u00b5g/mL",
+      "low": 2.5,
+      "high": 4.0,
+      "color": "#ff7f0e"
+    }
   ],
-  etomidate: [],
-  ketamine: [],
-  dexmedetomidine: [],
-  midazolam: [],
-  diazepam: [],
-
-  // Opioids
-  fentanyl: [
-    { label: 'Analgesia (Ce)',  unit: 'ng/mL', low: 1, high: 2, color: '#9467bd' },
-    { label: 'Anesthesia (Ce)', unit: 'ng/mL', low: 2, high: 4, color: '#8c564b' }
+  "etomidate": [
+    {
+      "label": "Hypnosis (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 0.2,
+      "high": 0.4,
+      "color": "#1f77b4"
+    }
   ],
-  hydromorphone: [],
-  remifentanil: [
-    { label: 'Analgesia (Ce)',  unit: 'ng/mL', low: 1, high: 3, color: '#9467bd' },
-    { label: 'Anesthesia (Ce)', unit: 'ng/mL', low: 3, high: 8, color: '#8c564b' }
+  "ketamine": [
+    {
+      "label": "Analgesia (plasma)",
+      "unit": "ng/mL",
+      "low": 100.0,
+      "high": 200.0,
+      "color": "#1f77b4"
+    },
+    {
+      "label": "Dissociative anesthesia (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 1.0,
+      "high": 2.0,
+      "color": "#1f77b4"
+    }
   ],
-  sufentanil: [
-    { label: 'Analgesia (Ce)',  unit: 'ng/mL', low: 0.1, high: 0.3, color: '#9467bd' },
-    { label: 'Anesthesia (Ce)', unit: 'ng/mL', low: 0.3, high: 0.7, color: '#8c564b' }
+  "dexmedetomidine": [
+    {
+      "label": "Sedation (plasma)",
+      "unit": "ng/mL",
+      "low": 0.3,
+      "high": 1.2,
+      "color": "#1f77b4"
+    },
+    {
+      "label": "Deep sedation (plasma)",
+      "unit": "ng/mL",
+      "low": 1.2,
+      "high": 2.0,
+      "color": "#1f77b4"
+    }
   ],
-  alfentanil: [
-    { label: 'Analgesia (Ce)',  unit: 'ng/mL', low: 50,  high: 150, color: '#9467bd' },
-    { label: 'Anesthesia (Ce)', unit: 'ng/mL', low: 150, high: 300, color: '#8c564b' }
+  "midazolam": [
+    {
+      "label": "Sedation (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 0.05,
+      "high": 0.15,
+      "color": "#1f77b4"
+    },
+    {
+      "label": "Anesthesia (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 0.2,
+      "high": 0.5,
+      "color": "#1f77b4"
+    }
   ],
-  methadone: [],
-
-  // Neuromuscular blockers
-  rocuronium: [],
-  vecuronium: [],
-  cisatracurium: [],
-  pancuronium: [],
-  succinylcholine: [],
-
-  // Local anesthetics
-  lidocaine: [],
-  bupivacaine: [],
-
-  // Vasoactives / Inotropes
-  phenylephrine: [],
-  ephedrine: [],
-  epinephrine: [],
-  dobutamine: [],
-  dopamine: [],
-  milrinone: [],
-  vasopressin: []
+  "diazepam": [
+    {
+      "label": "Anxiolysis/sedation (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 0.2,
+      "high": 2.0,
+      "color": "#1f77b4"
+    }
+  ],
+  "fentanyl": [
+    {
+      "label": "Analgesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 1.0,
+      "high": 2.0,
+      "color": "#ff7f0e"
+    },
+    {
+      "label": "Anesthesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 2.0,
+      "high": 4.0,
+      "color": "#ff7f0e"
+    }
+  ],
+  "hydromorphone": [],
+  "remifentanil": [
+    {
+      "label": "Analgesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 1.0,
+      "high": 3.0,
+      "color": "#ff7f0e"
+    },
+    {
+      "label": "Anesthesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 3.0,
+      "high": 8.0,
+      "color": "#ff7f0e"
+    }
+  ],
+  "sufentanil": [
+    {
+      "label": "Analgesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 0.1,
+      "high": 0.3,
+      "color": "#ff7f0e"
+    },
+    {
+      "label": "Anesthesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 0.3,
+      "high": 0.7,
+      "color": "#ff7f0e"
+    }
+  ],
+  "alfentanil": [
+    {
+      "label": "Analgesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 50.0,
+      "high": 150.0,
+      "color": "#ff7f0e"
+    },
+    {
+      "label": "Anesthesia (effect-site Ce)",
+      "unit": "ng/mL",
+      "low": 150.0,
+      "high": 300.0,
+      "color": "#ff7f0e"
+    }
+  ],
+  "methadone": [
+    {
+      "label": "Analgesia (plasma)",
+      "unit": "ng/mL",
+      "low": 30.0,
+      "high": 100.0,
+      "color": "#1f77b4"
+    }
+  ],
+  "rocuronium": [],
+  "vecuronium": [],
+  "cisatracurium": [],
+  "pancuronium": [],
+  "succinylcholine": [],
+  "lidocaine": [
+    {
+      "label": "Antiarrhythmic therapeutic (plasma)",
+      "unit": "\u00b5g/mL",
+      "low": 1.5,
+      "high": 5.0,
+      "color": "#1f77b4"
+    }
+  ],
+  "bupivacaine": [],
+  "phenylephrine": [],
+  "ephedrine": [],
+  "epinephrine": [],
+  "dobutamine": [],
+  "dopamine": [],
+  "milrinone": [],
+  "vasopressin": []
 };
+
 
 // Convert a value expressed in `unitName` into the current display unit
 // Internal math is mg/mL. Convert to mg/mL, then to current display unit.
@@ -110,7 +239,7 @@ function buildTherapeuticTraces(finalTime) {
       line: { color: r.color || '#2ca02c', width: 1.8, dash: 'dot' },
       hoverinfo: 'skip',
       legendgroup: 'therapeutic',
-      legendgrouptitle: { text: 'Therapeutic ranges (Ce)' }
+      legendgrouptitle: { text: 'Therapeutic ranges (Cp/Ce)' }
     });
   });
   return traces;
