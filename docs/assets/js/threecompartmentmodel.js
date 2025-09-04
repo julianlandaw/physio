@@ -621,10 +621,8 @@ function addEventMarkers(layout) {
 }
 
 function onecompartment() {
-  setDisplayUnit('mg/mL');
   Q2num.value = 0;
   Q3num.value = 0;
-  currentDrug = null;
   dfsolve();
 }
 
@@ -994,15 +992,12 @@ function vasopressin() {
   dfsolve();
 }
 function reset() {
-  setDisplayUnit('mg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-  currentDrug = null; // clear active drug
-  bnum.value = 0.4;
-  tbolusnum.value = 15;
+  propofol();
+  bnum.value = 1;
+  tbolusnum.value = 1;
   tinfusionnum.value = 60;
-  infusionnum.value = 0.005;
-  tfinalnum.value = 135;
+  infusionnum.value = 100;
+  tfinalnum.value = 255;
   dfsolve();
 }
 
