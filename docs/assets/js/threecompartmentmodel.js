@@ -688,6 +688,8 @@ function dexmedetomidine() {
 function midazolam() {
   currentDrug = 'midazolam';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 142 + 6.0/7;
   Vd2num.value = 714 + 2.0/7;
   Vd3num.value = 1428 + 4.0/7;
@@ -700,6 +702,8 @@ function midazolam() {
 function diazepam() {
   currentDrug = 'diazepam';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 100;
   Vd2num.value = 900;
   Vd3num.value = 3000;
@@ -712,6 +716,8 @@ function diazepam() {
 function fentanyl() {
   currentDrug = 'fentanyl';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/hr');
   Vd1num.value = 185 + 5.0/7;
   Vd2num.value = 342 + 6.0/7;
   Vd3num.value = 4800;
@@ -724,6 +730,8 @@ function fentanyl() {
 function hydromorphone() {
   currentDrug = 'hydromorphone';
   setDisplayUnit('ng/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 150;
   Vd2num.value = 350;
   Vd3num.value = 1200;
@@ -736,6 +744,8 @@ function hydromorphone() {
 function remifentanil() {
   currentDrug = 'remifentanil';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 100;
   Vd2num.value = 300;
   Vd3num.value = 500;
@@ -748,6 +758,8 @@ function remifentanil() {
 function sufentanil() {
   currentDrug = 'sufentanil';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/hr');
   Vd1num.value = 20;
   Vd2num.value = 150;
   Vd3num.value = 800;
@@ -760,6 +772,8 @@ function sufentanil() {
 function alfentanil() {
   currentDrug = 'alfentanil';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 200;
   Vd2num.value = 342 + 6.0/7;
   Vd3num.value = 1428 + 4.0/7;
@@ -772,6 +786,8 @@ function alfentanil() {
 function methadone() {
   currentDrug = 'methadone';
   setDisplayUnit('ng/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 160;
   Vd2num.value = 1000;
   Vd3num.value = 2430;
@@ -784,6 +800,8 @@ function methadone() {
 function rocuronium() {
   currentDrug = 'rocuronium';
   setDisplayUnit('mg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 142 + 6.0/7;
   Vd2num.value = 357 + 1.0/7;
   Vd3num.value = 571 + 3.0/7;
@@ -796,6 +814,8 @@ function rocuronium() {
 function vecuronium() {
   currentDrug = 'vecuronium';
   setDisplayUnit('mg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 142 + 6.0/7;
   Vd2num.value = 314 + 2.0/7;
   Vd3num.value = 571 + 3.0/7;
@@ -808,6 +828,8 @@ function vecuronium() {
 function cisatracurium() {
   currentDrug = 'cisatracurium';
   setDisplayUnit('mg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 128 + 4.0/7;
   Vd2num.value = 285 + 5.0/7;
   Vd3num.value = 500;
@@ -820,6 +842,8 @@ function cisatracurium() {
 function pancuronium() {
   currentDrug = 'pancuronium';
   setDisplayUnit('mg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   Vd1num.value = 171 + 3.0/7;
   Vd2num.value = 428 + 4.0/7;
   Vd3num.value = 714 + 2.0/7;
@@ -832,6 +856,8 @@ function pancuronium() {
 function succinylcholine() {
   currentDrug = 'succinylcholine';
   setDisplayUnit('mg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/min');
   Vd1num.value = 200;
   Vd2num.value = 285 + 5.0/7;
   Vd3num.value = 428 + 4.0/7;
@@ -844,6 +870,8 @@ function succinylcholine() {
 function lidocaine() {
   currentDrug = 'lidocaine';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 171 + 3.0/7;
   Vd2num.value = 571 + 3.0/7;
   Vd3num.value = 1428 + 4.0/7;
@@ -856,6 +884,8 @@ function lidocaine() {
 function bupivacaine() {
   currentDrug = 'bupivacaine';
   setDisplayUnit('µg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 142 + 6.0/7;
   Vd2num.value = 714 + 2.0/7;
   Vd3num.value = 2857 + 1.0/7;
@@ -868,6 +898,8 @@ function bupivacaine() {
 function phenylephrine() {
   currentDrug = 'phenylephrine';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 214 + 2.0/7;
   Vd2num.value = 357 + 1.0/7;
   Vd3num.value = 714 + 2.0/7;
@@ -880,6 +912,8 @@ function phenylephrine() {
 function ephedrine() {
   currentDrug = 'ephedrine';
   setDisplayUnit('ng/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/min');
   Vd1num.value = 285 + 5.0/7;
   Vd2num.value = 857 + 1.0/7;
   Vd3num.value = 1714 + 2.0/7;
@@ -892,6 +926,8 @@ function ephedrine() {
 function epinephrine() {
   currentDrug = 'epinephrine';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 171 + 3.0/7;
   Vd2num.value = 357 + 1.0/7;
   Vd3num.value = 571 + 3.0/7;
@@ -904,6 +940,8 @@ function epinephrine() {
 function dobutamine() {
   currentDrug = 'dobutamine';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 214 + 2.0/7;
   Vd2num.value = 428 + 4.0/7;
   Vd3num.value = 714 + 2.0/7;
@@ -916,6 +954,8 @@ function dobutamine() {
 function dopamine() {
   currentDrug = 'dopamine';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 228 + 4.0/7;
   Vd2num.value = 428 + 4.0/7;
   Vd3num.value = 785 + 5.0/7;
@@ -928,6 +968,8 @@ function dopamine() {
 function milrinone() {
   currentDrug = 'milrinone';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 285 + 5.0/7;
   Vd2num.value = 1000;
   Vd3num.value = 2142 + 6.0/7;
@@ -940,6 +982,8 @@ function milrinone() {
 function vasopressin() {
   currentDrug = 'vasopressin';
   setDisplayUnit('ng/mL');
+  setBolusUnit('µg/kg');
+  setInfusionUnit('µg/kg/min');
   Vd1num.value = 171 + 3.0/7;
   Vd2num.value = 357 + 1.0/7;
   Vd3num.value = 571 + 3.0/7;
@@ -951,6 +995,8 @@ function vasopressin() {
 }
 function reset() {
   setDisplayUnit('mg/mL');
+  setBolusUnit('mg/kg');
+  setInfusionUnit('mg/kg/hr');
   currentDrug = null; // clear active drug
   bnum.value = 0.4;
   tbolusnum.value = 15;
