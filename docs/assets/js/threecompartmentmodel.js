@@ -79,6 +79,7 @@ const UNITS = {
 let currentUnit = UNITS['mg/mL'];
 function setDisplayUnit(unitName) {
   currentUnit = UNITS[unitName] || UNITS['mg/mL'];
+  initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (" + unitName + ")";
 }
 
 const BOLUSUNITS = {
@@ -441,10 +442,10 @@ function dfsolve() {
   for (let i = 0; i < N + 1; i++) ts[i] = 1.0 * i * params.dt;
 
   // Initial conditions (amounts for x, concentration for Ce)
-  let x01 = 1.0 * params.initialp * params.Vd1; // mg/kg
+  let x01 = 1.0 * params.initialp * params.Vd1 / currentUnit.factor; // mg/kg
   let x02 = 0.0;
   let x03 = 0.0;
-  let ce0 = params.initialp;
+  let ce0 = params.initialp / currentUnit.factor;
   xs1[0] = x01; xs2[0] = x02; xs3[0] = x03; ces[0] = ce0;
 
   // ---- Matrix exponential setup ----
@@ -489,8 +490,8 @@ function dfsolve() {
   const unitLabel = currentUnit.name;
   let trace_cp = { x: [], y: [], name: `Cp (${unitLabel})`, line: { color: '#1f77b4', width: 2 } };
   let trace_ce = { x: [], y: [], name: `Ce (${unitLabel})`, line: { color: '#ff7f0e', width: 2, dash: 'dot' } };
-  let trace_p1 = { x: [], y: [], name: 'P1 Compartment (mg/mL)', line: { width: 2 } };
-  let trace_p2 = { x: [], y: [], name: 'P2 Compartment (mg/mL)', line: { width: 2 } };
+  let trace_p1 = { x: [], y: [], name: `P1 Compartment (${unitLabel})`, line: { width: 2 } };
+  let trace_p2 = { x: [], y: [], name: `P2 Compartment (${unitLabel})`, line: { width: 2 } };
   for (let i = 0; i < N + 1; i++) {
     const t = ts[i];
     const cp = (xs1[i]/params.Vd1); // mg/mL
@@ -499,8 +500,8 @@ function dfsolve() {
     const ce = (ces[i]); // mg/mL
     trace_cp.x.push(t); trace_cp.y.push(cp * yFactor);
     trace_ce.x.push(t); trace_ce.y.push(ce * yFactor);
-    trace_p1.x.push(t); trace_p1.y.push(p1);
-    trace_p2.x.push(t); trace_p2.y.push(p2);
+    trace_p1.x.push(t); trace_p1.y.push(p1 * yFactor);
+    trace_p2.x.push(t); trace_p2.y.push(p2 * yFactor);
   }
 
   // Layouts
@@ -512,12 +513,12 @@ function dfsolve() {
   var layout2 = {
     title: { text:'P1 Compartment', font: { family: 'Courier New, monospace', size: 24 } },
     xaxis: { title: { text: 'Time (min)', font: { family: 'Courier New, monospace', size: 18, color: '#7f7f7f' }}},
-    yaxis: { title: { text: 'Concentration (mg/mL)', font: { family: 'Courier New, monospace', size: 18, color: '#7f7f7f' }}}
+    yaxis: { title: { text: `Concentration (${unitLabel})`, font: { family: 'Courier New, monospace', size: 18, color: '#7f7f7f' }}}
   };
   var layout3 = {
     title: { text:'P2 Compartment', font: { family: 'Courier New, monospace', size: 24 } },
     xaxis: { title: { text: 'Time (min)', font: { family: 'Courier New, monospace', size: 18, color: '#7f7f7f' }}},
-    yaxis: { title: { text: 'Concentration (mg/mL)', font: { family: 'Courier New, monospace', size: 18, color: '#7f7f7f' }}}
+    yaxis: { title: { text: `Concentration (${unitLabel})`, font: { family: 'Courier New, monospace', size: 18, color: '#7f7f7f' }}}
   };
 
   layout1 = addEventMarkers(layout1);
