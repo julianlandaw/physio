@@ -42,6 +42,10 @@ var pfinalhtml = document.getElementById("pfinalhtml");
 pfinalhtml.innerHTML = 0;
 var psshtml = document.getElementById("psshtml");
 psshtml.innerHTML = 0;
+var concentrationunitshtml1 = document.getElementById("concentrationunitshtml1");
+concentrationunitshtml1.innerHTML = "mg/mL";
+var concentrationunitshtml2 = document.getElementById("concentrationunitshtml2");
+concentrationunitshtml2.innerHTML = "mg/mL";
 var alphahtml = document.getElementById("alphahtml");
 alphahtml.innerHTML = 0;
 var betahtml = document.getElementById("betahtml");
@@ -80,6 +84,8 @@ let currentUnit = UNITS['mg/mL'];
 function setDisplayUnit(unitName) {
   currentUnit = UNITS[unitName] || UNITS['mg/mL'];
   initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (" + unitName + ")";
+  concentrationunitshtml1.innerHTML = unitName;
+  concentrationunitshtml2.innerHTML = unitName;
 }
 
 const BOLUSUNITS = {
@@ -398,6 +404,47 @@ function ensureTherapeuticToggle() {
   }
 }
 
+// Place legend outside, centered below the plotting area.
+// bottomMargin controls how much space is reserved for the legend.
+
+// Place legend outside and below the entire chart (below the x-axis title).
+// Adjust 'y' (more negative = lower) and 'bottom' to reserve adequate space.
+// Use smaller font and item width to reduce needed height on narrow screens.
+function legendOutsideBottom(layout, {
+  y = -0.45,         // below the x-axis title area
+  bottom = 160,      // reserve space for legend in bottom margin
+  fontSize = 12,
+  itemWidth = 80
+} = {}) {
+  layout.legend = {
+    ...(layout.legend || {}),
+    orientation: 'h',
+    x: 0.5, xanchor: 'center',
+    y, yanchor: 'top', yref: 'paper',
+    bgcolor: 'rgba(0,0,0,0)',
+    borderwidth: 0,
+    font: { size: fontSize },
+    itemwidth: itemWidth,
+    itemclick: 'toggle',
+    itemdoubleclick: 'toggleothers',
+    tracegroupgap: 8
+  };
+
+  // Reserve bottom space so the legend doesn't overlap titles/labels
+  const m = layout.margin || {};
+  layout.margin = { t: Math.max(50, m.t || 0), r: Math.max(20, m.r || 0),
+                    b: Math.max(bottom, m.b || 0), l: Math.max(60, m.l || 0),
+                    pad: 4 };
+
+  // Keep the x-axis title tight to the ticks so legend has room below it
+  layout.xaxis = layout.xaxis || {};
+  layout.xaxis.title = { ...(layout.xaxis.title || {}), standoff: 10 };
+  layout.xaxis.automargin = true;  // helps with long tick labels
+
+  return layout;
+}
+
+
 // Defaults
 bnum.value = 0.4;
 tbolusnum.value = 15;
@@ -525,19 +572,35 @@ function dfsolve() {
   layout2 = addEventMarkers(layout2);
   layout3 = addEventMarkers(layout3);
 
+// Put legend outside & below; panel 1 typically has many entries
+  layout1 = legendOutsideBottom(layout1, { y: -0.50, bottom: 180, fontSize: 11, itemWidth: 90 });
+
+// P1/P2 panels: either hide legend or keep it compact
+  layout2.showlegend = false;  // recommended (single trace)
+  layout3.showlegend = false;  // recommended
+// If you prefer to keep them:
+/// layout2 = legendOutsideBottom(layout2, { y: -0.35, bottom: 120 });
+/// layout3 = legendOutsideBottom(layout3, { y: -0.35, bottom: 120 });
+
+
+
   // Build therapeutic traces (Ce) for legend toggle
-  
   const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(params.tfinal);
-  layout1.shapes = therShapes;
+  layout1.shapes = [ ...(layout1.shapes || []), ...therShapes ];
+
   const panel1Traces = [trace_cp, trace_ce, ...legendTraces];
-  Plotly.newPlot('myDiv1', panel1Traces, layout1);
-  Plotly.newPlot('myDiv2', [trace_p1], layout2);
-  Plotly.newPlot('myDiv3', [trace_p2], layout3);
+
+  const PLOT_CONFIG = { responsive: true, displaylogo: false };
+
+  Plotly.newPlot('myDiv1', panel1Traces, layout1, PLOT_CONFIG);
+  Plotly.newPlot('myDiv2', [trace_p1],       layout2, PLOT_CONFIG);
+  Plotly.newPlot('myDiv3', [trace_p2],       layout3, PLOT_CONFIG);
+
 
   // ===== Results panel =====
-  pfinalhtml.innerHTML = roundToSignificantFigures(xs1[N]/params.Vd1, 3);
+  pfinalhtml.innerHTML = roundToSignificantFigures(yFactor*xs1[N]/params.Vd1, 3);
   const pss = params.b/params.Cl;
-  psshtml.innerHTML = roundToSignificantFigures(pss,3);
+  psshtml.innerHTML = roundToSignificantFigures(yFactor*pss,3);
 
   // Eigenvalues α, β, γ from 3x3 x-subsystem
   const Axyz = math.matrix([
@@ -602,11 +665,11 @@ function addEventMarkers(layout) {
   layout.shapes = [];
   if (bolusTime > 0 && bolusTime < finalTime) {
     layout.shapes.push({ type: "line", x0: bolusTime, x1: bolusTime, y0: 0, y1: 1,
-      xref: "x", yref: "paper", line: { color: "red", width: 2, dash: "dot" } });
+      xref: "x", yref: "paper", line: { color: "red", width: 0.5, dash: "dot" } });
   }
   if (infusionStop < finalTime && infusionStop > bolusTime) {
     layout.shapes.push({ type: "line", x0: infusionStop, x1: infusionStop, y0: 0, y1: 1,
-      xref: "x", yref: "paper", line: { color: "blue", width: 2, dash: "dot" } });
+      xref: "x", yref: "paper", line: { color: "blue", width: 0.5, dash: "dot" } });
   }
   if (bolusTime > 0 && bolusTime < finalTime && infusionStop < finalTime && infusionStop > bolusTime) {
     layout.annotations = [
