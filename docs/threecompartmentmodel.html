@@ -18,7 +18,7 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            padding-top: 100px; /* height of navbar + breathing room */
+            padding-top: 20px; /* height of navbar + breathing room */
         }
         .card {
             border-radius: 1rem;
@@ -110,7 +110,8 @@
         .right-sidebar {
             position: fixed;
             top: 80px;
-            right: 0;
+            left: 250px;
+            /* right: 0; */
             width: 350px;
             height: 75vh;
             overflow-y: auto;
@@ -150,8 +151,8 @@
         }
         /* Main content adapts dynamically between sidebars */
         .content-with-sidebars {
-            margin-left: 250px;   /* left sidebar width */
-            margin-right: 350px;  /* right sidebar width */
+            margin-left: 600px;   /* left sidebar width */
+            margin-right: 0;  /* right sidebar width */
             padding: 20px;
             width: auto;          /* expand to remaining space */
         }
@@ -310,14 +311,48 @@
         }
 
         #darkModeBtn {
-            left: 20px;  /* bottom-left */
+            left: 25px;  /* bottom-left */
+            bottom: 50px;
+            font-size: 20px;
         }
         
         #scaleToggleBtn {
-            right: 20px; /* bottom-right */
+            left: 250px; /* bottom-right */
+            bottom: 50px;
+            font-size: 20px;
         }
     </style>
-</head>
+
+<style>
+  .copyright-badge {
+    position: fixed;
+    left: 16px;
+    bottom: 12px;
+    z-index: 9999;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    font-size: 12.5px;
+    line-height: 1.2;
+    color: #fff;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: saturate(120%) blur(2px);
+    -webkit-backdrop-filter: saturate(120%) blur(2px);
+    padding: 6px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    pointer-events: none; /* so it doesn't block clicks */
+  }
+  @media (prefers-color-scheme: light) {
+    .copyright-badge { background: rgba(0,0,0,0.45); color: #fff; }
+  }
+  @media (prefers-color-scheme: dark) {
+    .copyright-badge { background: rgba(0,0,0,0.55); color: #f2f2f2; }
+  }
+  @media (max-width: 480px) {
+    .copyright-badge { font-size: 11.5px; right: 10px; bottom: 10px; padding: 5px 8px; }
+  }
+</style>
+
+\1
 <body>
     <!-- Page navigation -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top" data-spy="affix" data-offset-top="0">
@@ -661,21 +696,12 @@
 
         <script src="assets/js/threecompartmentmodel.js"></script>
     </section>
-
-    <footer class="page-footer">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-sm-6">
-                    <p>Copyright <script>document.write(new Date().getFullYear())</script> &copy; Julian Landaw</p>
-                </div>
-            </div>
-        </div>
-    </footer>
-
     <!-- core  -->
     <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
     <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
     <script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
     <script src="assets/js/steller.js"></script>
+
+<div class="copyright-badge">Copyright © <script>document.write(new Date().getFullYear())</script> Julian W. Landaw, MD, PhD.</div>
 </body>
 </html>
