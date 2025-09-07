@@ -6,7 +6,7 @@
     <meta name="author" content="Julian Landaw">
     <title>Three Compartment Model</title>
     <!-- font icons -->
-    <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
+    <!-- <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css"> -->
     <!-- Bootstrap + Steller main styles -->
 	<link rel="stylesheet" href="assets/css/steller.css">
     <script src="assets/js/math.js" type="text/javascript"></script>
@@ -63,7 +63,7 @@
             top: 80px;
             left: 0;
             width: 250px;
-            height: 75vh;          /* 80% height */
+            height: 70vh;          /* 80% height */
             overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
             padding: 10px;
@@ -102,18 +102,14 @@
             background-color: #1e1e1e;
             border-right: 1px solid #444;
         }
-        .content-with-sidebar {
-            margin-left: 300px;
-        }
 
         /* Right sidebar styles */
         .right-sidebar {
             position: fixed;
             top: 80px;
             left: 250px;
-            /* right: 0; */
             width: 350px;
-            height: 75vh;
+            height: 70vh;
             overflow-y: auto;
             background-color: #f8f9fa;
             padding: 10px;
@@ -156,12 +152,17 @@
             padding: 20px;
             width: auto;          /* expand to remaining space */
         }
+
+        body.dark-mode .content-with-sidebars {
+            background-color: #1e1e1e;
+            border-left: 1px solid #444;
+        }
         
         /* Medium screens: narrower sidebars */
         @media (max-width: 1200px) {
             .content-with-sidebars {
-                margin-left: 300px;
-                margin-right: 300px;
+                margin-left: 600px;
+                margin-right: 0px;
             }
         }
         
@@ -179,7 +180,7 @@
                 position: static;   /* let it flow in the page */
                 width: 300px;
                 height: auto;
-                max-height: 75vh;
+                max-height: 70vh;
                 float: left;        /* align to the left */
             }
             .content-with-sidebar {
@@ -292,11 +293,6 @@
             margin-right: 10px;
             text-align: left;  /* keep labels left-aligned */
         }
-        
-        .param-row input {
-            flex: 1;
-            text-align: right;
-        }
         /* Ensure parameter input boxes can always show 4 digits comfortably */
         .param-row input {
             flex: 1;
@@ -311,15 +307,15 @@
         }
 
         #darkModeBtn {
-            left: 25px;  /* bottom-left */
+            left: 5px;  /* bottom-left */
             bottom: 50px;
-            font-size: 20px;
+            font-size: 10px;
         }
         
         #scaleToggleBtn {
-            left: 250px; /* bottom-right */
+            left: 130px; /* bottom-right */
             bottom: 50px;
-            font-size: 20px;
+            font-size: 10px;
         }
     </style>
 
@@ -352,9 +348,9 @@
   }
 </style>
 
-\1
 <body>
     <!-- Page navigation -->
+    <!-- 
     <nav class="navbar navbar-expand-lg navbar-light fixed-top" data-spy="affix" data-offset-top="0">
         <div class="container">
             <a class="navbar-brand" href="pharmacology.html"><img src="assets/imgs/chaos.jpeg" alt=""></a>
@@ -371,6 +367,7 @@
             </div>
         </div>          
     </nav>
+    -->
     <!-- End of page navigation -->
 
     <!-- Sidebar toggle button (mobile) -->
