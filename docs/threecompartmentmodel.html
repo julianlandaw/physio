@@ -115,30 +115,6 @@
             border-left: 5px solid #dee2e6;
             z-index: 1030;
         }
-
-        /* Collapsible right sidebar on small screens */
-        @media (max-width: 768px) {
-            .right-sidebar {
-                position: fixed;
-                top: 0;
-                right: -350px;           /* hide off-screen */
-                transition: right 0.3s ease;
-                height: 100%;
-                z-index: 1040;
-            }
-            .right-sidebar.active {
-                right: 0;                /* slide in */
-            }
-            .right-sidebar-toggle-btn {
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                z-index: 1050;
-            }
-            .content-with-sidebars {
-                margin-right: 0;         /* no space on mobile */
-            }
-        }
         
         body.dark-mode .right-sidebar {
             background-color: #1e1e1e;
@@ -157,55 +133,45 @@
             border-left: 1px solid #444;
         }
         
-        /* Medium screens: narrower sidebars */
-        @media (max-width: 1200px) {
-            .content-with-sidebars {
-                margin-left: 600px;
-                margin-right: 0px;
-            }
-        }
-        
         /* Small screens: sidebars collapse, content takes full width */
-        @media (max-width: 768px) {
+        @media (max-width: 1200px) {
             .content-with-sidebars {
                 margin-left: 0;
                 margin-right: 0;
-            }
-        }
-    
-        /* On laptop-sized screens, sidebar pushes content instead of covering */
-        @media (max-width: 1200px) and (min-width: 769px) {
-            .sidebar {
-                position: static;   /* let it flow in the page */
-                width: 300px;
-                height: auto;
-                max-height: 70vh;
-                float: left;        /* align to the left */
-            }
-            .content-with-sidebar {
-                margin-left: 300px; /* pushes content to the right */
-            }
-        }
-    
-        /* Collapsible sidebar on small screens */
-        @media (max-width: 768px) {
+            } 
             .sidebar {
                 position: fixed;
-                top: 0;
-                left: -300px;
+                top: 150px;
+                left: -250px;
                 transition: left 0.3s ease;
-                height: 100%;
+                height: auto;
+                max-height: 70vh;
                 z-index: 1040;
             }
             .sidebar.active {
                 left: 0;
             }
-            .content-with-sidebar {
-                margin-left: 0;
-            }
             .sidebar-toggle-btn {
                 position: fixed;
                 top: 10px;
+                left: 10px;
+                z-index: 1050;
+            }
+            .right-sidebar {
+                position: fixed;
+                top: 150px;
+                left: -350px;           /* hide off-screen */
+                transition: left 0.3s ease;
+                height: auto;
+                max-height: 70vh;
+                z-index: 1040;
+            }
+            .right-sidebar.active {
+                left: 0;                /* slide in */
+            }
+            .right-sidebar-toggle-btn {
+                position: fixed;
+                top: 60px;
                 left: 10px;
                 z-index: 1050;
             }
@@ -660,13 +626,13 @@
             }
             
             function closeRightSidebarOnMobile() {
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 1200) {
                     document.getElementById('right-sidebar').classList.remove('active');
                 }
             }
 
             function closeSidebarOnMobile() {
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 1200) {
                     document.getElementById('sidebar').classList.remove('active');
                 }
             }
