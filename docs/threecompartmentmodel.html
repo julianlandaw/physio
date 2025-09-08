@@ -59,10 +59,10 @@
         /* Sidebar styles */
         .sidebar {
             position: fixed;
-            top: 80px;
+            top: 10px;
             left: 0;
             width: 250px;
-            height: 70vh;          /* 80% height */
+            height: 80vh;          /* 80% height */
             overflow-y: auto;       /* scroll if too tall */
             background-color: #f8f9fa;
             padding: 10px;
@@ -105,10 +105,10 @@
         /* Right sidebar styles */
         .right-sidebar {
             position: fixed;
-            top: 80px;
+            top: 10px;
             left: 250px;
             width: 350px;
-            height: 70vh;
+            height: 80vh;
             overflow-y: auto;
             background-color: #f8f9fa;
             padding: 10px;
@@ -141,7 +141,7 @@
             } 
             .sidebar {
                 position: fixed;
-                top: 150px;
+                top: 120px;
                 left: -250px;
                 transition: left 0.3s ease;
                 height: auto;
@@ -159,7 +159,7 @@
             }
             .right-sidebar {
                 position: fixed;
-                top: 150px;
+                top: 120px;
                 left: -350px;           /* hide off-screen */
                 transition: left 0.3s ease;
                 height: auto;
@@ -278,7 +278,7 @@
         }
         
         #scaleToggleBtn {
-            left: 130px; /* bottom-right */
+            right: 5px; /* bottom-right */
             bottom: 50px;
             font-size: 10px;
         }
@@ -653,7 +653,7 @@
 
         <!-- Fixed bottom-left dark mode toggle -->
         <button id="darkModeBtn" class="btn btn-secondary fixed-btn" onclick="toggleDarkMode()">
-            Toggle Dark Mode
+            Dark Mode
         </button>
 
         <script src="assets/js/threecompartmentmodel.js"></script>
