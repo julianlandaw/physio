@@ -691,18 +691,18 @@ function onecompartment() {
 }
 
 // ===== Drug presets (all set currentDrug) =====
-function propofol() {
+function propofol() { // Schnider et al. "The Influence of Method of Administration and Covariates on the Pharmacokinetics of Propofol in Adult Volunteers", Anesthesiology, 1998, 88, 1170-82.
   currentDrug = 'propofol';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 61;
-  Vd2num.value = 270;
-  Vd3num.value = 3400;
-  Clnum.value = 26.571;
-  Q2num.value = 18.429;
-  Q3num.value = 11.943;
-  ke0num.value = 0.26;
+  Vd1num.value = 61; // 4.27/70*1000; 
+  Vd2num.value = 270; // 18.9/70*1000; 
+  Vd3num.value = 3400; // 238/70*1000; 
+  Clnum.value = 27.023; // 4.27/70*1000*0.443; 
+  Q2num.value = 18.422; // 4.27/70*1000*0.302; 
+  Q3num.value = 11.956; // 4.27/70*1000*0.196;
+  ke0num.value = 0.456;
   dfsolve();
 }
 function etomidate() {
@@ -733,17 +733,17 @@ function ketamine() {
   ke0num.value = 0.25;
   dfsolve();
 }
-function dexmedetomidine() {
+function dexmedetomidine() { // DOI: 10.1097/ALN.0000000000000740
   currentDrug = 'dexmedetomidine';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 30; // 25–35
-  Vd2num.value = 50; // 40–60
-  Vd3num.value = 120; // aligned to presets text
-  Clnum.value = 0.7; // 0.6–0.8
-  Q2num.value = 0.5;
-  Q3num.value = 0.3;
+  Vd1num.value = 1.78/70*1000; // 
+  Vd2num.value = 30.3/70*1000; // 
+  Vd3num.value = 62/70*1000; // 
+  Clnum.value = 0.686/70*1000; // 
+  Q2num.value = 2.98/70*1000;
+  Q3num.value = 0.602/70*1000;
   ke0num.value = 0.277;
   dfsolve();
 }
@@ -775,17 +775,17 @@ function diazepam() {
   ke0num.value = 0.018;
   dfsolve();
 }
-function fentanyl() {
+function fentanyl() { // https://doi.org/10.1016/j.bja.2020.06.066.
   currentDrug = 'fentanyl';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 185 + 5.0/7;
-  Vd2num.value = 342 + 6.0/7;
-  Vd3num.value = 4800;
-  Clnum.value = 0.6 + 3.0/70;
-  Q2num.value = 5;
-  Q3num.value = 1 + 6.0/7;
+  Vd1num.value = 144 + 2.0/7; // 10.1/70*1000;
+  Vd2num.value = 378 + 4.0/7; // 26.5/70*1000;
+  Vd3num.value = 2942 + 5.0/7; // 206/70*1000;
+  Clnum.value = 10 + 4.0/70; // 0.704/70*1000;
+  Q2num.value = 34; // 2.38/70*1000;
+  Q3num.value = 21 + 2.0/7; // 1.49/70*1000;
   ke0num.value = 0.114;
   dfsolve();
 }
