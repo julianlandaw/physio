@@ -705,31 +705,31 @@ function propofol() { // Schnider et al. "The Influence of Method of Administrat
   ke0num.value = 0.456;
   dfsolve();
 }
-function etomidate() {
+function etomidate() { // Kaneda "split into 3 compartments"
   currentDrug = 'etomidate';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 150;
-  Vd2num.value = 300;
-  Vd3num.value = 1200;
-  Clnum.value = 14;
-  Q2num.value = 20;
-  Q3num.value = 10;
-  ke0num.value = 0.3;
+  Vd1num.value = 4.45/70*1000;
+  Vd2num.value = 15/70*1000;
+  Vd3num.value = 60/70*1000;
+  Clnum.value = 0.63/70*1000;
+  Q2num.value = 3/70*1000;
+  Q3num.value = 0.5/70*1000;
+  ke0num.value = 0.45;
   dfsolve();
 }
-function ketamine() {
+function ketamine() { // Example numbers based on lots of different papers
   currentDrug = 'ketamine';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 250;
-  Vd2num.value = 500;
-  Vd3num.value = 1500;
-  Clnum.value = 20;
-  Q2num.value = 30;
-  Q3num.value = 15;
+  Vd1num.value = 20/70*1000;
+  Vd2num.value = 40/70*1000;
+  Vd3num.value = 125/70*1000;
+  Clnum.value = 1.2/70*1000;
+  Q2num.value = 1.5/70*1000;
+  Q3num.value = 0.3/70*1000;
   ke0num.value = 0.25;
   dfsolve();
 }
@@ -747,32 +747,32 @@ function dexmedetomidine() { // DOI: 10.1097/ALN.0000000000000740
   ke0num.value = 0.277;
   dfsolve();
 }
-function midazolam() {
+function midazolam() { // Consistent with reported values
   currentDrug = 'midazolam';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 142 + 6.0/7;
-  Vd2num.value = 714 + 2.0/7;
-  Vd3num.value = 1428 + 4.0/7;
-  Clnum.value = 8 + 4.0/7;
-  Q2num.value = 11 + 3.0/7;
-  Q3num.value = 7 + 1.0/7;
+  Vd1num.value = 25/70*1000;
+  Vd2num.value = 50/70*1000;
+  Vd3num.value = 125/70*1000;
+  Clnum.value = 0.45/70*1000;
+  Q2num.value = 1.5/70*1000;
+  Q3num.value = 0.3/70*1000;
   ke0num.value = 0.073;
   dfsolve();
 }
-function diazepam() {
+function diazepam() { // Ku KC et al, Population pharmacokinetics and exploratory exposure-response relationships of diazepam in children treated for status epilepticus, into a 3 compartment model as opposed to 2 
   currentDrug = 'diazepam';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 100;
-  Vd2num.value = 900;
-  Vd3num.value = 3000;
-  Clnum.value = 0.25; // 0.2–0.3
-  Q2num.value = 0.5;
-  Q3num.value = 0.2;
-  ke0num.value = 0.018;
+  Vd1num.value = 42/70*1000;
+  Vd2num.value = 18/70*1000;
+  Vd3num.value = 38.5/70*1000;
+  Clnum.value = 39.3/70; 
+  Q2num.value = 300/70;
+  Q3num.value = 76.7/70;
+  ke0num.value = 0.2;
   dfsolve();
 }
 function fentanyl() { // https://doi.org/10.1016/j.bja.2020.06.066.
@@ -789,60 +789,60 @@ function fentanyl() { // https://doi.org/10.1016/j.bja.2020.06.066.
   ke0num.value = 0.114;
   dfsolve();
 }
-function hydromorphone() {
+function hydromorphone() { // Looking at “Morphine and hydromorphone PK in volunteers 2025” (Meissner et al.) when full tables are published might give more precise 3-comp numbers; keeping up with that is useful
   currentDrug = 'hydromorphone';
   setDisplayUnit('ng/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 150;
-  Vd2num.value = 350;
-  Vd3num.value = 1200;
-  Clnum.value = 5;
-  Q2num.value = 10;
-  Q3num.value = 5;
-  ke0num.value = 0.2;
+  Vd1num.value = 20/70*1000;
+  Vd2num.value = 90/70*1000;
+  Vd3num.value = 70/70*1000;
+  Clnum.value = 0.75/70*1000;
+  Q2num.value = 1.5/70*1000;
+  Q3num.value = 0.4/70*1000;
+  ke0num.value = 0.5;
   dfsolve();
 }
-function remifentanil() {
+function remifentanil() { // Eleveld et al. Allometric Model of Remifentanil Pharmacokinetics and Pharmacodynamics, 2017
   currentDrug = 'remifentanil';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 100;
-  Vd2num.value = 300;
-  Vd3num.value = 500;
-  Clnum.value = 3;
-  Q2num.value = 2;
-  Q3num.value = 1;
-  ke0num.value = 0.595;
+  Vd1num.value = 5.8/70*1000;
+  Vd2num.value = 8.82/70*1000;
+  Vd3num.value = 5.03/70*1000;
+  Clnum.value = 2.58/70*1000;
+  Q2num.value = 1.72/70*1000;
+  Q3num.value = 0.124/70*1000;
+  ke0num.value = 1.09;
   dfsolve();
 }
-function sufentanil() {
+function sufentanil() { // Combination from Hahn et al 2019, Zhao et al 2009, Youngs and Shafer 1994
   currentDrug = 'sufentanil';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 20;
-  Vd2num.value = 150;
-  Vd3num.value = 800;
-  Clnum.value = 0.35;
-  Q2num.value = 0.5;
-  Q3num.value = 0.2; // patched from 0.12
-  ke0num.value = 0.12;
+  Vd1num.value = 25/70*1000;
+  Vd2num.value = 150/70*1000;
+  Vd3num.value = 500/70*1000;
+  Clnum.value = 1/70*1000;
+  Q2num.value = 1.2/70*1000;
+  Q3num.value = 0.3/70*1000; 
+  ke0num.value = 1.5;
   dfsolve();
 }
-function alfentanil() {
+function alfentanil() { // From multiple sources, unclear now if Q2 should be 1 and 0.3 in these units or 1/70*1000 and 0.3/70*1000 in these units
   currentDrug = 'alfentanil';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 200;
-  Vd2num.value = 342 + 6.0/7;
-  Vd3num.value = 1428 + 4.0/7;
-  Clnum.value = 14 + 2.0/7;
-  Q2num.value = 17 + 1.0/7;
-  Q3num.value = 7 + 1.0/7;
-  ke0num.value = 0.456;
+  Vd1num.value = 0.9*1000;
+  Vd2num.value = 1.5*1000;
+  Vd3num.value = 3*1000;
+  Clnum.value = 6.4;
+  Q2num.value = 1/70*1000;
+  Q3num.value = 0.3/70*1000;
+  ke0num.value = 2;
   dfsolve();
 }
 function methadone() {
