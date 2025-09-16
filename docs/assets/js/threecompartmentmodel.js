@@ -831,7 +831,7 @@ function sufentanil() { // Combination from Hahn et al 2019, Zhao et al 2009, Yo
   ke0num.value = 1.5;
   dfsolve();
 }
-function alfentanil() { // From multiple sources, unclear now if Q2 should be 1 and 0.3 in these units or 1/70*1000 and 0.3/70*1000 in these units
+function alfentanil() { // From multiple sources
   currentDrug = 'alfentanil';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
@@ -845,88 +845,88 @@ function alfentanil() { // From multiple sources, unclear now if Q2 should be 1 
   ke0num.value = 2;
   dfsolve();
 }
-function methadone() {
+function methadone() { // Lotsch et al (2005) and Ward et al (2014)
   currentDrug = 'methadone';
   setDisplayUnit('ng/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 160;
-  Vd2num.value = 1000;
-  Vd3num.value = 2430;
-  Clnum.value = 106/70;
-  Q2num.value = 0.145*160;
-  Q3num.value = 0.08*160;
-  ke0num.value = 0.003;
+  Vd1num.value = 21.5/70*1000;
+  Vd2num.value = 75.1/70*1000;
+  Vd3num.value = 484/70*1000;
+  Clnum.value = 2.25;
+  Q2num.value = 77.4;
+  Q3num.value = 32.4;
+  ke0num.value = 0.087;
   dfsolve();
 }
-function rocuronium() {
+function rocuronium() { // multiple sources, usually uses 2 compartment models for neuromuscular blockers
   currentDrug = 'rocuronium';
-  setDisplayUnit('mg/mL');
+  setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 142 + 6.0/7;
-  Vd2num.value = 357 + 1.0/7;
-  Vd3num.value = 571 + 3.0/7;
-  Clnum.value = 5;
-  Q2num.value = 11 + 3.0/7;
-  Q3num.value = 7 + 1.0/7;
-  ke0num.value = null;
+  Vd1num.value = 80;
+  Vd2num.value = 300;
+  Vd3num.value = 400;
+  Clnum.value = 3.2;
+  Q2num.value = 20;
+  Q3num.value = 5;
+  ke0num.value = 0.2;
   dfsolve();
 }
-function vecuronium() {
+function vecuronium() { // Vega-Villa et al (2014)
   currentDrug = 'vecuronium';
-  setDisplayUnit('mg/mL');
+  setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 142 + 6.0/7;
-  Vd2num.value = 314 + 2.0/7;
-  Vd3num.value = 571 + 3.0/7;
-  Clnum.value = 4;
-  Q2num.value = 10;
-  Q3num.value = 6 + 3.0/7;
-  ke0num.value = null;
+  Vd1num.value = 10.25/70*1000;
+  Vd2num.value = 7.92/70*1000;
+  Vd3num.value = 41.99/70*1000;
+  Clnum.value = 0.51/70*1000;
+  Q2num.value = 0.51/70*1000;
+  Q3num.value = 0.095/70*1000;
+  ke0num.value = 0.3; //speculative 
   dfsolve();
 }
-function cisatracurium() {
+function cisatracurium() { // Varin et al (1998), Pfizer study
   currentDrug = 'cisatracurium';
-  setDisplayUnit('mg/mL');
+  setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 128 + 4.0/7;
-  Vd2num.value = 285 + 5.0/7;
-  Vd3num.value = 500;
-  Clnum.value = 2 + 6.0/7;
-  Q2num.value = 8 + 4.0/7;
-  Q3num.value = 5 + 5.0/7;
-  ke0num.value = null;
+  Vd1num.value = 40;
+  Vd2num.value = 60;
+  Vd3num.value = 45;
+  Clnum.value = 5;
+  Q2num.value = 10;
+  Q3num.value = 2;
+  ke0num.value = 0.0575;
   dfsolve();
 }
-function pancuronium() {
+function pancuronium() { // Somogyi et al, Buzello/Duvaldestin (1970s)
   currentDrug = 'pancuronium';
-  setDisplayUnit('mg/mL');
+  setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 171 + 3.0/7;
-  Vd2num.value = 428 + 4.0/7;
-  Vd3num.value = 714 + 2.0/7;
-  Clnum.value = 2 + 4.0/7;
-  Q2num.value = 8 + 4.0/7;
-  Q3num.value = 5 + 5.0/7;
-  ke0num.value = null;
+  Vd1num.value = 100;
+  Vd2num.value = 120;
+  Vd3num.value = 30;
+  Clnum.value = 1.5;
+  Q2num.value = 8;
+  Q3num.value = 2;
+  ke0num.value = 0.05;
   dfsolve();
 }
-function succinylcholine() {
+function succinylcholine() { // Multiple sources, no official 3 compartment model but estimated these values
   currentDrug = 'succinylcholine';
-  setDisplayUnit('mg/mL');
+  setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/min');
-  Vd1num.value = 200;
-  Vd2num.value = 285 + 5.0/7;
-  Vd3num.value = 428 + 4.0/7;
-  Clnum.value = 20;
-  Q2num.value = 21 + 3.0/7;
-  Q3num.value = 14 + 2.0/7;
-  ke0num.value = null;
+  Vd1num.value = 10;
+  Vd2num.value = 20;
+  Vd3num.value = 50;
+  Clnum.value = 300;
+  Q2num.value = 50;
+  Q3num.value = 5;
+  ke0num.value = 0.197;
   dfsolve();
 }
 function lidocaine() {
