@@ -97,8 +97,6 @@ let currentBolusUnit = BOLUSUNITS['mg/kg']
 function setBolusUnit(unitName) {
   currentBolusUnit = BOLUSUNITS[unitName] || BOLUSUNITS['mg/kg'];
   bhtml.innerHTML = 'Bolus (' + unitName + ')' || 'Bolus (mg/kg)';
-
-  updateScheduleUnitLabels();
 }
 
 const INFUSIONUNITS = {
@@ -113,213 +111,6 @@ let currentInfusionUnit = INFUSIONUNITS['mg/kg/min']
 function setInfusionUnit(unitName) {
   currentInfusionUnit = INFUSIONUNITS[unitName] || INFUSIONUNITS['mg/kg/min'];
   infusionhtml.innerHTML = 'Infusion (' + unitName + ')' || 'Infusion (mg/kg/min)';
-
-  updateScheduleUnitLabels();
-}
-
-function updateScheduleUnitLabels() {
-  const bSpan = document.getElementById('scheduleBolusUnit');
-  const iSpan = document.getElementById('scheduleInfusionUnit');
-  const bBadge = document.getElementById('scheduleBolusUnitBadge');
-  const iBadge = document.getElementById('scheduleInfusionUnitBadge');
-  const bUnit = (currentBolusUnit && currentBolusUnit.name) ? currentBolusUnit.name : 'mg/kg';
-  const iUnit = (currentInfusionUnit && currentInfusionUnit.name) ? currentInfusionUnit.name : 'mg/kg/min';
-  if (bSpan) bSpan.textContent = `(${bUnit})`;
-  if (iSpan) iSpan.textContent = `(${iUnit})`;
-  if (bBadge) bBadge.textContent = bUnit;
-  if (iBadge) iBadge.textContent = iUnit;
-}
-
-
-
-
-function disableLegacyBolusInfusionInputs(disabled) {
-  const ids = ['b','tbolus','infusion','tinfusion'];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = !!disabled;
-  });
-}
-
-// ============================================================================
-// Advanced dosing schedule: multiple boluses and variable infusion segments
-// ============================================================================
-function parseFloatSafe(v, defVal = 0) {
-  const x = parseFloat(v);
-  return Number.isFinite(x) ? x : defVal;
-}
-function clamp(x, lo, hi) { return Math.min(Math.max(x, lo), hi); }
-
-function ensureScheduleUI() {
-  const useCb = document.getElementById('useSchedule');
-  const bolusTbl = document.getElementById('bolusEventsTable');
-  const infTbl = document.getElementById('infusionEventsTable');
-  const addB = document.getElementById('addBolusEventBtn');
-  const addI = document.getElementById('addInfusionEventBtn');
-  const clrB = document.getElementById('clearBolusEventsBtn');
-  const clrI = document.getElementById('clearInfusionEventsBtn');
-  if (!useCb || !bolusTbl || !infTbl || !addB || !addI || !clrB || !clrI) return;
-  // Schedule is the default
-  useCb.checked = true;
-  disableLegacyBolusInfusionInputs(true);
-  updateScheduleUnitLabels();
-
-  // Default: schedule disabled; add one empty row so UI isn't blank
-  if (bolusTbl.tBodies[0].rows.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 });
-  if (infTbl.tBodies[0].rows.length === 0) addInfusionRow({ start: 0, end: 0, rate: 0 });
-
-  useCb.addEventListener('change', () => { disableLegacyBolusInfusionInputs(useCb.checked); dfsolve(); });
-  addB.addEventListener('click', () => { addBolusRow(); dfsolve(); });
-  addI.addEventListener('click', () => { addInfusionRow(); dfsolve(); });
-  clrB.addEventListener('click', () => { clearTable(bolusTbl); addBolusRow({ time: 0, dose: 0, duration: 0 }); dfsolve(); });
-  clrI.addEventListener('click', () => { clearTable(infTbl); addInfusionRow({ start: 0, end: 0, rate: 0 }); dfsolve(); });
-
-  // Recompute on edits (event delegation)
-  bolusTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
-  infTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
-
-  bolusTbl.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('button');
-    if (!btn) return;
-    if (btn.dataset.action === 'remove') {
-      btn.closest('tr')?.remove();
-      if (useCb.checked) dfsolve();
-    }
-  });
-  infTbl.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('button');
-    if (!btn) return;
-    if (btn.dataset.action === 'remove') {
-      btn.closest('tr')?.remove();
-      if (useCb.checked) dfsolve();
-    }
-  });
-}
-
-function clearTable(tbl) {
-  if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
-  tbl.tBodies[0].innerHTML = '';
-}
-
-function addBolusRow({ time = 0, dose = 0, duration = 0 } = {}) {
-  const tbl = document.getElementById('bolusEventsTable');
-  if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="time" value="${time}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="dose" value="${dose}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="duration" value="${duration}"></td>
-    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove">×</button></td>
-  `;
-  tbl.tBodies[0].appendChild(tr);
-}
-
-function addInfusionRow({ start = 0, end = 0, rate = 0 } = {}) {
-  const tbl = document.getElementById('infusionEventsTable');
-  if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="start" value="${start}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="end" value="${end}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="rate" value="${rate}"></td>
-    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove">×</button></td>
-  `;
-  tbl.tBodies[0].appendChild(tr);
-}
-
-function getScheduleFromDOM() {
-  const schedule = { enabled: false, boluses: [], infusions: [] };
-  const useCb = document.getElementById('useSchedule');
-  if (!useCb || !useCb.checked) return schedule;
-  schedule.enabled = true;
-
-  const bolusTbl = document.getElementById('bolusEventsTable');
-  const infTbl = document.getElementById('infusionEventsTable');
-
-  // Boluses
-  if (bolusTbl && bolusTbl.tBodies && bolusTbl.tBodies[0]) {
-    [...bolusTbl.tBodies[0].rows].forEach(r => {
-      const time = parseFloatSafe(r.querySelector('input[data-field="time"]')?.value, 0);
-      const dose = parseFloatSafe(r.querySelector('input[data-field="dose"]')?.value, 0);
-      const duration = parseFloatSafe(r.querySelector('input[data-field="duration"]')?.value, 0);
-      if (dose === 0) return;
-      schedule.boluses.push({ time, dose, duration });
-    });
-  }
-
-  // Infusions
-  if (infTbl && infTbl.tBodies && infTbl.tBodies[0]) {
-    [...infTbl.tBodies[0].rows].forEach(r => {
-      const start = parseFloatSafe(r.querySelector('input[data-field="start"]')?.value, 0);
-      const end = parseFloatSafe(r.querySelector('input[data-field="end"]')?.value, 0);
-      const rate = parseFloatSafe(r.querySelector('input[data-field="rate"]')?.value, 0);
-      if (rate === 0) return;
-      schedule.infusions.push({ start, end, rate });
-    });
-  }
-
-  // Sort for sanity
-  schedule.boluses.sort((a,b) => a.time - b.time);
-  schedule.infusions.sort((a,b) => a.start - b.start);
-  return schedule;
-}
-
-function setScheduleToDOM(schedule) {
-  const useCb = document.getElementById('useSchedule');
-  const bolusTbl = document.getElementById('bolusEventsTable');
-  const infTbl = document.getElementById('infusionEventsTable');
-  if (!useCb || !bolusTbl || !infTbl) return;
-  useCb.checked = !!(schedule && schedule.enabled);
-  clearTable(bolusTbl);
-  clearTable(infTbl);
-  const bs = (schedule && Array.isArray(schedule.boluses)) ? schedule.boluses : [];
-  const ins = (schedule && Array.isArray(schedule.infusions)) ? schedule.infusions : [];
-  if (bs.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 });
-  else bs.forEach(b => addBolusRow(b));
-  if (ins.length === 0) addInfusionRow({ start: 0, end: 0, rate: 0 });
-  else ins.forEach(i => addInfusionRow(i));
-}
-
-function buildInputRateFromSchedule(schedule, dt, tfinal) {
-  // Returns { u: Array(N), instant: Array(N+1) } where u is mg/kg/min in each dt interval.
-  const N = Math.ceil(tfinal / dt);
-  const u = new Array(N).fill(0);
-  const instant = new Array(N + 1).fill(0);
-  if (!schedule || !schedule.enabled) return { u, instant };
-
-  // Boluses (dose in currentBolusUnit; convert to mg/kg)
-  const bFactor = (currentBolusUnit && currentBolusUnit.factor) ? currentBolusUnit.factor : 1;
-  (schedule.boluses || []).forEach(ev => {
-    const t = Math.max(0, parseFloatSafe(ev.time, 0));
-    const doseMgKg = parseFloatSafe(ev.dose, 0) / bFactor;
-    const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
-    if (!Number.isFinite(doseMgKg) || doseMgKg === 0) return;
-    const idx0 = clamp(Math.round(t / dt), 0, N);
-    if (dur <= 0) {
-      instant[idx0] += doseMgKg;
-      return;
-    }
-    const idx1 = clamp(Math.round((t + dur) / dt), 0, N);
-    const end = Math.max(idx0 + 1, idx1);
-    const rate = doseMgKg / dur; // mg/kg/min
-    for (let i = idx0; i < Math.min(end, N); i++) u[i] += rate;
-  });
-
-  // Infusions (rate in currentInfusionUnit; convert to mg/kg/min)
-  const iFactor = (currentInfusionUnit && currentInfusionUnit.factor) ? currentInfusionUnit.factor : 1;
-  (schedule.infusions || []).forEach(ev => {
-    let s = Math.max(0, parseFloatSafe(ev.start, 0));
-    let e = Math.max(0, parseFloatSafe(ev.end, 0));
-    if (e < s) { const tmp = e; e = s; s = tmp; }
-    const rateMgKgMin = parseFloatSafe(ev.rate, 0) / iFactor;
-    if (!Number.isFinite(rateMgKgMin) || rateMgKgMin === 0) return;
-    const idx0 = clamp(Math.round(s / dt), 0, N);
-    const idx1 = clamp(Math.round(e / dt), 0, N);
-    if (idx1 <= idx0) return;
-    for (let i = idx0; i < Math.min(idx1, N); i++) u[i] += rateMgKgMin;
-  });
-
-  return { u, instant };
 }
 
 // Track which drug preset is active
@@ -727,30 +518,14 @@ function dfsolve() {
   const a41 = M.subset(math.index(3,0)), a42 = M.subset(math.index(3,1)), a43 = M.subset(math.index(3,2)), a44 = M.subset(math.index(3,3)), a45 = M.subset(math.index(3,4));
 
   // ---- Time stepping ----
- // Advanced schedule support
- const schedule = getScheduleFromDOM();
- const schedRates = buildInputRateFromSchedule(schedule, params.dt, params.tfinal);
- const uArr = schedRates.u;
- const instArr = schedRates.instant;
-
   let counter = 0;
   while (counter < N) {
- // Determine input for this interval (mg/kg/min)
- let u = 0;
- if (schedule && schedule.enabled) {
-   // Apply instantaneous bolus at the start of this step
-   if (instArr && instArr[counter]) {
-     xs1[counter] = xs1[counter] + instArr[counter];
-   }
-   u = (uArr && uArr[counter]) ? uArr[counter] : 0;
- } else {
-   // Legacy single bolus + single infusion
-   if (counter < Nhalf1) u = parseFloat(bnum.value)/parseFloat(tbolusnum.value)/currentBolusUnit.factor;
-   else if (counter < Nhalf2) u = parseFloat(infusionnum.value)/currentInfusionUnit.factor;
-   else u = 0;
- }
- params.b = u;
- // State updates: Ce does NOT feed back into x1/x2/x3
+    // Piecewise-constant input rate (mg/kg/min)
+    if (counter < Nhalf1) params.b = parseFloat(bnum.value)/parseFloat(tbolusnum.value)/currentBolusUnit.factor;
+    else if (counter < Nhalf2) params.b = parseFloat(infusionnum.value)/currentInfusionUnit.factor;
+    else params.b = 0;
+
+    // State updates: Ce does NOT feed back into x1/x2/x3
     const x1n = a11*xs1[counter] + a12*xs2[counter] + a13*xs3[counter] + params.b*a15;
     const x2n = a21*xs1[counter] + a22*xs2[counter] + a23*xs3[counter] + params.b*a25;
     const x3n = a31*xs1[counter] + a32*xs2[counter] + a33*xs3[counter] + params.b*a35;
@@ -833,9 +608,7 @@ function dfsolve() {
 
   // ===== Results panel =====
   pfinalhtml.innerHTML = roundToSignificantFigures(yFactor*xs1[N]/params.Vd1, 3);
-  // Approximate Css for the current (last-step) input rate
- const uLast = (Number.isFinite(params.b) ? params.b : 0);
- const pss = uLast/params.Cl;
+  const pss = params.b/params.Cl;
   psshtml.innerHTML = roundToSignificantFigures(yFactor*pss,3);
 
   // Eigenvalues α, β, γ from 3x3 x-subsystem
@@ -895,65 +668,28 @@ function dfsolve() {
 }
 
 function addEventMarkers(layout) {
-  const finalTime = parseFloatSafe(document.getElementById('tfinal')?.value, 0);
+  const bolusTime = parseFloat(document.getElementById('tbolus').value);
+  const infusionStop = parseFloat(document.getElementById('tinfusion').value) + bolusTime
+  const finalTime = parseFloat(document.getElementById('tfinal').value);
   layout.shapes = [];
-  layout.annotations = [];
-
-  const schedule = getScheduleFromDOM();
-
-  // Legacy markers
-  if (!schedule || !schedule.enabled) {
-    const bolusTime = parseFloatSafe(document.getElementById('tbolus')?.value, 0);
-    const infusionStop = parseFloatSafe(document.getElementById('tinfusion')?.value, 0) + bolusTime;
-    if (bolusTime > 0 && bolusTime < finalTime) {
-      layout.shapes.push({ type: 'line', x0: bolusTime, x1: bolusTime, y0: 0, y1: 1,
-        xref: 'x', yref: 'paper', line: { color: 'red', width: 0.6, dash: 'dot' } });
-      layout.annotations.push({ x: bolusTime, y: 1, xref: 'x', yref: 'paper', text: 'Bolus', showarrow: false,
-        yanchor: 'bottom', font: { color: 'red', size: 10 } });
-    }
-    if (infusionStop > 0 && infusionStop < finalTime) {
-      layout.shapes.push({ type: 'line', x0: infusionStop, x1: infusionStop, y0: 0, y1: 1,
-        xref: 'x', yref: 'paper', line: { color: 'blue', width: 0.6, dash: 'dot' } });
-      layout.annotations.push({ x: infusionStop, y: 1, xref: 'x', yref: 'paper', text: 'Infusion End', showarrow: false,
-        yanchor: 'bottom', font: { color: 'blue', size: 10 } });
-    }
-    return layout;
+  if (bolusTime > 0 && bolusTime < finalTime) {
+    layout.shapes.push({ type: "line", x0: bolusTime, x1: bolusTime, y0: 0, y1: 1,
+      xref: "x", yref: "paper", line: { color: "red", width: 0.5, dash: "dot" } });
   }
-
-  // Schedule markers (multiple)
-  const boluses = (schedule.boluses || []).filter(b => Number.isFinite(b.time));
-  const infs = (schedule.infusions || []).filter(i => Number.isFinite(i.start) && Number.isFinite(i.end));
-
-  // Bolus lines
-  boluses.forEach((b, k) => {
-    const t = b.time;
-    if (t >= 0 && t <= finalTime) {
-      layout.shapes.push({ type: 'line', x0: t, x1: t, y0: 0, y1: 1,
-        xref: 'x', yref: 'paper', line: { color: 'red', width: 0.6, dash: 'dot' } });
-      if (k < 6) {
-        layout.annotations.push({ x: t, y: 1, xref: 'x', yref: 'paper', text: `B${k+1}`,
-          showarrow: false, yanchor: 'bottom', font: { color: 'red', size: 10 } });
-      }
-    }
-  });
-
-  // Infusion segment boundaries
-  infs.forEach((seg, k) => {
-    const s = Math.max(0, seg.start);
-    const e = Math.max(0, seg.end);
-    [s, e].forEach((t, j) => {
-      if (t >= 0 && t <= finalTime) {
-        layout.shapes.push({ type: 'line', x0: t, x1: t, y0: 0, y1: 1,
-          xref: 'x', yref: 'paper', line: { color: 'blue', width: 0.6, dash: 'dot' } });
-        if (k < 4) {
-          const label = (j === 0) ? `I${k+1}s` : `I${k+1}e`;
-          layout.annotations.push({ x: t, y: 1, xref: 'x', yref: 'paper', text: label,
-            showarrow: false, yanchor: 'bottom', font: { color: 'blue', size: 10 } });
-        }
-      }
-    });
-  });
-
+  if (infusionStop < finalTime && infusionStop > bolusTime) {
+    layout.shapes.push({ type: "line", x0: infusionStop, x1: infusionStop, y0: 0, y1: 1,
+      xref: "x", yref: "paper", line: { color: "blue", width: 0.5, dash: "dot" } });
+  }
+  if (bolusTime > 0 && bolusTime < finalTime && infusionStop < finalTime && infusionStop > bolusTime) {
+    layout.annotations = [
+      { x: bolusTime, y: 1, xref: "x", yref: "paper", text: "Bolus", showarrow: false, yanchor: "bottom", font: {color: "red"} },
+      { x: infusionStop, y: 1, xref: "x", yref: "paper", text: "Infusion End", showarrow: false, yanchor: "bottom", font: {color: "blue"} }
+    ];
+  } else if (bolusTime > 0 && bolusTime < finalTime) {
+    layout.annotations = [ { x: bolusTime, y: 1, xref: "x", yref: "paper", text: "Bolus", showarrow: false, yanchor: "bottom", font: {color: "red"} } ];
+  } else if (infusionStop < finalTime && infusionStop > bolusTime) {
+    layout.annotations = [ { x: infusionStop, y: 1, xref: "x", yref: "paper", text: "Infusion End", showarrow: false, yanchor: "bottom", font: {color: "blue"} } ];
+  }
   return layout;
 }
 
@@ -1335,18 +1071,6 @@ function reset() {
   tinfusionnum.value = 60;
   infusionnum.value = 100;
   tfinalnum.value = 255;
-  // Default schedule mirrors the single bolus + single infusion template
-  try {
-    setScheduleToDOM({
-      enabled: true,
-      boluses: [{ time: 0, dose: parseFloatSafe(bnum.value,0), duration: parseFloatSafe(tbolusnum.value,0) }],
-      infusions: [{ start: parseFloatSafe(tbolusnum.value,0), end: parseFloatSafe(tbolusnum.value,0) + parseFloatSafe(tinfusionnum.value,0), rate: parseFloatSafe(infusionnum.value,0) }]
-    });
-  } catch(e) {}
-  const useCb = document.getElementById('useSchedule');
-  if (useCb) useCb.checked = true;
-  disableLegacyBolusInfusionInputs(true);
-  updateScheduleUnitLabels();
   dfsolve();
 }
 
@@ -1367,21 +1091,8 @@ ke0num.addEventListener("change", function() { dfsolve(); });
 
 // Ensure the toggle exists, then plot defaults
 ensureTherapeuticToggle();
-try { ensureScheduleUI(); updateScheduleUnitLabels(); } catch(e) {}
 reset();
 
-
-function plural(n, one, many) { return (n === 1) ? one : many; }
-function scheduleCounts(schedule) {
-  if (!schedule || !schedule.enabled) return { boluses: 1, infusions: 1 };
-  const b = Array.isArray(schedule.boluses) ? schedule.boluses.length : 0;
-  const i = Array.isArray(schedule.infusions) ? schedule.infusions.length : 0;
-  return { boluses: b, infusions: i };
-}
-function scheduleSummary(schedule) {
-  const c = scheduleCounts(schedule);
-  return `${c.boluses} ${plural(c.boluses,'bolus','boluses')}, ${c.infusions} ${plural(c.infusions,'infusion','infusions')}`;
-}
 
 // ============================================================================
 // Comparison feature: capture multiple dosing strategies and overlay Cp/Ce
@@ -1411,8 +1122,7 @@ function getCurrentState(name = 'Current') {
       tfinal: parseFloat(tfinalnum.value),
       initialp: parseFloat(initialpnum.value)
     },
- schedule: getScheduleFromDOM(),
- pk: {
+    pk: {
       Vd1: parseFloat(Vd1num.value),
       Vd2: parseFloat(Vd2num.value),
       Vd3: parseFloat(Vd3num.value),
@@ -1430,7 +1140,7 @@ function captureCurrentStrategy() {
   const s = {
     ...live,
     id: uuidLike(),
-    name: `${(currentDrug ?? 'Drug')} strategy ${n}`
+    name: `${(currentDrug || 'Drug')} strategy ${n}`
   };
   strategies.push(s);
   activeStrategyId = s.id;
@@ -1474,10 +1184,7 @@ function loadStrategyToInputs(id) {
   Q2num.value = s.pk.Q2;
   Q3num.value = s.pk.Q3;
   ke0num.value = s.pk.ke0;
-  
-  // Restore schedule (if present)
-  if (s.schedule) setScheduleToDOM(s.schedule);
-activeStrategyId = s.id;
+  activeStrategyId = s.id;
   renderStrategyList();
   dfsolve();
 }
@@ -1498,8 +1205,7 @@ function renderStrategyList() {
   }
   const rows = strategies.map(s => {
     const activeClass = (s.id === activeStrategyId) ? 'border-primary' : '';
-    const c = scheduleCounts(s.schedule);
- const subtitle = `${c.boluses} ${plural(c.boluses,'bolus','boluses')}; ${c.infusions} ${plural(c.infusions,'infusion','infusions')}; tfinal ${s.inputs.tfinal} min`;
+    const subtitle = `Bolus ${s.inputs.b} ${s.units.bolus} over ${s.inputs.tbolus} min; Infusion ${s.inputs.infusion} ${s.units.infusion} × ${s.inputs.tinfusion} min; tfinal ${s.inputs.tfinal} min`;
     return `
       <div class="list-group-item ${activeClass}" data-id="${s.id}">
         <div class="d-flex justify-content-between align-items-start gap-2">
@@ -1580,47 +1286,6 @@ function simulateStrategy(state) {
   const Nhalf1 = Math.ceil(tbol / dt);
   const Nhalf2 = Nhalf1 + Math.ceil(tinf / dt);
 
- // Schedule (if enabled on this saved state)
- const schedule = (state && state.schedule && state.schedule.enabled) ? state.schedule : { enabled: false };
-
- function buildRatesFromStateSchedule() {
-   const u = new Array(N).fill(0);
-   const instant = new Array(N + 1).fill(0);
-   if (!schedule || !schedule.enabled) return { u, instant };
-
-   // Boluses (use state's bolus unit)
-   const bF = bUnit.factor;
-   (schedule.boluses || []).forEach(ev => {
-     const t = Math.max(0, parseFloatSafe(ev.time, 0));
-     const doseMgKg = parseFloatSafe(ev.dose, 0) / bF;
-     const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
-     if (!Number.isFinite(doseMgKg) || doseMgKg === 0) return;
-     const idx0 = clamp(Math.round(t / dt), 0, N);
-     if (dur <= 0) { instant[idx0] += doseMgKg; return; }
-     const idx1 = clamp(Math.round((t + dur) / dt), 0, N);
-     const end = Math.max(idx0 + 1, idx1);
-     const rate = doseMgKg / dur;
-     for (let i = idx0; i < Math.min(end, N); i++) u[i] += rate;
-   });
-
-   // Infusions (use state's infusion unit)
-   const iF = iUnit.factor;
-   (schedule.infusions || []).forEach(ev => {
-     let s = Math.max(0, parseFloatSafe(ev.start, 0));
-     let e = Math.max(0, parseFloatSafe(ev.end, 0));
-     if (e < s) { const tmp = e; e = s; s = tmp; }
-     const rateMgKgMin = parseFloatSafe(ev.rate, 0) / iF;
-     if (!Number.isFinite(rateMgKgMin) || rateMgKgMin === 0) return;
-     const idx0 = clamp(Math.round(s / dt), 0, N);
-     const idx1 = clamp(Math.round(e / dt), 0, N);
-     if (idx1 <= idx0) return;
-     for (let i = idx0; i < Math.min(idx1, N); i++) u[i] += rateMgKgMin;
-   });
-
-   return { u, instant };
- }
- const sched = buildRatesFromStateSchedule();
-
   // Time
   const ts = new Array(N + 1);
   for (let i = 0; i <= N; i++) ts[i] = i * dt;
@@ -1652,14 +1317,10 @@ function simulateStrategy(state) {
   // Step
   for (let i = 0; i < N; i++) {
     let u = 0;
-    if (schedule && schedule.enabled) {
-      if (sched.instant && sched.instant[i]) xs1[i] = xs1[i] + sched.instant[i];
-      u = (sched.u && sched.u[i]) ? sched.u[i] : 0;
-    } else {
-      if (i < Nhalf1) u = bolusRate;
-      else if (i < Nhalf2) u = infusionRate;
-      else u = 0;
-    }
+    if (i < Nhalf1) u = bolusRate;
+    else if (i < Nhalf2) u = infusionRate;
+    else u = 0;
+
     const x1 = xs1[i], x2 = xs2[i], x3 = xs3[i], ce = ces[i];
     xs1[i+1] = a11*x1 + a12*x2 + a13*x3 + u*a15;
     xs2[i+1] = a21*x1 + a22*x2 + a23*x3 + u*a25;
@@ -1801,5 +1462,4 @@ function renderCompareResults(rows, unitLabel) {
 }
 
 // Ensure compare UI exists after load
-try { ensureScheduleUI(); } catch (e) { console.warn('Schedule UI init failed:', e); }
 try { ensureCompareUI(); } catch (e) { console.warn('Compare UI init failed:', e); }

@@ -107,7 +107,7 @@
             position: fixed;
             top: 10px;
             left: 250px;
-            width: 450px;
+            width: 350px;
             height: 80vh;
             overflow-y: auto;
             background-color: #f8f9fa;
@@ -122,7 +122,7 @@
         }
         /* Main content adapts dynamically between sidebars */
         .content-with-sidebars {
-            margin-left: 700px;   /* left sidebar width */
+            margin-left: 600px;   /* left sidebar width */
             margin-right: 0;  /* right sidebar width */
             padding: 20px;
             width: auto;          /* expand to remaining space */
@@ -386,8 +386,8 @@
         <div class="right-sidebar" id="right-sidebar">
             <!-- Bolus and Infusion Parameters -->
             <div class="card shadow-sm mb-3">
-              <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▲</span></div>
-              <div class="card-body hidden">
+              <div class="card-header" onclick="toggleCollapse(this)">Bolus & Infusion <span class="toggle-icon">▼</span></div>
+              <div class="card-body">
                 <div class="param-row">
                   <div id="bhtml" class="label"></div>
                   <input type="number" class="form-control" id="b" value="0.1">
@@ -408,67 +408,7 @@
             </div>
         
             
-            
-
-    <!-- Dosing Schedule (advanced) -->
-    <div class="card shadow-sm mb-3" id="scheduleCard">
-      <div class="card-header" onclick="toggleCollapse(this)">Dosing Schedule (advanced) <span class="toggle-icon">▼</span></div>
-      <div class="card-body">
-        <div class="form-check form-switch mb-2">
-          <input class="form-check-input" type="checkbox" id="useSchedule" checked>
-          <label class="form-check-label" for="useSchedule">Use schedule (multiple boluses + variable infusions)</label>
-        </div>
-        <div class="small mb-2" id="scheduleUnitsBadge"><span class="badge bg-light text-dark me-1">Bolus unit: <span id="scheduleBolusUnitBadge">mg/kg</span></span><span class="badge bg-light text-dark">Infusion unit: <span id="scheduleInfusionUnitBadge">mg/kg/min</span></span></div>
-        <div class="small text-muted mb-3">
-          Times are in minutes from t=0. Bolus dose uses the current <b>Bolus</b> unit; infusion rate uses the current <b>Infusion</b> unit.
-          A bolus with duration 0 is treated as instantaneous.
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <strong>Boluses</strong>
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" type="button" id="addBolusEventBtn">Add bolus</button>
-            <button class="btn btn-outline-secondary" type="button" id="clearBolusEventsBtn">Clear</button>
-          </div>
-        </div>
-        <div class="table-responsive mb-3">
-          <table class="table table-sm table-bordered text-center align-middle" id="bolusEventsTable">
-            <thead class="table-light">
-              <tr>
-                <th style="min-width:90px;">Time (min)</th>
-                <th style="min-width:110px;">Dose <span class="text-muted" id="scheduleBolusUnit">(mg/kg)</span></th>
-                <th style="min-width:110px;">Duration (min)</th>
-                <th style="width:50px;"></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <strong>Infusions</strong>
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" type="button" id="addInfusionEventBtn">Add infusion segment</button>
-            <button class="btn btn-outline-secondary" type="button" id="clearInfusionEventsBtn">Clear</button>
-          </div>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered text-center align-middle" id="infusionEventsTable">
-            <thead class="table-light">
-              <tr>
-                <th style="min-width:90px;">Start (min)</th>
-                <th style="min-width:90px;">End (min)</th>
-                <th style="min-width:130px;">Rate <span class="text-muted" id="scheduleInfusionUnit">(mg/kg/min)</span></th>
-                <th style="width:50px;"></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Compare strategies -->
+            <!-- Compare strategies -->
             <div class="card shadow-sm mb-3" id="compareCard">
               <div class="card-header" onclick="toggleCollapse(this)">Compare Strategies <span class="toggle-icon">▼</span></div>
               <div class="card-body">
@@ -480,7 +420,7 @@
                   <button class="btn btn-sm btn-primary" type="button" id="addStrategyBtn">Add strategy from current inputs</button>
                   <button class="btn btn-sm btn-outline-secondary" type="button" id="clearStrategiesBtn">Clear</button>
                 </div>
-                <div class="small text-muted mb-2">Tip: adjust your dosing schedule (boluses/infusions) or PK parameters, then click “Add” again to capture another strategy.</div>
+                <div class="small text-muted mb-2">Tip: adjust bolus/infusion inputs (or PK parameters), then click “Add” again to capture another strategy.</div>
                 <div id="strategyList" class="list-group"></div>
               </div>
             </div>
