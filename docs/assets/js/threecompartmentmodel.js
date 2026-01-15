@@ -1688,20 +1688,20 @@ function populateDrugDatalist() {
   });
 }
 
+
 function resolveDrugIdFromInput(text) {
   if (!text) return null;
   const t = text.trim().toLowerCase();
-  // Exact label match
-  const exact = DRUGS.find(d => d.label.toLowerCase() === t);
-  if (exact) return exact.id;
-  // ID match
-  const idMatch = DRUGS.find(d => d.id.toLowerCase() === t);
-  if (idMatch) return idMatch.id;
-  // Starts-with match
-  const sw = DRUGS.find(d => d.label.toLowerCase().startsWith(t));
-  if (sw) return sw.id;
+
+  const exactLabel = DRUGS.find(d => d.label.toLowerCase() === t);
+  if (exactLabel) return exactLabel.id;
+
+  const exactId = DRUGS.find(d => d.id.toLowerCase() === t);
+  if (exactId) return exactId.id;
+
   return null;
 }
+
 
 function setCurrentDrugLabel() {
   const label = document.getElementById('currentDrugLabel');
@@ -1711,17 +1711,35 @@ function setCurrentDrugLabel() {
   label.textContent = `${d.label} — units: ${currentUnit.name}`;
 }
 
-function applyDrugFromTopBar() {
-  const inp = document.getElementById('drugSearch');
-  const text = inp?.value || '';
-  const id = resolveDrugIdFromInput(text);
+function applyDrugById(id) {
   if (!id) return;
   const fn = window[id];
-  if (typeof fn === 'function') {
-    fn();
-    setCurrentDrugLabel();
-  }
+  if (typeof fn !== 'function') return;
+
+  fn();                 // runs the preset (sets units + PK + dfsolve())
+  setCurrentDrugLabel();
+
+  // Update input to the canonical label (nice UX)
+  const inp = document.getElementById('drugSearch');
+  const d = DRUGS.find(x => x.id === id);
+  if (inp && d) inp.value = d.label;
+
+  // Optional: dismiss keyboard on mobile after selection
+  inp?.blur?.();
 }
+
+
+function maybeAutoApplyDrugFromInput() {
+  const inp = document.getElementById('drugSearch');
+  if (!inp) return;
+
+  // Only apply if it's an exact match for a known drug
+  const id = resolveDrugIdFromInput(inp.value);
+  if (!id) return;
+
+  applyDrugById(id);
+}
+
 
 // ============================
 // Reset + init
@@ -1750,6 +1768,7 @@ function reset() {
   dfsolve();
 }
 
+
 function wireInputs() {
   [Vd1num, Vd2num, Vd3num, Clnum, Q2num, Q3num, bnum, tbolusnum, tinfusionnum, infusionnum, initialpnum, tfinalnum, ke0num]
     .forEach(el => el?.addEventListener('change', () => dfsolve()));
@@ -1757,9 +1776,34 @@ function wireInputs() {
   document.getElementById('scaleToggleBtnTop')?.addEventListener('click', () => toggleScale());
   document.getElementById('darkModeBtnTop')?.addEventListener('click', () => toggleDarkMode());
 
-  document.getElementById('drugApplyBtn')?.addEventListener('click', () => applyDrugFromTopBar());
-  document.getElementById('drugSearch')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); applyDrugFromTopBar(); }
+  const drugInput = document.getElementById('drugSearch');
+
+  // Key UX: tapping the field selects all so typing replaces "Propofol"
+  drugInput?.addEventListener('focus', () => {
+    setTimeout(() => drugInput.select(), 0);
+  });
+
+  // Immediate apply when user selects a real drug (exact match)
+  drugInput?.addEventListener('input', () => {
+    maybeAutoApplyDrugFromInput();
+  });
+
+  // Clear button
+  document.getElementById('drugClearBtn')?.addEventListener('click', () => {
+    if (!drugInput) return;
+    drugInput.value = '';
+    drugInput.focus();
+  });
+
+  // Dropdown button: clear + focus to show full list
+  document.getElementById('drugDropdownBtn')?.addEventListener('click', () => {
+    if (!drugInput) return;
+
+    drugInput.value = '';
+    drugInput.focus();
+
+    // iOS/Safari sometimes needs an input event to show suggestions
+    drugInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());

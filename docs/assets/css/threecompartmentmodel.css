@@ -314,6 +314,45 @@ body.drawer-open .drawer-backdrop {
   }
 }
 
+
+/* Drug field with embedded clear + dropdown controls */
+.drugsearch__field{
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.drugsearch__field input{
+  padding-right: 56px; /* room for × and ▾ */
+  min-width: 0;
+  width: 100%;
+}
+
+.drugsearch__icon{
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+#drugClearBtn{ right: 30px; }
+#drugDropdownBtn{ right: 6px; }
+
+.drugsearch__icon:hover{
+  background: rgba(127,127,127,.12);
+  color: var(--text);
+}
+
+
 /* Copyright badge */
 .copyright-badge {
   position: fixed;

@@ -27,19 +27,26 @@
         <div class="brand__subtitle" id="currentDrugLabel">No drug selected</div>
       </div>
 
+      
       <div class="drugsearch" role="search">
         <label class="sr-only" for="drugSearch">Drug search</label>
-        <input
-          id="drugSearch"
-          class="form-control form-control-sm"
-          type="text"
-          placeholder="Search or select a drug…"
-          list="drugDatalist"
-          autocomplete="off"
-        />
+
+        <div class="drugsearch__field">
+          <input
+            id="drugSearch"
+            class="form-control form-control-sm"
+            type="text"
+            placeholder="Search or select a drug…"
+            list="drugDatalist"
+            autocomplete="off"
+          />
+          <button class="drugsearch__icon" type="button" id="drugClearBtn" aria-label="Clear drug">×</button>
+          <button class="drugsearch__icon" type="button" id="drugDropdownBtn" aria-label="Show drug list">▾</button>
+        </div>
+
         <datalist id="drugDatalist"></datalist>
-        <button class="btn btn-sm btn-outline-secondary" type="button" id="drugApplyBtn">Apply</button>
       </div>
+
     </div>
 
     <div class="appbar__right">
