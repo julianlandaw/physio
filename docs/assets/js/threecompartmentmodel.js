@@ -399,8 +399,8 @@ function ensureScheduleUI() {
   const clrI = document.getElementById('clearInfusionEventsBtn');
   if (!useCb || !bolusTbl || !infTbl || !addB || !addI || !clrB || !clrI) return;
 
-  useCb.checked = true;
-  disableLegacyBolusInfusionInputs(true);
+  useCb.checked = false;
+  disableLegacyBolusInfusionInputs(false);
   updateScheduleUnitLabels();
 
   if (bolusTbl.tBodies[0].rows.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 });
@@ -1736,15 +1736,15 @@ function reset() {
 
   try {
     setScheduleToDOM({
-      enabled: true,
+      enabled: false,
       boluses: [{ time: 0, dose: parseFloatSafe(bnum.value,0), duration: parseFloatSafe(tbolusnum.value,0) }],
       infusions: [{ start: parseFloatSafe(tbolusnum.value,0), end: parseFloatSafe(tbolusnum.value,0) + parseFloatSafe(tinfusionnum.value,0), rate: parseFloatSafe(infusionnum.value,0) }]
     });
   } catch (e) {}
 
   const useCb = document.getElementById('useSchedule');
-  if (useCb) useCb.checked = true;
-  disableLegacyBolusInfusionInputs(true);
+  if (useCb) useCb.checked = false;
+  disableLegacyBolusInfusionInputs(false);
   updateScheduleUnitLabels();
   setCurrentDrugLabel();
   dfsolve();
