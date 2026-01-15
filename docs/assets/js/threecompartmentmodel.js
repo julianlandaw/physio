@@ -86,9 +86,12 @@ function initDrawer() {
     body.style.display = collapsed ? 'none' : 'block';
     if (icon) icon.textContent = collapsed ? '▲' : '▼';
   };
-
+  collapseById('parameterCard',true);
   collapseById('scheduleCard', true);
   collapseById('compareCard', true);
+  collapseById('simulationCard', true);
+  collapseById('volumeCard', true);
+  collapseById('pharmCard', true);
 }
 
 // ============================
