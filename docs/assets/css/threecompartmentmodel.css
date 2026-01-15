@@ -1,0 +1,279 @@
+/* threecompartmentmodel.css
+   Clean layout: top app bar + right drawer + full-width content.
+*/
+
+:root {
+  --appbar-h: 56px;
+  --drawer-w: 440px;
+
+  --bg: #ffffff;
+  --panel: #f8f9fa;
+  --panel-2: #ffffff;
+  --text: #212529;
+  --muted: #6c757d;
+  --border: #dee2e6;
+  --shadow: 0 10px 30px rgba(0,0,0,.18);
+
+  --radius: 14px;
+}
+
+body.dark-mode {
+  --bg: #121212;
+  --panel: #1e1e1e;
+  --panel-2: #161616;
+  --text: #e9ecef;
+  --muted: #adb5bd;
+  --border: #444;
+  --shadow: 0 12px 34px rgba(0,0,0,.40);
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  padding-top: var(--appbar-h);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* Screen-reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* App bar */
+.appbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--appbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  z-index: 2000;
+}
+
+.appbar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brand {
+  display: grid;
+  line-height: 1.1;
+}
+
+.brand__title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.brand__subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drugsearch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 280px;
+  max-width: 520px;
+}
+
+.drugsearch input {
+  min-width: 220px;
+}
+
+.appbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Drawer */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 2100;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(var(--drawer-w), 92vw);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  transform: translateX(105%);
+  transition: transform .22s ease;
+  z-index: 2200;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer__header {
+  height: var(--appbar-h);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer__title {
+  font-weight: 800;
+}
+
+.drawer__hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.drawer__body {
+  padding: 12px;
+  overflow: auto;
+}
+
+body.drawer-open .drawer {
+  transform: translateX(0);
+}
+
+body.drawer-open .drawer-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Content */
+.app-content {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 14px;
+}
+
+.content-section {
+  margin-bottom: 16px;
+}
+
+.content-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+  margin: 6px 0 10px;
+}
+
+/* Cards */
+.card {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+
+.card-header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-weight: 650;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle-icon {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card-body {
+  background: var(--panel-2);
+}
+
+/* Parameter rows */
+.param-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.param-row .label {
+  font-weight: 650;
+}
+
+.param-row input {
+  text-align: right;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+/* Plot sizing */
+.plot {
+  width: 100%;
+  height: 420px;
+}
+
+.plot--small {
+  height: 300px;
+}
+
+@media (max-width: 576px) {
+  .brand__subtitle { display: none; }
+  .drugsearch { min-width: 0; }
+  .drugsearch input { min-width: 140px; }
+  .plot { height: 340px; }
+  .plot--small { height: 260px; }
+  .param-row { grid-template-columns: 130px 1fr; }
+}
+
+/* Copyright badge */
+.copyright-badge {
+  position: fixed;
+  left: 16px;
+  bottom: 12px;
+  z-index: 9999;
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: #fff;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: saturate(120%) blur(2px);
+  -webkit-backdrop-filter: saturate(120%) blur(2px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
