@@ -251,13 +251,67 @@ body.drawer-open .drawer-backdrop {
   height: 300px;
 }
 
-@media (max-width: 576px) {
-  .brand__subtitle { display: none; }
-  .drugsearch { min-width: 0; }
-  .drugsearch input { min-width: 140px; }
-  .plot { height: 340px; }
-  .plot--small { height: 260px; }
-  .param-row { grid-template-columns: 130px 1fr; }
+/* --- Mobile header layout: prevent overlap --- */
+@media (max-width: 690px) {
+  /* Let header wrap to multiple rows */
+  .appbar {
+    position: sticky;
+    height: auto;              /* allow taller header */
+    flex-wrap: wrap;           /* key: allow wrapping */
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  body {
+    padding-top: 0;
+  }
+
+  /* Put left and right sections on their own rows */
+  .appbar__left,
+  .appbar__right {
+    flex: 1 1 100%;
+    min-width: 0;              /* key: allow children to shrink */
+  }
+
+  /* Make left row compact */
+  .appbar__left {
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Optional: hide subtitle to save space */
+  .brand__subtitle {
+    display: none;
+  }
+
+  /* Search should take the full row */
+  .drugsearch {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* Allow input to shrink and fill available space */
+  .drugsearch input {
+    flex: 1 1 auto;
+    min-width: 0;              /* key: prevents overflow */
+    width: 100%;
+  }
+
+  /* Buttons row: spread out nicely */
+  .appbar__right {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Prevent button text from wrapping awkwardly */
+  #paramsBtn,
+  #drugApplyBtn {
+    white-space: nowrap;
+  }
 }
 
 /* Copyright badge */
