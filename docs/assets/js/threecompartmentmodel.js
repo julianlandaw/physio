@@ -884,23 +884,71 @@ function trapz(y, x) {
   return s;
 }
 
+
 function computeMetrics(state, sim) {
   const { ts, cp, ce } = sim;
+
   const idxCp = cp.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
   const idxCe = ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
 
   const bUnit = BOLUSUNITS[state.units.bolus] || BOLUSUNITS['mg/kg'];
   const iUnit = INFUSIONUNITS[state.units.infusion] || INFUSIONUNITS['mg/kg/min'];
-  const bolusDose_mgkg = (state.inputs.b || 0) / bUnit.factor;
-  const infusionRate_mgkgmin = (state.inputs.infusion || 0) / iUnit.factor;
-  const infusionDose_mgkg = infusionRate_mgkgmin * (state.inputs.tinfusion || 0);
+
+  const tfinal = Math.max(0, parseFloatSafe(state.inputs?.tfinal, 0));
+
+  let totalDose_mgkg = 0;
+
+  const schedule = (state && state.schedule && state.schedule.enabled) ? state.schedule : null;
+
+  if (schedule) {
+    // --- Boluses: dose field is total dose over duration. Clip delivered fraction to [0, tfinal].
+    (schedule.boluses || []).forEach(ev => {
+      const t = Math.max(0, parseFloatSafe(ev.time, 0));
+      const dose_mgkg = parseFloatSafe(ev.dose, 0) / bUnit.factor;
+      const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
+
+      if (!Number.isFinite(dose_mgkg) || dose_mgkg === 0) return;
+      if (t > tfinal) return;
+
+      if (dur <= 0) {
+        // Instantaneous bolus at time t
+        totalDose_mgkg += dose_mgkg;
+      } else {
+        // Finite-duration bolus: deliver proportionally over its duration, clipped to tfinal
+        const delivered = Math.max(0, Math.min(t + dur, tfinal) - t);
+        totalDose_mgkg += dose_mgkg * (delivered / dur);
+      }
+    });
+
+    // --- Infusions: rate is mg/kg/min (after unit conversion). Clip to [0, tfinal].
+    (schedule.infusions || []).forEach(ev => {
+      let s = Math.max(0, parseFloatSafe(ev.start, 0));
+      let e = Math.max(0, parseFloatSafe(ev.end, 0));
+      if (e < s) { const tmp = e; e = s; s = tmp; }
+
+      if (s > tfinal) return;
+
+      const rate_mgkgmin = parseFloatSafe(ev.rate, 0) / iUnit.factor;
+      if (!Number.isFinite(rate_mgkgmin) || rate_mgkgmin === 0) return;
+
+      const delivered = Math.max(0, Math.min(e, tfinal) - s);
+      totalDose_mgkg += rate_mgkgmin * delivered;
+    });
+
+  } else {
+    // Legacy: one bolus + one infusion
+    const bolusDose_mgkg = (parseFloatSafe(state.inputs?.b, 0)) / bUnit.factor;
+    const infusionRate_mgkgmin = (parseFloatSafe(state.inputs?.infusion, 0)) / iUnit.factor;
+    const tinf = Math.max(0, parseFloatSafe(state.inputs?.tinfusion, 0));
+    totalDose_mgkg = bolusDose_mgkg + infusionRate_mgkgmin * tinf;
+  }
 
   return {
-    totalDose_mgkg: bolusDose_mgkg + infusionDose_mgkg,
+    totalDose_mgkg,
     cmaxCp: cp[idxCp], tmaxCp: ts[idxCp],
     cmaxCe: ce[idxCe], tmaxCe: ts[idxCe],
     aucCp: trapz(cp, ts), aucCe: trapz(ce, ts),
-    finalCp: cp[cp.length-1], finalCe: ce[ce.length-1]
+    finalCp: cp[cp.length - 1], finalCe: ce[ce.length - 1]
   };
 }
 
@@ -1100,16 +1148,31 @@ function dfsolve() {
   const uArr = schedRates.u;
   const instArr = schedRates.instant;
 
+  
   let counter = 0;
+
+  // Track end of LAST rate-based input (infusions + finite-duration boluses)
+  const EPS_DOSE = 1e-12;
+  let lastRateEndIdx = -1;   // index in [0..N] where the final rate interval ends
+
   while (counter < N) {
     let u = 0;
     if (schedule && schedule.enabled) {
       if (instArr && instArr[counter]) xs1[counter] = xs1[counter] + instArr[counter];
       u = (uArr && uArr[counter]) ? uArr[counter] : 0;
+
+      // If u is nonzero, that rate runs on [counter, counter+1), so dosing ends at counter+1
+      if (Math.abs(u) > EPS_DOSE) {
+        lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
+      }
     } else {
       if (counter < Nhalf1) u = parseFloat(bnum.value) / parseFloat(tbolusnum.value) / currentBolusUnit.factor;
       else if (counter < Nhalf2) u = parseFloat(infusionnum.value) / currentInfusionUnit.factor;
       else u = 0;
+
+      if (Math.abs(u) > EPS_DOSE) {
+        lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
+      }
     }
 
     params.b = u;
@@ -1229,18 +1292,34 @@ function dfsolve() {
   k13html.innerHTML = roundToSignificantFigures(k13, 3);
   k31html.innerHTML = roundToSignificantFigures(k31, 3);
 
-  // Context-sensitive half-life
+
+  // Context-sensitive half-life (CSHL)
+  // Start at end of last rate-based input (infusions + finite-duration boluses),
+  // OR at end of simulation if rate continues through tfinal.
+  let startIdx = (lastRateEndIdx >= 0) ? clamp(lastRateEndIdx, 0, N) : N;
+
   let cshl = 0;
-  let x1 = xs1[N], x2 = xs2[N], x3 = xs3[N];
-  while (x1 > (xs1[N]/2)) {
-    cshl += params.dt;
-    const x1t = x1, x2t = x2, x3t = x3;
-    x1 = a11*x1t + a12*x2t + a13*x3t;
-    x2 = a21*x1t + a22*x2t + a23*x3t;
-    x3 = a31*x1t + a32*x2t + a33*x3t;
-    if (cshl > 1e6) break;
+  let x1 = xs1[startIdx], x2 = xs2[startIdx], x3 = xs3[startIdx];
+
+  if (Number.isFinite(x1) && x1 > 0) {
+    const target = x1 / 2;
+    while (x1 > target) {
+      cshl += params.dt;
+      const x1t = x1, x2t = x2, x3t = x3;
+
+      // Post-infusion washout: u = 0
+      x1 = a11*x1t + a12*x2t + a13*x3t;
+      x2 = a21*x1t + a22*x2t + a23*x3t;
+      x3 = a31*x1t + a32*x2t + a33*x3t;
+
+      if (cshl > 1e6) break; // safety guard
+    }
+  } else {
+    cshl = 0;
   }
+
   contextsensitivehalflifehtml.innerHTML = roundToSignificantFigures(cshl, 3);
+
 }
 
 window.dfsolve = dfsolve;
