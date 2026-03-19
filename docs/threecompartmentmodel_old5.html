@@ -8,7 +8,7 @@
   <title>Three Compartment Model</title>
 
   <!-- Existing site styles (optional). Keep if you rely on global Bootstrap/theme styles. -->
-  <!-- <link rel="stylesheet" href="assets/css/steller.css" /> -->
+  <link rel="stylesheet" href="assets/css/steller.css" />
 
   <!-- New app-specific styles -->
   <link rel="stylesheet" href="assets/css/threecompartmentmodel.css" />
@@ -84,33 +84,23 @@
         <div class="card-header" data-collapse="true">Bolus &amp; Infusion <span class="toggle-icon">▼</span></div>
         <div class="card-body">
           <div class="param-row">
-            <label class="label" for="bolusUnitSelect">Bolus unit</label>
-            <select class="form-control" id="bolusUnitSelect" aria-label="Bolus unit"></select>
-          </div>
-          <div class="param-row">
-            <label class="label" for="infusionUnitSelect">Infusion unit</label>
-            <select class="form-control" id="infusionUnitSelect" aria-label="Infusion unit"></select>
-          </div>
-          <div class="param-note">Use per-kg dosing (mg/kg, µg/kg/min) or absolute dosing (mg, mg/min, mg/hr). Absolute units are converted internally using patient weight.</div>
-          <div class="param-row">
             <div id="bhtml" class="label"></div>
-            <input type="number" class="form-control" id="b" value="0.1" min="0" step="0.01" inputmode="decimal" />
+            <input type="number" class="form-control" id="b" value="0.1" />
           </div>
           <div class="param-row">
             <div id="tbolushtml" class="label"></div>
-            <input type="number" class="form-control" id="tbolus" value="0.1" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="tbolus" value="0.1" />
           </div>
           <div class="param-row">
             <div id="infusionhtml" class="label"></div>
-            <input type="number" class="form-control" id="infusion" value="0" min="0" step="0.01" inputmode="decimal" />
+            <input type="number" class="form-control" id="infusion" value="0" />
           </div>
           <div class="param-row">
             <div id="tinfusionhtml" class="label"></div>
-            <input type="number" class="form-control" id="tinfusion" value="240" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="tinfusion" value="240" />
           </div>
         </div>
       </div>
-
 
       <!-- Dosing Schedule (advanced) -->
       <div class="card shadow-sm mb-3" id="scheduleCard">
@@ -201,21 +191,15 @@
         <div class="card-header" data-collapse="true">Simulation <span class="toggle-icon">▼</span></div>
         <div class="card-body">
           <div class="param-row">
-            <label id="weighthtml" class="label" for="weight">Weight (kg)</label>
-            <input type="number" class="form-control" id="weight" value="70" min="0.1" step="0.1" inputmode="decimal" />
-          </div>
-          <div class="param-note">Absolute bolus/rate units are converted internally to mg/kg or mg/kg/min using patient weight.</div>
-          <div class="param-row">
             <div id="initialphtml" class="label"></div>
             <input type="number" class="form-control" id="initialp" value="0" />
           </div>
           <div class="param-row">
             <div id="tfinalhtml" class="label"></div>
-            <input type="number" class="form-control" id="tfinal" value="240" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="tfinal" value="240" />
           </div>
         </div>
       </div>
-
 
       <!-- Volumes -->
       <div class="card shadow-sm mb-3" id="volumeCard">

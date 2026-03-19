@@ -171,11 +171,6 @@ const tbolusnum = document.getElementById("tbolus");
 const tinfusionhtml = document.getElementById("tinfusionhtml");
 tinfusionhtml.innerHTML = "Infusion Time (min)";
 const tinfusionnum = document.getElementById("tinfusion");
-const weighthtml = document.getElementById("weighthtml");
-if (weighthtml) weighthtml.innerHTML = "Weight (kg)";
-const weightnum = document.getElementById("weight");
-const bolusUnitSelect = document.getElementById("bolusUnitSelect");
-const infusionUnitSelect = document.getElementById("infusionUnitSelect");
 const initialphtml = document.getElementById("initialphtml");
 initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (mg/mL)";
 const initialpnum = document.getElementById("initialp");
@@ -219,88 +214,31 @@ function setDisplayUnit(unitName) {
 }
 
 const BOLUSUNITS = {
-  'mg/kg': { name: 'mg/kg', factor: 1, perKg: true },
-  'µg/kg': { name: 'µg/kg', factor: 1e3, perKg: true },
-  'ng/kg': { name: 'ng/kg', factor: 1e6, perKg: true },
-  'mg': { name: 'mg', factor: 1, perKg: false },
-  'µg': { name: 'µg', factor: 1e3, perKg: false },
-  'ng': { name: 'ng', factor: 1e6, perKg: false }
+  'mg/kg': { name: 'mg/kg', factor: 1 },
+  'µg/kg': { name: 'µg/kg', factor: 1e3 },
+  'ng/kg': { name: 'ng/kg', factor: 1e6 }
 };
 let currentBolusUnit = BOLUSUNITS['mg/kg'];
 
-const INFUSIONUNITS = {
-  'mg/kg/min': { name: 'mg/kg/min', factor: 1, perKg: true },
-  'µg/kg/min': { name: 'µg/kg/min', factor: 1e3, perKg: true },
-  'ng/kg/min': { name: 'ng/kg/min', factor: 1e6, perKg: true },
-  'mg/kg/hr': { name: 'mg/kg/hr', factor: 60.0, perKg: true },
-  'µg/kg/hr': { name: 'µg/kg/hr', factor: 1e3 * 60.0, perKg: true },
-  'ng/kg/hr': { name: 'ng/kg/hr', factor: 1e6 * 60.0, perKg: true },
-  'mg/min': { name: 'mg/min', factor: 1, perKg: false },
-  'µg/min': { name: 'µg/min', factor: 1e3, perKg: false },
-  'ng/min': { name: 'ng/min', factor: 1e6, perKg: false },
-  'mg/hr': { name: 'mg/hr', factor: 60.0, perKg: false },
-  'µg/hr': { name: 'µg/hr', factor: 1e3 * 60.0, perKg: false },
-  'ng/hr': { name: 'ng/hr', factor: 1e6 * 60.0, perKg: false }
-};
-let currentInfusionUnit = INFUSIONUNITS['mg/kg/min'];
-
-const BOLUS_UNIT_ORDER = ['mg/kg', 'µg/kg', 'ng/kg', 'mg', 'µg', 'ng'];
-const INFUSION_UNIT_ORDER = ['mg/kg/min', 'µg/kg/min', 'ng/kg/min', 'mg/kg/hr', 'µg/kg/hr', 'ng/kg/hr', 'mg/min', 'µg/min', 'ng/min', 'mg/hr', 'µg/hr', 'ng/hr'];
-
-function getWeightKg() {
-  const w = parseFloatSafe(weightnum?.value, 70);
-  return (Number.isFinite(w) && w > 0) ? w : 70;
-}
-
-function convertBolusValueToMgKg(value, unitObj = currentBolusUnit, weightKg = getWeightKg()) {
-  const normalized = parseFloatSafe(value, 0) / (unitObj?.factor ?? 1);
-  if (unitObj?.perKg) return normalized;
-  return normalized / Math.max(weightKg, 1e-9);
-}
-
-function convertInfusionValueToMgKgMin(value, unitObj = currentInfusionUnit, weightKg = getWeightKg()) {
-  const normalized = parseFloatSafe(value, 0) / (unitObj?.factor ?? 1);
-  if (unitObj?.perKg) return normalized;
-  return normalized / Math.max(weightKg, 1e-9);
-}
-
-function convertBolusToMgKg(value, unitObj = currentBolusUnit) {
-  return convertBolusValueToMgKg(value, unitObj, getWeightKg());
-}
-
-function convertInfusionToMgKgMin(value, unitObj = currentInfusionUnit) {
-  return convertInfusionValueToMgKgMin(value, unitObj, getWeightKg());
-}
-
-function populateUnitSelect(selectEl, unitsMap, order) {
-  if (!selectEl) return;
-  selectEl.innerHTML = '';
-  order.forEach(unitName => {
-    const meta = unitsMap[unitName];
-    if (!meta) return;
-    const opt = document.createElement('option');
-    opt.value = unitName;
-    opt.textContent = meta.name;
-    selectEl.appendChild(opt);
-  });
-}
-
-function initializeUnitSelectors() {
-  populateUnitSelect(bolusUnitSelect, BOLUSUNITS, BOLUS_UNIT_ORDER);
-  populateUnitSelect(infusionUnitSelect, INFUSIONUNITS, INFUSION_UNIT_ORDER);
-}
-
 function setBolusUnit(unitName) {
   currentBolusUnit = BOLUSUNITS[unitName] || BOLUSUNITS['mg/kg'];
-  bhtml.innerHTML = `Bolus (${currentBolusUnit.name})`;
-  if (bolusUnitSelect) bolusUnitSelect.value = currentBolusUnit.name;
+  bhtml.innerHTML = `Bolus (${unitName})`;
   updateScheduleUnitLabels();
 }
 
+const INFUSIONUNITS = {
+  'mg/kg/min': { name: 'mg/kg/min', factor: 1 },
+  'µg/kg/min': { name: 'µg/kg/min', factor: 1e3 },
+  'ng/kg/min': { name: 'ng/kg/min', factor: 1e6 },
+  'mg/kg/hr': { name: 'mg/kg/hr', factor: 60.0 },
+  'µg/kg/hr': { name: 'µg/kg/hr', factor: 1e3 * 60.0 },
+  'ng/kg/hr': { name: 'ng/kg/hr', factor: 1e6 * 60.0 }
+};
+let currentInfusionUnit = INFUSIONUNITS['mg/kg/min'];
+
 function setInfusionUnit(unitName) {
   currentInfusionUnit = INFUSIONUNITS[unitName] || INFUSIONUNITS['mg/kg/min'];
-  infusionhtml.innerHTML = `Infusion (${currentInfusionUnit.name})`;
-  if (infusionUnitSelect) infusionUnitSelect.value = currentInfusionUnit.name;
+  infusionhtml.innerHTML = `Infusion (${unitName})`;
   updateScheduleUnitLabels();
 }
 
@@ -418,9 +356,10 @@ function buildInputRateFromSchedule(schedule, dt, tfinal) {
   const instant = new Array(N + 1).fill(0);
   if (!schedule || !schedule.enabled) return { u, instant };
 
+  const bFactor = (currentBolusUnit && currentBolusUnit.factor) ? currentBolusUnit.factor : 1;
   (schedule.boluses || []).forEach(ev => {
     const t = Math.max(0, parseFloatSafe(ev.time, 0));
-    const doseMgKg = convertBolusToMgKg(ev.dose, currentBolusUnit);
+    const doseMgKg = parseFloatSafe(ev.dose, 0) / bFactor;
     const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
     if (!Number.isFinite(doseMgKg) || doseMgKg === 0) return;
     const idx0 = clamp(Math.round(t / dt), 0, N);
@@ -434,11 +373,12 @@ function buildInputRateFromSchedule(schedule, dt, tfinal) {
     for (let i = idx0; i < Math.min(end, N); i++) u[i] += rate;
   });
 
+  const iFactor = (currentInfusionUnit && currentInfusionUnit.factor) ? currentInfusionUnit.factor : 1;
   (schedule.infusions || []).forEach(ev => {
     let s = Math.max(0, parseFloatSafe(ev.start, 0));
     let e = Math.max(0, parseFloatSafe(ev.end, 0));
     if (e < s) { const tmp = e; e = s; s = tmp; }
-    const rateMgKgMin = convertInfusionToMgKgMin(ev.rate, currentInfusionUnit);
+    const rateMgKgMin = parseFloatSafe(ev.rate, 0) / iFactor;
     if (!Number.isFinite(rateMgKgMin) || rateMgKgMin === 0) return;
     const idx0 = clamp(Math.round(s / dt), 0, N);
     const idx1 = clamp(Math.round(e / dt), 0, N);
@@ -676,9 +616,6 @@ function getCurrentState(name = 'Current') {
     id: 'live',
     name,
     drug: currentDrug,
-    patient: {
-      weightKg: getWeightKg()
-    },
     units: {
       conc: currentUnit?.name || 'mg/mL',
       bolus: currentBolusUnit?.name || 'mg/kg',
@@ -769,7 +706,6 @@ function loadStrategyToInputs(id) {
   tinfusionnum.value = s.inputs.tinfusion;
   tfinalnum.value = s.inputs.tfinal;
   initialpnum.value = s.inputs.initialp;
-  if (weightnum && s.patient?.weightKg != null) weightnum.value = s.patient.weightKg;
 
   Vd1num.value = s.pk.Vd1;
   Vd2num.value = s.pk.Vd2;
@@ -779,8 +715,6 @@ function loadStrategyToInputs(id) {
   Q3num.value = s.pk.Q3;
   ke0num.value = s.pk.ke0;
 
-  if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus);
-  if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion);
   if (s.schedule) setScheduleToDOM(s.schedule);
   activeStrategyId = s.id;
   renderStrategyList();
@@ -844,13 +778,11 @@ function simulateStrategy(state) {
 
   const bUnit = BOLUSUNITS[state.units.bolus] || BOLUSUNITS['mg/kg'];
   const iUnit = INFUSIONUNITS[state.units.infusion] || INFUSIONUNITS['mg/kg/min'];
-  const weightKg = (state.patient?.weightKg && state.patient.weightKg > 0) ? state.patient.weightKg : 70;
 
   const tbol = Math.max(0, inp.tbolus);
   const tinf = Math.max(0, inp.tinfusion);
-  const bolusDoseMgKg = convertBolusValueToMgKg(inp.b, bUnit, weightKg);
-  const bolusRate = (tbol > 0 ? (bolusDoseMgKg / tbol) : 0);
-  const infusionRate = convertInfusionValueToMgKgMin(inp.infusion, iUnit, weightKg);
+  const bolusRate = (tbol > 0 ? (inp.b / tbol) : 0) / bUnit.factor;
+  const infusionRate = (inp.infusion) / iUnit.factor;
   const Nhalf1 = Math.ceil(tbol / dt);
   const Nhalf2 = Nhalf1 + Math.ceil(tinf / dt);
 
@@ -861,9 +793,10 @@ function simulateStrategy(state) {
     const instant = new Array(N + 1).fill(0);
     if (!schedule || !schedule.enabled) return { u, instant };
 
+    const bF = bUnit.factor;
     (schedule.boluses || []).forEach(ev => {
       const t = Math.max(0, parseFloatSafe(ev.time, 0));
-      const doseMgKg = convertBolusValueToMgKg(ev.dose, bUnit, weightKg);
+      const doseMgKg = parseFloatSafe(ev.dose, 0) / bF;
       const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
       if (!Number.isFinite(doseMgKg) || doseMgKg === 0) return;
       const idx0 = clamp(Math.round(t / dt), 0, N);
@@ -874,31 +807,37 @@ function simulateStrategy(state) {
       for (let i = idx0; i < Math.min(end, N); i++) u[i] += rate;
     });
 
+    const iF = iUnit.factor;
     (schedule.infusions || []).forEach(ev => {
       let s = Math.max(0, parseFloatSafe(ev.start, 0));
       let e = Math.max(0, parseFloatSafe(ev.end, 0));
       if (e < s) { const tmp = e; e = s; s = tmp; }
-      const rateMgKgMin = convertInfusionValueToMgKgMin(ev.rate, iUnit, weightKg);
+      const rateMgKgMin = parseFloatSafe(ev.rate, 0) / iF;
       if (!Number.isFinite(rateMgKgMin) || rateMgKgMin === 0) return;
       const idx0 = clamp(Math.round(s / dt), 0, N);
       const idx1 = clamp(Math.round(e / dt), 0, N);
       if (idx1 <= idx0) return;
       for (let i = idx0; i < Math.min(idx1, N); i++) u[i] += rateMgKgMin;
     });
+
     return { u, instant };
   }
 
   const sched = buildRatesFromStateSchedule();
+
   const ts = new Array(N + 1);
   for (let i = 0; i <= N; i++) ts[i] = i * dt;
+
   const xs1 = new Array(N + 1);
   const xs2 = new Array(N + 1);
   const xs3 = new Array(N + 1);
   const ces = new Array(N + 1);
+
   xs1[0] = initialp_mgml * p.Vd1;
   xs2[0] = 0;
   xs3[0] = 0;
   ces[0] = initialp_mgml;
+
   const mat = math.matrix([
     [ -dt*(k10 + k12 + k13), dt*k21, dt*k31, 0, dt ],
     [ dt*k12, -dt*k21, 0, 0, 0 ],
@@ -907,10 +846,12 @@ function simulateStrategy(state) {
     [ 0, 0, 0, 0, 0 ]
   ]);
   const M = math.expm(mat);
+
   const a11 = M.subset(math.index(0,0)), a12 = M.subset(math.index(0,1)), a13 = M.subset(math.index(0,2)), a15 = M.subset(math.index(0,4));
   const a21 = M.subset(math.index(1,0)), a22 = M.subset(math.index(1,1)), a23 = M.subset(math.index(1,2)), a25 = M.subset(math.index(1,4));
   const a31 = M.subset(math.index(2,0)), a32 = M.subset(math.index(2,1)), a33 = M.subset(math.index(2,2)), a35 = M.subset(math.index(2,4));
   const a41 = M.subset(math.index(3,0)), a42 = M.subset(math.index(3,1)), a43 = M.subset(math.index(3,2)), a44 = M.subset(math.index(3,3)), a45 = M.subset(math.index(3,4));
+
   for (let i = 0; i < N; i++) {
     let u = 0;
     if (schedule && schedule.enabled) {
@@ -921,12 +862,14 @@ function simulateStrategy(state) {
       else if (i < Nhalf2) u = infusionRate;
       else u = 0;
     }
+
     const x1 = xs1[i], x2 = xs2[i], x3 = xs3[i], ce = ces[i];
     xs1[i+1] = a11*x1 + a12*x2 + a13*x3 + u*a15;
     xs2[i+1] = a21*x1 + a22*x2 + a23*x3 + u*a25;
     xs3[i+1] = a31*x1 + a32*x2 + a33*x3 + u*a35;
     ces[i+1] = a41*x1 + a42*x2 + a43*x3 + a44*ce + u*a45;
   }
+
   const cp = xs1.map(x => x / p.Vd1);
   const ce = ces.slice();
   return { ts, cp, ce };
@@ -944,45 +887,58 @@ function trapz(y, x) {
 
 function computeMetrics(state, sim) {
   const { ts, cp, ce } = sim;
+
   const idxCp = cp.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
   const idxCe = ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
 
   const bUnit = BOLUSUNITS[state.units.bolus] || BOLUSUNITS['mg/kg'];
   const iUnit = INFUSIONUNITS[state.units.infusion] || INFUSIONUNITS['mg/kg/min'];
+
   const tfinal = Math.max(0, parseFloatSafe(state.inputs?.tfinal, 0));
-  const weightKg = (state.patient?.weightKg && state.patient.weightKg > 0) ? state.patient.weightKg : 70;
 
   let totalDose_mgkg = 0;
+
   const schedule = (state && state.schedule && state.schedule.enabled) ? state.schedule : null;
 
   if (schedule) {
+    // --- Boluses: dose field is total dose over duration. Clip delivered fraction to [0, tfinal].
     (schedule.boluses || []).forEach(ev => {
       const t = Math.max(0, parseFloatSafe(ev.time, 0));
-      const dose_mgkg = convertBolusValueToMgKg(ev.dose, bUnit, weightKg);
+      const dose_mgkg = parseFloatSafe(ev.dose, 0) / bUnit.factor;
       const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
+
       if (!Number.isFinite(dose_mgkg) || dose_mgkg === 0) return;
       if (t > tfinal) return;
+
       if (dur <= 0) {
+        // Instantaneous bolus at time t
         totalDose_mgkg += dose_mgkg;
       } else {
+        // Finite-duration bolus: deliver proportionally over its duration, clipped to tfinal
         const delivered = Math.max(0, Math.min(t + dur, tfinal) - t);
         totalDose_mgkg += dose_mgkg * (delivered / dur);
       }
     });
 
+    // --- Infusions: rate is mg/kg/min (after unit conversion). Clip to [0, tfinal].
     (schedule.infusions || []).forEach(ev => {
       let s = Math.max(0, parseFloatSafe(ev.start, 0));
       let e = Math.max(0, parseFloatSafe(ev.end, 0));
       if (e < s) { const tmp = e; e = s; s = tmp; }
+
       if (s > tfinal) return;
-      const rate_mgkgmin = convertInfusionValueToMgKgMin(ev.rate, iUnit, weightKg);
+
+      const rate_mgkgmin = parseFloatSafe(ev.rate, 0) / iUnit.factor;
       if (!Number.isFinite(rate_mgkgmin) || rate_mgkgmin === 0) return;
+
       const delivered = Math.max(0, Math.min(e, tfinal) - s);
       totalDose_mgkg += rate_mgkgmin * delivered;
     });
+
   } else {
-    const bolusDose_mgkg = convertBolusValueToMgKg(parseFloatSafe(state.inputs?.b, 0), bUnit, weightKg);
-    const infusionRate_mgkgmin = convertInfusionValueToMgKgMin(parseFloatSafe(state.inputs?.infusion, 0), iUnit, weightKg);
+    // Legacy: one bolus + one infusion
+    const bolusDose_mgkg = (parseFloatSafe(state.inputs?.b, 0)) / bUnit.factor;
+    const infusionRate_mgkgmin = (parseFloatSafe(state.inputs?.infusion, 0)) / iUnit.factor;
     const tinf = Math.max(0, parseFloatSafe(state.inputs?.tinfusion, 0));
     totalDose_mgkg = bolusDose_mgkg + infusionRate_mgkgmin * tinf;
   }
@@ -1134,7 +1090,7 @@ function toArray(m) {
 }
 
 function dfsolve() {
-  let params = { b: [], Cl: [], Q2: [], Q3: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tinfusion: [], initialp: [], tfinal: [], dt: [], ke0: [], weightKg: [] };
+  let params = { b: [], Cl: [], Q2: [], Q3: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tinfusion: [], initialp: [], tfinal: [], dt: [], ke0: [] };
   params.Vd1 = parseFloat(Vd1num.value);
   params.Vd2 = parseFloat(Vd2num.value);
   params.Vd3 = parseFloat(Vd3num.value);
@@ -1142,13 +1098,10 @@ function dfsolve() {
   params.Q2 = parseFloat(Q2num.value) / 1.0;
   params.Q3 = parseFloat(Q3num.value) / 1.0;
 
-  params.tbolus = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
-  params.tinfusion = Math.max(0, parseFloatSafe(tinfusionnum.value, 0));
-  params.weightKg = getWeightKg();
-
   // Legacy b/tbolus is still read (but disabled when schedule is enabled)
-  const legacyBolusDoseMgKg = convertBolusValueToMgKg(bnum.value, currentBolusUnit, params.weightKg);
-  params.b = params.tbolus > 0 ? legacyBolusDoseMgKg / params.tbolus : 0;
+  params.b = parseFloat(bnum.value) / parseFloat(tbolusnum.value) / currentBolusUnit.factor;
+  params.tbolus = parseFloat(tbolusnum.value);
+  params.tinfusion = parseFloat(tinfusionnum.value);
   params.initialp = parseFloat(initialpnum.value);
   params.tfinal = parseFloat(tfinalnum.value);
   params.dt = 0.1;
@@ -1213,8 +1166,8 @@ function dfsolve() {
         lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
       }
     } else {
-      if (counter < Nhalf1) u = params.b;
-      else if (counter < Nhalf2) u = convertInfusionValueToMgKgMin(infusionnum.value, currentInfusionUnit, params.weightKg);
+      if (counter < Nhalf1) u = parseFloat(bnum.value) / parseFloat(tbolusnum.value) / currentBolusUnit.factor;
+      else if (counter < Nhalf2) u = parseFloat(infusionnum.value) / currentInfusionUnit.factor;
       else u = 0;
 
       if (Math.abs(u) > EPS_DOSE) {
@@ -1872,7 +1825,6 @@ function maybeAutoApplyDrugFromInput() {
 // ============================
 function reset() {
   propofol();
-  if (weightnum) weightnum.value = 70;
   bnum.value = 1;
   tbolusnum.value = 1;
   tinfusionnum.value = 60;
@@ -1897,17 +1849,8 @@ function reset() {
 
 
 function wireInputs() {
-  [Vd1num, Vd2num, Vd3num, Clnum, Q2num, Q3num, bnum, tbolusnum, tinfusionnum, infusionnum, initialpnum, tfinalnum, ke0num, weightnum]
+  [Vd1num, Vd2num, Vd3num, Clnum, Q2num, Q3num, bnum, tbolusnum, tinfusionnum, infusionnum, initialpnum, tfinalnum, ke0num]
     .forEach(el => el?.addEventListener('change', () => dfsolve()));
-
-  bolusUnitSelect?.addEventListener('change', () => {
-    setBolusUnit(bolusUnitSelect.value);
-    dfsolve();
-  });
-  infusionUnitSelect?.addEventListener('change', () => {
-    setInfusionUnit(infusionUnitSelect.value);
-    dfsolve();
-  });
 
   document.getElementById('scaleToggleBtnTop')?.addEventListener('click', () => toggleScale());
   document.getElementById('darkModeBtnTop')?.addEventListener('click', () => toggleDarkMode());
@@ -1950,7 +1893,6 @@ function wireInputs() {
   applyPlotTheme();
   initDrawer();
   populateDrugDatalist();
-  initializeUnitSelectors();
   ensureTherapeuticToggle();
   ensureScheduleUI();
   ensureCompareUI();
