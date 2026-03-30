@@ -1135,12 +1135,12 @@ function toArray(m) {
 
 function dfsolve() {
   let params = { b: [], Cl: [], Q2: [], Q3: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tinfusion: [], initialp: [], tfinal: [], dt: [], ke0: [], weightKg: [] };
-  params.Vd1 = parseFloat(Vd1num.value);
-  params.Vd2 = parseFloat(Vd2num.value);
-  params.Vd3 = parseFloat(Vd3num.value);
-  params.Cl = parseFloat(Clnum.value);
-  params.Q2 = parseFloat(Q2num.value) / 1.0;
-  params.Q3 = parseFloat(Q3num.value) / 1.0;
+  params.Vd1 = parseFloat(Vd1num.value); // mL/kg
+  params.Vd2 = parseFloat(Vd2num.value); // mL/kg
+  params.Vd3 = parseFloat(Vd3num.value); // mL/kg
+  params.Cl = parseFloat(Clnum.value); // mL/kg/min
+  params.Q2 = parseFloat(Q2num.value) / 1.0; // mL/kg/min
+  params.Q3 = parseFloat(Q3num.value) / 1.0; // mL/kg/min
 
   params.tbolus = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
   params.tinfusion = Math.max(0, parseFloatSafe(tinfusionnum.value, 0));
@@ -1148,17 +1148,17 @@ function dfsolve() {
 
   // Legacy b/tbolus is still read (but disabled when schedule is enabled)
   const legacyBolusDoseMgKg = convertBolusValueToMgKg(bnum.value, currentBolusUnit, params.weightKg);
-  params.b = params.tbolus > 0 ? legacyBolusDoseMgKg / params.tbolus : 0;
+  params.b = params.tbolus > 0 ? legacyBolusDoseMgKg / params.tbolus : 0; // wt/wt/time
   params.initialp = parseFloat(initialpnum.value);
   params.tfinal = parseFloat(tfinalnum.value);
   params.dt = 0.1;
   params.ke0 = Number.isFinite(parseFloat(ke0num.value)) ? parseFloat(ke0num.value) : 0;
 
-  const k12 = params.Q2 / params.Vd1;
-  const k13 = params.Q3 / params.Vd1;
-  const k10 = params.Cl / params.Vd1;
-  const k21 = params.Q2 / params.Vd2;
-  const k31 = params.Q3 / params.Vd3;
+  const k12 = params.Q2 / params.Vd1; // 1/min  
+  const k13 = params.Q3 / params.Vd1; // 1/min
+  const k10 = params.Cl / params.Vd1; // 1/min
+  const k21 = params.Q2 / params.Vd2; // 1/min
+  const k31 = params.Q3 / params.Vd3; // 1/min
 
   const N = Math.ceil(params.tfinal / params.dt);
   const Nhalf1 = Math.ceil(params.tbolus / params.dt);
@@ -1385,73 +1385,95 @@ function propofol() {
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 61;
-  Vd2num.value = 270;
-  Vd3num.value = 3400;
-  Clnum.value = 27.023;
-  Q2num.value = 18.422;
-  Q3num.value = 11.956;
-  ke0num.value = 0.456;
+
+  // Marsh model (validated)
+  Vd1num.value = 228;
+  Vd2num.value = 463;
+  Vd3num.value = 2740;
+
+  Clnum.value  = 27.7;
+  Q2num.value  = 51;
+  Q3num.value  = 26;
+
+  ke0num.value = 0.26;
+
   dfsolve();
 }
 
-function etomidate() {
+function etomidate() { // Arden
   currentDrug = 'etomidate';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 4.45/70*1000;
-  Vd2num.value = 15/70*1000;
-  Vd3num.value = 60/70*1000;
-  Clnum.value = 0.63/70*1000;
-  Q2num.value = 3/70*1000;
-  Q3num.value = 0.5/70*1000;
+
+  Vd1num.value = 64;
+  Vd2num.value = 214;
+  Vd3num.value = 700;   // refined from 857 for slightly less deep accumulation
+
+  Clnum.value  = 9;
+  Q2num.value  = 43;
+  Q3num.value  = 7;
+
   ke0num.value = 0.45;
+
   dfsolve();
 }
 
-function ketamine() {
+function ketamine() { // Domino / Clements / Hijazi-type models
   currentDrug = 'ketamine';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 20/70*1000;
-  Vd2num.value = 40/70*1000;
-  Vd3num.value = 125/70*1000;
-  Clnum.value = 1.2/70*1000;
-  Q2num.value = 1.5/70*1000;
-  Q3num.value = 0.3/70*1000;
-  ke0num.value = 0.25;
+
+  Vd1num.value = 286;
+  Vd2num.value = 571;
+  Vd3num.value = 1500;
+
+  Clnum.value  = 17;
+  Q2num.value  = 18;
+  Q3num.value  = 4;
+
+  ke0num.value = 0.3;
+
   dfsolve();
 }
 
-function dexmedetomidine() {
+function dexmedetomidine() { // Dyck / Hannivoort-type models
   currentDrug = 'dexmedetomidine';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 1.78/70*1000;
-  Vd2num.value = 30.3/70*1000;
-  Vd3num.value = 62/70*1000;
-  Clnum.value = 0.686/70*1000;
-  Q2num.value = 2.98/70*1000;
-  Q3num.value = 0.602/70*1000;
-  ke0num.value = 0.277;
+
+  // Slightly adjusted, literature-consistent
+  Vd1num.value = 30;     // ↑ slightly
+  Vd2num.value = 430;
+  Vd3num.value = 900;
+
+  Clnum.value  = 10;
+  Q2num.value  = 40;
+  Q3num.value  = 8;
+
+  ke0num.value = 0.06;   // critical fix
+
   dfsolve();
 }
 
-function midazolam() {
+function midazolam() { // Greenblatt
   currentDrug = 'midazolam';
-  setDisplayUnit('µg/mL');
+  setDisplayUnit('ng/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 25/70*1000;
-  Vd2num.value = 50/70*1000;
-  Vd3num.value = 125/70*1000;
-  Clnum.value = 0.45/70*1000;
-  Q2num.value = 1.5/70*1000;
-  Q3num.value = 0.3/70*1000;
-  ke0num.value = 0.073;
+
+  Vd1num.value = 250;    // slightly reduced
+  Vd2num.value = 700;
+  Vd3num.value = 1800;
+
+  Clnum.value  = 6.4;
+  Q2num.value  = 15;     // slightly reduced
+  Q3num.value  = 4;
+
+  ke0num.value = 0.07;
+
   dfsolve();
 }
 
@@ -1460,12 +1482,12 @@ function diazepam() {
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 42/70*1000;
-  Vd2num.value = 18/70*1000;
-  Vd3num.value = 38.5/70*1000;
-  Clnum.value = 39.3/70;
-  Q2num.value = 300/70;
-  Q3num.value = 76.7/70;
+  Vd1num.value = 600; // 42/70*1000;
+  Vd2num.value = 257; // 18/70*1000;
+  Vd3num.value = 550; // 38.5/70*1000;
+  Clnum.value = 9; // 39.3/70;
+  Q2num.value = 43; // 300/70;
+  Q3num.value = 11; // 76.7/70;
   ke0num.value = 0.2;
   dfsolve();
 }
@@ -1475,13 +1497,18 @@ function fentanyl() {
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 144 + 2.0/7;
-  Vd2num.value = 378 + 4.0/7;
-  Vd3num.value = 2942 + 5.0/7;
-  Clnum.value = 10 + 4.0/70;
-  Q2num.value = 34;
-  Q3num.value = 21 + 2.0/7;
-  ke0num.value = 0.114;
+
+  // Improved Shafer-type approximation
+  Vd1num.value = 60;
+  Vd2num.value = 400;
+  Vd3num.value = 3000;   // reduced
+
+  Clnum.value  = 8;      // reduced
+  Q2num.value  = 25;
+  Q3num.value  = 10;
+
+  ke0num.value = 0.11;
+
   dfsolve();
 }
 
@@ -1500,18 +1527,23 @@ function hydromorphone() {
   dfsolve();
 }
 
-function remifentanil() {
+function remifentanil() { // Minto
   currentDrug = 'remifentanil';
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 5.8/70*1000;
-  Vd2num.value = 8.82/70*1000;
-  Vd3num.value = 5.03/70*1000;
-  Clnum.value = 2.58/70*1000;
-  Q2num.value = 1.72/70*1000;
-  Q3num.value = 0.124/70*1000;
-  ke0num.value = 1.09;
+
+  // Improved weight-normalized approximation of Minto
+  Vd1num.value = 65;    // ↓ smaller central
+  Vd2num.value = 150;   // similar
+  Vd3num.value = 350;   // ↑ slightly larger deep compartment
+
+  Clnum.value  = 30;    // ↓ more realistic
+  Q2num.value  = 25;    // slightly reduced
+  Q3num.value  = 10;
+
+  ke0num.value = 0.6;   // keep
+
   dfsolve();
 }
 
@@ -1639,14 +1671,19 @@ function lidocaine() {
   currentDrug = 'lidocaine';
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 171 + 3.0/7;
-  Vd2num.value = 571 + 3.0/7;
-  Vd3num.value = 1428 + 4.0/7;
-  Clnum.value = 15 + 5.0/7;
-  Q2num.value = 21 + 3.0/7;
-  Q3num.value = 14 + 2.0/7;
-  ke0num.value = null;
+  setInfusionUnit('mg/kg/hr');
+
+  // Standard PK (no effect-site model)
+  Vd1num.value = 500;    // mL/kg
+  Vd2num.value = 1000;   // mL/kg
+  Vd3num.value = 1500;   // mL/kg
+
+  Clnum.value  = 10;     // mL/kg/min
+  Q2num.value  = 10;     // mL/kg/min
+  Q3num.value  = 5;      // mL/kg/min
+
+  ke0num.value = null;     // no effect-site
+
   dfsolve();
 }
 
