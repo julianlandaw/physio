@@ -225,11 +225,11 @@
             <div id="Vd1html" class="label"></div>
             <input type="number" class="form-control" id="Vd1" value="70" />
           </div>
-          <div class="param-row pk-clearance-volume-row">
+          <div class="param-row">
             <div id="Vd2html" class="label"></div>
             <input type="number" class="form-control" id="Vd2" value="60" />
           </div>
-          <div class="param-row pk-clearance-volume-row">
+          <div class="param-row">
             <div id="Vd3html" class="label"></div>
             <input type="number" class="form-control" id="Vd3" value="60" />
           </div>
@@ -241,47 +241,17 @@
         <div class="card-header" data-collapse="true">Pharmacokinetics <span class="toggle-icon">▼</span></div>
         <div class="card-body">
           <div class="param-row">
-            <label class="label" for="pkInputMode">PK input mode</label>
-            <select class="form-control" id="pkInputMode">
-              <option value="clearance" selected>V1, V2, V3, Cl, Q2, Q3</option>
-              <option value="microconstants">V1, k10, k12, k21, k13, k31</option>
-            </select>
-          </div>
-
-          <div class="param-row pk-clearance-row">
             <div id="Clhtml" class="label"></div>
             <input type="number" class="form-control" id="Cl" value="50" />
           </div>
-          <div class="param-row pk-clearance-row">
+          <div class="param-row">
             <div id="Q2html" class="label"></div>
             <input type="number" class="form-control" id="Q2" value="0.2" />
           </div>
-          <div class="param-row pk-clearance-row">
+          <div class="param-row">
             <div id="Q3html" class="label"></div>
             <input type="number" class="form-control" id="Q3" value="0.2" />
           </div>
-
-          <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k10inputhtml" class="label"></div>
-            <input type="number" class="form-control" id="k10input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k12inputhtml" class="label"></div>
-            <input type="number" class="form-control" id="k12input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k21inputhtml" class="label"></div>
-            <input type="number" class="form-control" id="k21input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k13inputhtml" class="label"></div>
-            <input type="number" class="form-control" id="k13input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k31inputhtml" class="label"></div>
-            <input type="number" class="form-control" id="k31input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-
           <div class="param-row">
             <div id="ke0html" class="label"></div>
             <input type="number" class="form-control" id="ke0" value="0.2" />
@@ -341,10 +311,7 @@
                 <tr><td>k<sub>21</sub></td><td><div id="k21html"></div></td><td>min<sup>-1</sup></td></tr>
                 <tr><td>k<sub>13</sub></td><td><div id="k13html"></div></td><td>min<sup>-1</sup></td></tr>
                 <tr><td>k<sub>31</sub></td><td><div id="k31html"></div></td><td>min<sup>-1</sup></td></tr>
-		<tr><td>V<sub>1</sub></td><td><div id="Vd1numhtml"></div></td><td>mL/kg</td></tr>
-		<tr><td>V<sub>2</sub></td><td><div id="Vd2numhtml"></div></td><td>mL/kg</td></tr>
-		<tr><td>V<sub>3</sub></td><td><div id="Vd3numhtml"></div></td><td>mL/kg</td></tr>
-		<tr><td>t<sub>1/2 term</sub></td><td><div id="termhalflifehtml"></div></td><td>min</td></tr>
+                <tr><td>t<sub>1/2 term</sub></td><td><div id="termhalflifehtml"></div></td><td>min</td></tr>
                 <tr><td>t<sub>1/2 CSHL</sub></td><td><div id="contextsensitivehalflifehtml"></div></td><td>min</td></tr>
               </tbody>
             </table>

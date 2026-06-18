@@ -159,6 +159,24 @@ const Q2num = document.getElementById("Q2");
 const Q3html = document.getElementById("Q3html");
 Q3html.innerHTML = "<i>Q</i><sub>3</sub> (mL/kg/min)";
 const Q3num = document.getElementById("Q3");
+
+const pkInputModeSelect = document.getElementById("pkInputMode");
+
+const k10inputhtml = document.getElementById("k10inputhtml");
+if (k10inputhtml) k10inputhtml.innerHTML = "k<sub>10</sub> (min<sup>-1</sup>)";
+const k10inputnum = document.getElementById("k10input");
+const k12inputhtml = document.getElementById("k12inputhtml");
+if (k12inputhtml) k12inputhtml.innerHTML = "k<sub>12</sub> (min<sup>-1</sup>)";
+const k12inputnum = document.getElementById("k12input");
+const k21inputhtml = document.getElementById("k21inputhtml");
+if (k21inputhtml) k21inputhtml.innerHTML = "k<sub>21</sub> (min<sup>-1</sup>)";
+const k21inputnum = document.getElementById("k21input");
+const k13inputhtml = document.getElementById("k13inputhtml");
+if (k13inputhtml) k13inputhtml.innerHTML = "k<sub>13</sub> (min<sup>-1</sup>)";
+const k13inputnum = document.getElementById("k13input");
+const k31inputhtml = document.getElementById("k31inputhtml");
+if (k31inputhtml) k31inputhtml.innerHTML = "k<sub>31</sub> (min<sup>-1</sup>)";
+const k31inputnum = document.getElementById("k31input");
 const bhtml = document.getElementById("bhtml");
 bhtml.innerHTML = "Bolus (mg/kg)";
 const bnum = document.getElementById("b");
@@ -199,6 +217,9 @@ const k12html = document.getElementById("k12html"); k12html.innerHTML = 0;
 const k13html = document.getElementById("k13html"); k13html.innerHTML = 0;
 const k21html = document.getElementById("k21html"); k21html.innerHTML = 0;
 const k31html = document.getElementById("k31html"); k31html.innerHTML = 0;
+const Vd1numhtml = document.getElementById("Vd1numhtml"); Vd1numhtml.innerHTML = 0;
+const Vd2numhtml = document.getElementById("Vd2numhtml"); Vd2numhtml.innerHTML = 0;
+const Vd3numhtml = document.getElementById("Vd3numhtml"); Vd3numhtml.innerHTML = 0;
 const contextsensitivehalflifehtml = document.getElementById("contextsensitivehalflifehtml"); contextsensitivehalflifehtml.innerHTML = 0;
 
 // ============================
@@ -694,12 +715,18 @@ function getCurrentState(name = 'Current') {
     },
     schedule: getScheduleFromDOM(),
     pk: {
-      Vd1: parseFloat(Vd1num.value),
-      Vd2: parseFloat(Vd2num.value),
-      Vd3: parseFloat(Vd3num.value),
-      Cl: parseFloat(Clnum.value),
-      Q2: parseFloat(Q2num.value),
-      Q3: parseFloat(Q3num.value),
+      inputMode: getPkInputMode(),
+      Vd1: parseFloatSafe(Vd1num.value, 0),
+      Vd2: parseFloatSafe(Vd2num.value, 0),
+      Vd3: parseFloatSafe(Vd3num.value, 0),
+      Cl: parseFloatSafe(Clnum.value, 0),
+      Q2: parseFloatSafe(Q2num.value, 0),
+      Q3: parseFloatSafe(Q3num.value, 0),
+      k10: parseFloatSafe(k10inputnum?.value, 0),
+      k12: parseFloatSafe(k12inputnum?.value, 0),
+      k21: parseFloatSafe(k21inputnum?.value, 0),
+      k13: parseFloatSafe(k13inputnum?.value, 0),
+      k31: parseFloatSafe(k31inputnum?.value, 0),
       ke0: Number.isFinite(parseFloat(ke0num.value)) ? parseFloat(ke0num.value) : 0
     }
   };
@@ -779,6 +806,16 @@ function loadStrategyToInputs(id) {
   Q3num.value = s.pk.Q3;
   ke0num.value = s.pk.ke0;
 
+  if (pkInputModeSelect) pkInputModeSelect.value = s.pk.inputMode || "clearance";
+  if (k10inputnum) k10inputnum.value = s.pk.k10 ?? "";
+  if (k12inputnum) k12inputnum.value = s.pk.k12 ?? "";
+  if (k21inputnum) k21inputnum.value = s.pk.k21 ?? "";
+  if (k13inputnum) k13inputnum.value = s.pk.k13 ?? "";
+  if (k31inputnum) k31inputnum.value = s.pk.k31 ?? "";
+  if ((s.pk.inputMode || "clearance") === "microconstants") syncClearanceInputsFromMicroInputs();
+  else syncMicroInputsFromClearanceInputs();
+  updatePkInputVisibility();
+
   if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus);
   if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion);
   if (s.schedule) setScheduleToDOM(s.schedule);
@@ -828,16 +865,33 @@ function ensureCompareUI() {
 
 // Strategy simulation for comparison (kept, trimmed but equivalent)
 function simulateStrategy(state) {
-  const p = state.pk;
+  const p = { ...(state.pk || {}) };
   const inp = state.inputs;
   const dt = 0.1;
   const N = Math.ceil(inp.tfinal / dt);
 
-  const k12 = p.Q2 / p.Vd1;
-  const k13 = p.Q3 / p.Vd1;
-  const k10 = p.Cl / p.Vd1;
-  const k21 = p.Q2 / p.Vd2;
-  const k31 = p.Q3 / p.Vd3;
+  if ((p.inputMode || "clearance") === "microconstants") {
+    p.Vd2 = p.k21 > 0 ? (p.k12 * p.Vd1) / p.k21 : 0;
+    p.Vd3 = p.k31 > 0 ? (p.k13 * p.Vd1) / p.k31 : 0;
+    p.Cl = p.k10 * p.Vd1;
+    p.Q2 = p.k12 * p.Vd1;
+    p.Q3 = p.k13 * p.Vd1;
+  }
+
+  let k10, k12, k21, k13, k31;
+  if ((p.inputMode || "clearance") === "microconstants") {
+    k10 = parseFloatSafe(p.k10, 0);
+    k12 = parseFloatSafe(p.k12, 0);
+    k21 = parseFloatSafe(p.k21, 0);
+    k13 = parseFloatSafe(p.k13, 0);
+    k31 = parseFloatSafe(p.k31, 0);
+  } else {
+    k10 = p.Vd1 > 0 ? p.Cl / p.Vd1 : 0;
+    k12 = p.Vd1 > 0 ? p.Q2 / p.Vd1 : 0;
+    k21 = p.Vd2 > 0 ? p.Q2 / p.Vd2 : 0;
+    k13 = p.Vd1 > 0 ? p.Q3 / p.Vd1 : 0;
+    k31 = p.Vd3 > 0 ? p.Q3 / p.Vd3 : 0;
+  }
 
   const initUnit = UNITS[state.units.conc] || UNITS['mg/mL'];
   const initialp_mgml = inp.initialp / initUnit.factor;
@@ -1073,6 +1127,88 @@ function plotComparisonFromCurrent() {
   renderCompareResults(metricsRows, unitLabel);
 }
 
+
+// ============================
+// PK input mode: clearances/volumes vs microconstants
+// ============================
+function getPkInputMode() {
+  return pkInputModeSelect?.value || "clearance";
+}
+
+function updatePkInputVisibility() {
+  const microMode = getPkInputMode() === "microconstants";
+  $$(".pk-clearance-row").forEach(row => { row.style.display = microMode ? "none" : ""; });
+  $$(".pk-clearance-volume-row").forEach(row => { row.style.display = microMode ? "none" : ""; });
+  $$(".pk-micro-row").forEach(row => { row.style.display = microMode ? "" : "none"; });
+}
+
+function syncMicroInputsFromClearanceInputs() {
+  const V1 = parseFloatSafe(Vd1num?.value, 0);
+  const V2 = parseFloatSafe(Vd2num?.value, 0);
+  const V3 = parseFloatSafe(Vd3num?.value, 0);
+  const Cl = parseFloatSafe(Clnum?.value, 0);
+  const Q2 = parseFloatSafe(Q2num?.value, 0);
+  const Q3 = parseFloatSafe(Q3num?.value, 0);
+
+  if (k10inputnum) k10inputnum.value = roundToSignificantFigures(V1 > 0 ? Cl / V1 : 0, 5);
+  if (k12inputnum) k12inputnum.value = roundToSignificantFigures(V1 > 0 ? Q2 / V1 : 0, 5);
+  if (k21inputnum) k21inputnum.value = roundToSignificantFigures(V2 > 0 ? Q2 / V2 : 0, 5);
+  if (k13inputnum) k13inputnum.value = roundToSignificantFigures(V1 > 0 ? Q3 / V1 : 0, 5);
+  if (k31inputnum) k31inputnum.value = roundToSignificantFigures(V3 > 0 ? Q3 / V3 : 0, 5);
+}
+
+function syncClearanceInputsFromMicroInputs() {
+  const V1 = parseFloatSafe(Vd1num?.value, 0);
+  const k10 = parseFloatSafe(k10inputnum?.value, 0);
+  const k12 = parseFloatSafe(k12inputnum?.value, 0);
+  const k21 = parseFloatSafe(k21inputnum?.value, 0);
+  const k13 = parseFloatSafe(k13inputnum?.value, 0);
+  const k31 = parseFloatSafe(k31inputnum?.value, 0);
+
+  const Cl = k10 * V1;
+  const V2 = k21 > 0 ? (k12 * V1) / k21 : 0;
+  const Q2 = k12 * V1;
+  const V3 = k31 > 0 ? (k13 * V1) / k31 : 0;
+  const Q3 = k13 * V1;
+
+  if (Clnum) Clnum.value = roundToSignificantFigures(Cl, 5);
+  if (Q2num) Q2num.value = roundToSignificantFigures(Q2, 5);
+  if (Q3num) Q3num.value = roundToSignificantFigures(Q3, 5);
+  if (Vd2num) Vd2num.value = roundToSignificantFigures(V2, 5);
+  if (Vd3num) Vd3num.value = roundToSignificantFigures(V3, 5);
+}
+
+function getPkParametersFromInputs() {
+  const mode = getPkInputMode();
+  const V1 = parseFloatSafe(Vd1num?.value, 0);
+  let V2, V3, Cl, Q2, Q3, k10, k12, k21, k13, k31;
+
+  if (mode === "microconstants") {
+    k10 = parseFloatSafe(k10inputnum?.value, 0);
+    k12 = parseFloatSafe(k12inputnum?.value, 0);
+    k21 = parseFloatSafe(k21inputnum?.value, 0);
+    k13 = parseFloatSafe(k13inputnum?.value, 0);
+    k31 = parseFloatSafe(k31inputnum?.value, 0);
+    Cl = k10 * V1;
+    V2 = k21 > 0 ? (k12 * V1) / k21 : 0;
+    Q2 = k12 * V1;
+    V3 = k31 > 0 ? (k13 * V1) / k31 : 0;
+    Q3 = k13 * V1;
+  } else {
+    V2 = parseFloatSafe(Vd2num?.value, 0);
+    V3 = parseFloatSafe(Vd3num?.value, 0);
+    Cl = parseFloatSafe(Clnum?.value, 0);
+    Q2 = parseFloatSafe(Q2num?.value, 0);
+    Q3 = parseFloatSafe(Q3num?.value, 0);
+    k10 = V1 > 0 ? Cl / V1 : 0;
+    k12 = V1 > 0 ? Q2 / V1 : 0;
+    k21 = V2 > 0 ? Q2 / V2 : 0;
+    k13 = V1 > 0 ? Q3 / V1 : 0;
+    k31 = V3 > 0 ? Q3 / V3 : 0;
+  }
+  return { mode, V1, V2, V3, Cl, Q2, Q3, k10, k12, k21, k13, k31 };
+}
+
 // ============================
 // Main solver / plotting (preserved)
 // ============================
@@ -1135,12 +1271,23 @@ function toArray(m) {
 
 function dfsolve() {
   let params = { b: [], Cl: [], Q2: [], Q3: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tinfusion: [], initialp: [], tfinal: [], dt: [], ke0: [], weightKg: [] };
-  params.Vd1 = parseFloat(Vd1num.value); // mL/kg
-  params.Vd2 = parseFloat(Vd2num.value); // mL/kg
-  params.Vd3 = parseFloat(Vd3num.value); // mL/kg
-  params.Cl = parseFloat(Clnum.value); // mL/kg/min
-  params.Q2 = parseFloat(Q2num.value) / 1.0; // mL/kg/min
-  params.Q3 = parseFloat(Q3num.value) / 1.0; // mL/kg/min
+
+  if (getPkInputMode() === "microconstants") syncClearanceInputsFromMicroInputs();
+  else syncMicroInputsFromClearanceInputs();
+
+  const pk = getPkParametersFromInputs();
+  params.Vd1 = pk.V1; // mL/kg
+  params.Vd2 = pk.V2; // mL/kg, derived in microconstant mode
+  params.Vd3 = pk.V3; // mL/kg, derived in microconstant mode
+  params.Cl = pk.Cl;  // mL/kg/min
+  params.Q2 = pk.Q2;  // mL/kg/min
+  params.Q3 = pk.Q3;  // mL/kg/min
+
+  const k10 = pk.k10; // 1/min
+  const k12 = pk.k12; // 1/min
+  const k21 = pk.k21; // 1/min
+  const k13 = pk.k13; // 1/min
+  const k31 = pk.k31; // 1/min
 
   params.tbolus = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
   params.tinfusion = Math.max(0, parseFloatSafe(tinfusionnum.value, 0));
@@ -1149,16 +1296,11 @@ function dfsolve() {
   // Legacy b/tbolus is still read (but disabled when schedule is enabled)
   const legacyBolusDoseMgKg = convertBolusValueToMgKg(bnum.value, currentBolusUnit, params.weightKg);
   params.b = params.tbolus > 0 ? legacyBolusDoseMgKg / params.tbolus : 0; // wt/wt/time
-  params.initialp = parseFloat(initialpnum.value);
-  params.tfinal = parseFloat(tfinalnum.value);
+  params.initialp = parseFloatSafe(initialpnum.value, 0);
+  params.tfinal = parseFloatSafe(tfinalnum.value, 240);
   params.dt = 0.1;
   params.ke0 = Number.isFinite(parseFloat(ke0num.value)) ? parseFloat(ke0num.value) : 0;
 
-  const k12 = params.Q2 / params.Vd1; // 1/min  
-  const k13 = params.Q3 / params.Vd1; // 1/min
-  const k10 = params.Cl / params.Vd1; // 1/min
-  const k21 = params.Q2 / params.Vd2; // 1/min
-  const k31 = params.Q3 / params.Vd3; // 1/min
 
   const N = Math.ceil(params.tfinal / params.dt);
   const Nhalf1 = Math.ceil(params.tbolus / params.dt);
@@ -1246,9 +1388,9 @@ function dfsolve() {
 
   for (let i = 0; i < N + 1; i++) {
     const t = ts[i];
-    const cp = (xs1[i] / params.Vd1);
-    const p1 = (xs2[i] / params.Vd2);
-    const p2 = (xs3[i] / params.Vd3);
+    const cp = params.Vd1 > 0 ? (xs1[i] / params.Vd1) : 0;
+    const p1 = params.Vd2 > 0 ? (xs2[i] / params.Vd2) : 0;
+    const p2 = params.Vd3 > 0 ? (xs3[i] / params.Vd3) : 0;
     const ce = (ces[i]);
 
     trace_cp.x.push(t); trace_cp.y.push(cp * yFactor);
@@ -1299,7 +1441,7 @@ function dfsolve() {
   // Results
   pfinalhtml.innerHTML = roundToSignificantFigures(yFactor * xs1[N] / params.Vd1, 3);
   const uLast = (Number.isFinite(params.b) ? params.b : 0);
-  const pss = uLast / params.Cl;
+  const pss = params.Cl > 0 ? uLast / params.Cl : 0;
   psshtml.innerHTML = roundToSignificantFigures(yFactor * pss, 3);
 
   // Eigenvalues
@@ -1338,7 +1480,9 @@ function dfsolve() {
   k21html.innerHTML = roundToSignificantFigures(k21, 3);
   k13html.innerHTML = roundToSignificantFigures(k13, 3);
   k31html.innerHTML = roundToSignificantFigures(k31, 3);
-
+  Vd1numhtml.innerHTML = roundToSignificantFigures(params.Vd1, 3);
+  Vd2numhtml.innerHTML = roundToSignificantFigures(params.Vd2, 3);
+  Vd3numhtml.innerHTML = roundToSignificantFigures(params.Vd3, 3);
 
   // Context-sensitive half-life (CSHL)
   // Start at end of last rate-based input (infusions + finite-duration boluses),
@@ -1374,6 +1518,10 @@ window.dfsolve = dfsolve;
 function onecompartment() {
   Q2num.value = 0;
   Q3num.value = 0;
+  if (k12inputnum) k12inputnum.value = 0;
+  if (k21inputnum) k21inputnum.value = 0;
+  if (k13inputnum) k13inputnum.value = 0;
+  if (k31inputnum) k31inputnum.value = 0;
   dfsolve();
 }
 
@@ -1397,6 +1545,7 @@ function propofol() {
 
   ke0num.value = 0.26;
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1416,6 +1565,7 @@ function etomidate() { // Arden
 
   ke0num.value = 0.45;
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1435,6 +1585,7 @@ function ketamine() { // Domino / Clements / Hijazi-type models
 
   ke0num.value = 0.3;
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1455,6 +1606,7 @@ function dexmedetomidine() { // Dyck / Hannivoort-type models
 
   ke0num.value = 0.06;   // critical fix
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1474,6 +1626,7 @@ function midazolam() { // Greenblatt
 
   ke0num.value = 0.07;
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1489,6 +1642,7 @@ function diazepam() {
   Q2num.value = 43; // 300/70;
   Q3num.value = 11; // 76.7/70;
   ke0num.value = 0.2;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1509,6 +1663,7 @@ function fentanyl() {
 
   ke0num.value = 0.11;
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1524,6 +1679,7 @@ function hydromorphone() {
   Q2num.value = 1.5/70*1000;
   Q3num.value = 0.4/70*1000;
   ke0num.value = 0.5;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1544,6 +1700,7 @@ function remifentanil() { // Minto
 
   ke0num.value = 0.6;   // keep
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1559,6 +1716,7 @@ function sufentanil() {
   Q2num.value = 1.2/70*1000;
   Q3num.value = 0.3/70*1000;
   ke0num.value = 1.5;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1574,6 +1732,7 @@ function alfentanil() {
   Q2num.value = 1/70*1000;
   Q3num.value = 0.3/70*1000;
   ke0num.value = 2;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1589,6 +1748,7 @@ function methadone() {
   Q2num.value = 77.4;
   Q3num.value = 32.4;
   ke0num.value = 0.087;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1604,6 +1764,7 @@ function rocuronium() {
   Q2num.value = 20;
   Q3num.value = 5;
   ke0num.value = 0.2;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1619,6 +1780,7 @@ function vecuronium() {
   Q2num.value = 0.51/70*1000;
   Q3num.value = 0.095/70*1000;
   ke0num.value = 0.3;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1634,6 +1796,7 @@ function cisatracurium() {
   Q2num.value = 10;
   Q3num.value = 2;
   ke0num.value = 0.0575;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1649,6 +1812,7 @@ function pancuronium() {
   Q2num.value = 8;
   Q3num.value = 2;
   ke0num.value = 0.05;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1664,6 +1828,7 @@ function succinylcholine() {
   Q2num.value = 50;
   Q3num.value = 5;
   ke0num.value = 0.197;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1684,6 +1849,7 @@ function lidocaine() {
 
   ke0num.value = null;     // no effect-site
 
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1699,6 +1865,7 @@ function bupivacaine() {
   Q2num.value = 11 + 3.0/7;
   Q3num.value = 7 + 1.0/7;
   ke0num.value = null;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1714,6 +1881,7 @@ function phenylephrine() {
   Q2num.value = 17 + 1.0/7;
   Q3num.value = 11 + 3.0/7;
   ke0num.value = 0.4;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1729,6 +1897,7 @@ function ephedrine() {
   Q2num.value = 10;
   Q3num.value = 7 + 1.0/7;
   ke0num.value = 0.06;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1744,6 +1913,7 @@ function epinephrine() {
   Q2num.value = 21 + 3.0/7;
   Q3num.value = 14 + 2.0/7;
   ke0num.value = 0.8;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1759,6 +1929,7 @@ function dobutamine() {
   Q2num.value = 14 + 2.0/7;
   Q3num.value = 10;
   ke0num.value = 0.3;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1774,6 +1945,7 @@ function dopamine() {
   Q2num.value = 12 + 6.0/7;
   Q3num.value = 8 + 4.0/7;
   ke0num.value = 0.2;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1789,6 +1961,7 @@ function milrinone() {
   Q2num.value = 7 + 1.0/7;
   Q3num.value = 4 + 2.0/7;
   ke0num.value = 0.03;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1804,6 +1977,7 @@ function vasopressin() {
   Q2num.value = 8 + 4.0/7;
   Q3num.value = 5 + 5.0/7;
   ke0num.value = 0.05;
+  syncMicroInputsFromClearanceInputs();
   dfsolve();
 }
 
@@ -1934,8 +2108,20 @@ function reset() {
 
 
 function wireInputs() {
-  [Vd1num, Vd2num, Vd3num, Clnum, Q2num, Q3num, bnum, tbolusnum, tinfusionnum, infusionnum, initialpnum, tfinalnum, ke0num, weightnum]
-    .forEach(el => el?.addEventListener('change', () => dfsolve()));
+  [
+    Vd1num, Vd2num, Vd3num,
+    Clnum, Q2num, Q3num,
+    k10inputnum, k12inputnum, k21inputnum, k13inputnum, k31inputnum,
+    bnum, tbolusnum, tinfusionnum, infusionnum,
+    initialpnum, tfinalnum, ke0num, weightnum
+  ].forEach(el => el?.addEventListener('change', () => dfsolve()));
+
+  pkInputModeSelect?.addEventListener("change", () => {
+    if (getPkInputMode() === "microconstants") syncMicroInputsFromClearanceInputs();
+    else syncClearanceInputsFromMicroInputs();
+    updatePkInputVisibility();
+    dfsolve();
+  });
 
   bolusUnitSelect?.addEventListener('change', () => {
     setBolusUnit(bolusUnitSelect.value);
@@ -1992,6 +2178,8 @@ function wireInputs() {
   ensureScheduleUI();
   ensureCompareUI();
   wireInputs();
+  updatePkInputVisibility();
+  syncMicroInputsFromClearanceInputs();
   reset();
 
   window.addEventListener('resize', () => {
