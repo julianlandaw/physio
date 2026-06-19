@@ -9,7 +9,7 @@
 *{box-sizing:border-box} html,body{height:100%;margin:0;overflow:hidden} body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 header{height:52px;padding:8px 14px;border-bottom:1px solid var(--line);background:#fff} h1{font-size:1.05rem;margin:0 0 2px} header p{font-size:.78rem;margin:0;color:var(--muted)}
 main{height:calc(100vh - 52px);display:grid;grid-template-columns:300px 1fr;gap:10px;padding:10px;overflow:hidden}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 1px 2px rgba(0,0,0,.035)}
-.controls{overflow:hidden}.controls h2,.plot h2{font-size:.95rem;margin:0 0 7px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}label{display:block;font-size:.68rem;color:#374151;margin-bottom:2px}input,select{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:7px;font-size:.78rem}.full{grid-column:1/-1}button{border:0;border-radius:8px;padding:7px 8px;font-size:.78rem;font-weight:650;cursor:pointer}.primary{background:var(--accent);color:#fff;width:100%;margin-top:8px}.secondary{background:#eef2ff;color:#1e40af;margin:5px 4px 0 0}.secondary:disabled{opacity:.45}.status{font-size:.72rem;color:var(--muted);min-height:1.1em;margin-top:5px}.note{font-size:.69rem;color:var(--muted);line-height:1.25;margin:.45rem 0 0}.plots{height:100%;display:grid;grid-template-rows:minmax(0,1.12fr) minmax(0,.88fr);gap:10px;overflow:hidden}.plot{min-height:0;overflow:hidden;display:flex;flex-direction:column}.plot canvas{flex:1;min-height:0;width:100%;height:100%;display:block;border:1px solid var(--line);border-radius:9px;background:#fff}.downloads{display:flex;flex-wrap:wrap}.tablebox{position:absolute;right:12px;bottom:12px;width:min(980px,calc(100vw - 330px));max-height:42vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 8px 25px rgba(0,0,0,.15);display:none}.tablebox.show{display:block}table{width:100%;border-collapse:collapse;font-size:.72rem}th,td{border-bottom:1px solid #e5e7eb;padding:4px 5px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}.close{float:right;background:#fee2e2;color:#991b1b}
+.controls{overflow:hidden}.controls h2,.plot h2{font-size:.95rem;margin:0 0 7px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px}label{display:block;font-size:.68rem;color:#374151;margin-bottom:2px}input,select{width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:7px;font-size:.78rem}.full{grid-column:1/-1}button{border:0;border-radius:8px;padding:7px 8px;font-size:.78rem;font-weight:650;cursor:pointer}.primary{background:var(--accent);color:#fff;width:100%;margin-top:8px}.secondary{background:#eef2ff;color:#1e40af;margin:5px 4px 0 0}.secondary:disabled{opacity:.45}.status{font-size:.72rem;color:var(--muted);min-height:1.1em;margin-top:5px}.presetdetails{font-size:.69rem;color:var(--muted);line-height:1.25;margin-top:4px}.note{font-size:.69rem;color:var(--muted);line-height:1.25;margin:.45rem 0 0}.plots{height:100%;display:grid;grid-template-rows:minmax(0,1.12fr) minmax(0,.88fr);gap:10px;overflow:hidden}.plot{min-height:0;overflow:hidden;display:flex;flex-direction:column}.plot canvas{flex:1;min-height:0;width:100%;height:100%;display:block;border:1px solid var(--line);border-radius:9px;background:#fff}.downloads{display:flex;flex-wrap:wrap}.tablebox{position:absolute;right:12px;bottom:12px;width:min(980px,calc(100vw - 330px));max-height:42vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 8px 25px rgba(0,0,0,.15);display:none}.tablebox.show{display:block}table{width:100%;border-collapse:collapse;font-size:.72rem}th,td{border-bottom:1px solid #e5e7eb;padding:4px 5px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}.close{float:right;background:#fee2e2;color:#991b1b}
 @media(max-width:900px){main{grid-template-columns:260px 1fr}.grid{gap:4px}.tablebox{width:calc(100vw - 290px)}}
 </style>
 </head>
@@ -19,6 +19,7 @@ main{height:calc(100vh - 52px);display:grid;grid-template-columns:300px 1fr;gap:
 <section class="card controls">
 <h2>Inputs</h2>
 <div class="grid">
+<div class="full"><label>Drug preset</label><select id="drugPreset"><option value="">Custom / manual entry</option></select></div>
 <div><label>k10</label><input id="k10" type="number" step="0.001" value="0.20"></div><div><label>k12</label><input id="k12" type="number" step="0.001" value="0.60"></div>
 <div><label>k21</label><input id="k21" type="number" step="0.001" value="0.30"></div><div><label>k13</label><input id="k13" type="number" step="0.001" value="0.15"></div>
 <div><label>k31</label><input id="k31" type="number" step="0.001" value="0.04"></div><div><label>Rate</label><input id="rate" type="number" step="0.01" value="1.0"></div>
@@ -27,7 +28,7 @@ main{height:calc(100vh - 52px);display:grid;grid-template-columns:300px 1fr;gap:
 <div><label>Loss step %</label><input id="lossstep" type="number" step="1" value="5"></div><div><label>Max loss %</label><input id="maxloss" type="number" step="1" value="95"></div>
 <div><label>Y scale</label><select id="yscale"><option value="linear">linear</option><option value="log" selected>log</option></select></div><div><label>Colors</label><select id="cmap"><option value="coolwarm" selected>blue-white-red</option><option value="bluered">blue-red</option><option value="viridis">viridis</option><option value="gray">gray</option></select></div>
 </div>
-<button class="primary" id="runBtn">Compute</button><div id="status" class="status"></div>
+<button class="primary" id="runBtn">Compute</button><div id="status" class="status"></div><div id="presetDetails" class="presetdetails"></div>
 <div class="downloads"><button class="secondary" id="downloadTimes" disabled>Times CSV</button><button class="secondary" id="downloadSurface" disabled>Surface CSV</button><button class="secondary" id="downloadHeatmap" disabled>PNG</button><button class="secondary" id="showTable" disabled>Table</button></div>
 <p class="note">Tip: raising T/tau points smooths plots but may slow the browser. The table opens as an overlay so the page itself does not scroll.</p>
 </section>
@@ -39,6 +40,299 @@ main{height:calc(100vh - 52px);display:grid;grid-template-columns:300px 1fr;gap:
 <div id="tableBox" class="tablebox"><button class="close" id="closeTable">Close</button><h2 style="font-size:.95rem;margin:0 0 8px">Decrement-time table</h2><div id="tableWrap"></div></div>
 <script>
 'use strict';
+const DRUG_PRESETS = [
+  {
+    "drug": "propofol",
+    "k10": 0.1188596491,
+    "k12": 0.1118421053,
+    "k21": 0.0549568966,
+    "k13": 0.0421052632,
+    "k31": 0.0033160622,
+    "V1_mL_per_kg": 228.0,
+    "ke0_min^-1": 0.26
+  },
+  {
+    "drug": "etomidate",
+    "k10": 0.140625,
+    "k12": 0.671875,
+    "k21": 0.2009345794,
+    "k13": 0.109375,
+    "k31": 0.01,
+    "V1_mL_per_kg": 64.0,
+    "ke0_min^-1": 0.45
+  },
+  {
+    "drug": "ketamine",
+    "k10": 0.0594405594,
+    "k12": 0.0629370629,
+    "k21": 0.0315236427,
+    "k13": 0.013986014,
+    "k31": 0.0026666667,
+    "V1_mL_per_kg": 286.0,
+    "ke0_min^-1": 0.3
+  },
+  {
+    "drug": "dexmedetomidine",
+    "k10": 0.0358333333,
+    "k12": 0.0666666667,
+    "k21": 0.0488798371,
+    "k13": 0.0247222222,
+    "k31": 0.0095289079,
+    "V1_mL_per_kg": 360.0,
+    "ke0_min^-1": 0.06
+  },
+  {
+    "drug": "midazolam",
+    "k10": 0.0256,
+    "k12": 0.06,
+    "k21": 0.0214285714,
+    "k13": 0.016,
+    "k31": 0.0022222222,
+    "V1_mL_per_kg": 250.0,
+    "ke0_min^-1": 0.07
+  },
+  {
+    "drug": "diazepam",
+    "k10": 0.01,
+    "k12": 0.05,
+    "k21": 0.0149970006,
+    "k13": 0.015,
+    "k31": 0.001,
+    "V1_mL_per_kg": 500.0,
+    "ke0_min^-1": 0.2
+  },
+  {
+    "drug": "fentanyl",
+    "k10": 0.1,
+    "k12": 0.15,
+    "k21": 0.03,
+    "k13": 0.05,
+    "k31": 0.0013333333,
+    "V1_mL_per_kg": 80.0,
+    "ke0_min^-1": 0.11
+  },
+  {
+    "drug": "hydromorphone",
+    "k10": 0.0533333333,
+    "k12": 0.1666666667,
+    "k21": 0.0416666667,
+    "k13": 0.0333333333,
+    "k31": 0.0033333333,
+    "V1_mL_per_kg": 150.0,
+    "ke0_min^-1": 0.5
+  },
+  {
+    "drug": "remifentanil",
+    "k10": 0.4615384615,
+    "k12": 0.3846153846,
+    "k21": 0.1666666667,
+    "k13": 0.1538461538,
+    "k31": 0.0285714286,
+    "V1_mL_per_kg": 65.0,
+    "ke0_min^-1": 0.6
+  },
+  {
+    "drug": "sufentanil",
+    "k10": 0.03,
+    "k12": 0.15,
+    "k21": 0.06,
+    "k13": 0.05,
+    "k31": 0.006002401,
+    "V1_mL_per_kg": 100.0,
+    "ke0_min^-1": 1.5
+  },
+  {
+    "drug": "alfentanil",
+    "k10": 0.035,
+    "k12": 0.2,
+    "k21": 0.1,
+    "k13": 0.06,
+    "k31": 0.015,
+    "V1_mL_per_kg": 150.0,
+    "ke0_min^-1": 2.0
+  },
+  {
+    "drug": "methadone",
+    "k10": 0.0073255814,
+    "k12": 0.252,
+    "k21": 0.0721438083,
+    "k13": 0.1054883721,
+    "k31": 0.0046859504,
+    "V1_mL_per_kg": 307.1428571429,
+    "ke0_min^-1": 0.087
+  },
+  {
+    "drug": "rocuronium",
+    "k10": 0.04,
+    "k12": 0.25,
+    "k21": 0.0666666667,
+    "k13": 0.0625,
+    "k31": 0.0125,
+    "V1_mL_per_kg": 80.0,
+    "ke0_min^-1": 0.2
+  },
+  {
+    "drug": "vecuronium",
+    "k10": 0.0497560976,
+    "k12": 0.0497560976,
+    "k21": 0.0643939394,
+    "k13": 0.0092682927,
+    "k31": 0.0022624434,
+    "V1_mL_per_kg": 146.4285714286,
+    "ke0_min^-1": 0.3
+  },
+  {
+    "drug": "cisatracurium",
+    "k10": 0.125,
+    "k12": 0.25,
+    "k21": 0.1666666667,
+    "k13": 0.05,
+    "k31": 0.0444444444,
+    "V1_mL_per_kg": 40.0,
+    "ke0_min^-1": 0.0575
+  },
+  {
+    "drug": "pancuronium",
+    "k10": 0.025,
+    "k12": 0.15,
+    "k21": 0.05,
+    "k13": 0.05,
+    "k31": 0.005,
+    "V1_mL_per_kg": 60.0,
+    "ke0_min^-1": 0.05
+  },
+  {
+    "drug": "succinylcholine",
+    "k10": 6.0,
+    "k12": 0.5,
+    "k21": 0.25,
+    "k13": 0.2,
+    "k31": 0.0666666667,
+    "V1_mL_per_kg": 50.0,
+    "ke0_min^-1": 0.197
+  },
+  {
+    "drug": "lidocaine",
+    "k10": 0.02,
+    "k12": 0.02,
+    "k21": 0.01,
+    "k13": 0.01,
+    "k31": 0.0033333333,
+    "V1_mL_per_kg": 500.0,
+    "ke0_min^-1": null
+  },
+  {
+    "drug": "bupivacaine",
+    "k10": 0.02,
+    "k12": 0.1,
+    "k21": 0.05,
+    "k13": 0.04,
+    "k31": 0.01,
+    "V1_mL_per_kg": 150.0,
+    "ke0_min^-1": null
+  },
+  {
+    "drug": "phenylephrine",
+    "k10": 0.08,
+    "k12": 0.08,
+    "k21": 0.048,
+    "k13": 0.0533333333,
+    "k31": 0.016,
+    "V1_mL_per_kg": 214.2857142857,
+    "ke0_min^-1": 0.4
+  },
+  {
+    "drug": "ephedrine",
+    "k10": 0.02,
+    "k12": 0.035,
+    "k21": 0.0116666667,
+    "k13": 0.025,
+    "k31": 0.0041666667,
+    "V1_mL_per_kg": 285.7142857143,
+    "ke0_min^-1": 0.06
+  },
+  {
+    "drug": "epinephrine",
+    "k10": 0.125,
+    "k12": 0.125,
+    "k21": 0.06,
+    "k13": 0.0833333333,
+    "k31": 0.025,
+    "V1_mL_per_kg": 171.4285714286,
+    "ke0_min^-1": 0.8
+  },
+  {
+    "drug": "dobutamine",
+    "k10": 0.0666666667,
+    "k12": 0.0666666667,
+    "k21": 0.0333333333,
+    "k13": 0.0466666667,
+    "k31": 0.014,
+    "V1_mL_per_kg": 214.2857142857,
+    "ke0_min^-1": 0.3
+  },
+  {
+    "drug": "dopamine",
+    "k10": 0.05625,
+    "k12": 0.05625,
+    "k21": 0.03,
+    "k13": 0.0375,
+    "k31": 0.0109090909,
+    "V1_mL_per_kg": 228.5714285714,
+    "ke0_min^-1": 0.2
+  },
+  {
+    "drug": "milrinone",
+    "k10": 0.01,
+    "k12": 0.025,
+    "k21": 0.0071428571,
+    "k13": 0.015,
+    "k31": 0.002,
+    "V1_mL_per_kg": 285.7142857143,
+    "ke0_min^-1": 0.03
+  },
+  {
+    "drug": "vasopressin",
+    "k10": 0.025,
+    "k12": 0.05,
+    "k21": 0.024,
+    "k13": 0.0333333333,
+    "k31": 0.01,
+    "V1_mL_per_kg": 171.4285714286,
+    "ke0_min^-1": 0.05
+  }
+];
+function prettyDrugName(s){return s.replace(/_/g,' ').replace(/\w/g,c=>c.toUpperCase())}
+function setInputValue(id,value){
+  const el=document.getElementById(id);
+  if(el && value!==null && value!==undefined && Number.isFinite(Number(value))) el.value=Number(value).toPrecision(10).replace(/(?:\.0+|(?:(\.\d*?)0+))$/,'$1');
+}
+function populateDrugDropdown(){
+  const sel=document.getElementById('drugPreset');
+  if(!sel) return;
+  DRUG_PRESETS.forEach((d,i)=>{
+    const opt=document.createElement('option');
+    opt.value=String(i);
+    opt.textContent=prettyDrugName(d.drug);
+    sel.appendChild(opt);
+  });
+}
+function applyDrugPreset(index){
+  const details=document.getElementById('presetDetails');
+  if(index==='' || index===null || index===undefined){
+    if(details) details.textContent='';
+    return;
+  }
+  const d=DRUG_PRESETS[Number(index)];
+  if(!d) return;
+  ['k10','k12','k21','k13','k31'].forEach(k=>setInputValue(k,d[k]));
+  const extra=[];
+  if(d.V1_mL_per_kg!==null && d.V1_mL_per_kg!==undefined) extra.push(`V1 ${Number(d.V1_mL_per_kg).toPrecision(6)} mL/kg`);
+  if(d['ke0_min^-1']!==null && d['ke0_min^-1']!==undefined) extra.push(`ke0 ${Number(d['ke0_min^-1']).toPrecision(6)} min⁻¹`);
+  if(details) details.textContent=`Loaded ${prettyDrugName(d.drug)} preset${extra.length ? ' — '+extra.join('; ') : ''}.`;
+  const st=document.getElementById('status');
+  if(st) st.textContent='Preset loaded. Click Compute to update plots.';
+}
 const N=3; let lastResult=null;
 const z=()=>[[0,0,0],[0,0,0],[0,0,0]], eye=()=>[[1,0,0],[0,1,0],[0,0,1]];
 function madd(A,B){let C=z();for(let i=0;i<N;i++)for(let j=0;j<N;j++)C[i][j]=A[i][j]+B[i][j];return C}function msub(A,B){let C=z();for(let i=0;i<N;i++)for(let j=0;j<N;j++)C[i][j]=A[i][j]-B[i][j];return C}function mscale(A,s){let C=z();for(let i=0;i<N;i++)for(let j=0;j<N;j++)C[i][j]=s*A[i][j];return C}function mmul(A,B){let C=z();for(let i=0;i<N;i++)for(let k=0;k<N;k++)for(let j=0;j<N;j++)C[i][j]+=A[i][k]*B[k][j];return C}function mvec(A,x){let y=[0,0,0];for(let i=0;i<N;i++)for(let j=0;j<N;j++)y[i]+=A[i][j]*x[j];return y}function norm1(A){let best=0;for(let j=0;j<N;j++){let s=0;for(let i=0;i<N;i++)s+=Math.abs(A[i][j]);best=Math.max(best,s)}return best}
@@ -53,7 +347,7 @@ function drawHeatmap(r){let c=document.getElementById('heatmap'),ctx=c.getContex
 function drawCurves(r){let c=document.getElementById('curves'),ctx=c.getContext('2d'),W=c.width,H=c.height,m={l:62,r:20,t:25,b:42},pw=W-m.l-m.r,ph=H-m.t-m.b,{T,levels,lossTimes}=r,ymax=Math.max(...lossTimes.flat());ctx.clearRect(0,0,W,H);let xMap=x=>m.l+(x-T[0])/(T.at(-1)-T[0])*pw,yMap=y=>m.t+ph-y/ymax*ph;ctx.strokeStyle='#111827';ctx.strokeRect(m.l,m.t,pw,ph);ctx.font='12px system-ui';ctx.fillStyle='#111827';ctx.textAlign='center';ctx.fillText('Infusion duration T (min)',m.l+pw/2,H-11);ctx.save();ctx.translate(17,m.t+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Time to decrement (min)',0,0);ctx.restore();for(let x of ticks(T[0],T.at(-1),5))ctx.fillText(x.toFixed(x>=10?0:1),xMap(x),H-27);ctx.textAlign='right';for(let y of ticks(0,ymax,5))ctx.fillText(y.toFixed(0),m.l-7,yMap(y)+4);for(let k=0;k<levels.length;k++){let pct=levels[k]*100,rgb=cmap(pct,levels[0]*100,levels.at(-1)*100,'coolwarm');ctx.strokeStyle=`rgb(${rgb})`;ctx.lineWidth=Math.abs(pct-50)<1e-9?2.5:1;ctx.beginPath();lossTimes[k].forEach((v,j)=>j?ctx.lineTo(xMap(T[j]),yMap(v)):ctx.moveTo(xMap(T[j]),yMap(v)));ctx.stroke()}ctx.textAlign='left';ctx.font='13px system-ui';ctx.fillText('Context-sensitive decrement curves',m.l,m.t-8)}
 function renderTable(r){let s='<table><thead><tr><th>T</th>'+r.levels.map(f=>`<th>${Math.round(f*100)}%</th>`).join('')+'</tr></thead><tbody>';for(let j=0;j<r.T.length;j++){s+=`<tr><td>${r.T[j].toFixed(3)}</td>`;for(let k=0;k<r.levels.length;k++)s+=`<td>${r.lossTimes[k][j].toFixed(3)}</td>`;s+='</tr>'}document.getElementById('tableWrap').innerHTML=s+'</tbody></table>'}
 function timesCSV(r){let s='T_min,'+r.levels.map(f=>`time_to_${String(Math.round(f*100)).padStart(2,'0')}pct_loss_min`).join(',')+'\n';for(let j=0;j<r.T.length;j++)s+=[r.T[j],...r.levels.map((_,k)=>r.lossTimes[k][j])].join(',')+'\n';return s}function surfaceCSV(r){let s='time_after_stop_min,'+r.T.map(x=>`T_${Number(x.toPrecision(10))}_min`).join(',')+'\n';for(let i=0;i<r.tau.length;i++)s+=[r.tau[i],...r.Z[i]].join(',')+'\n';return s}function dl(name,text){let a=document.createElement('a'),blob=new Blob([text],{type:'text/csv'});a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
-document.getElementById('runBtn').onclick=compute;document.getElementById('downloadTimes').onclick=()=>lastResult&&dl('csht_fraction_loss_times.csv',timesCSV(lastResult));document.getElementById('downloadSurface').onclick=()=>lastResult&&dl('csht_fraction_lost_surface.csv',surfaceCSV(lastResult));document.getElementById('downloadHeatmap').onclick=()=>{let a=document.createElement('a');a.download='csht_fraction_lost_heatmap.png';a.href=document.getElementById('heatmap').toDataURL('image/png');a.click()};document.getElementById('showTable').onclick=()=>document.getElementById('tableBox').classList.add('show');document.getElementById('closeTable').onclick=()=>document.getElementById('tableBox').classList.remove('show');
+document.getElementById('drugPreset').onchange=e=>applyDrugPreset(e.target.value);populateDrugDropdown();document.getElementById('runBtn').onclick=compute;document.getElementById('downloadTimes').onclick=()=>lastResult&&dl('csht_fraction_loss_times.csv',timesCSV(lastResult));document.getElementById('downloadSurface').onclick=()=>lastResult&&dl('csht_fraction_lost_surface.csv',surfaceCSV(lastResult));document.getElementById('downloadHeatmap').onclick=()=>{let a=document.createElement('a');a.download='csht_fraction_lost_heatmap.png';a.href=document.getElementById('heatmap').toDataURL('image/png');a.click()};document.getElementById('showTable').onclick=()=>document.getElementById('tableBox').classList.add('show');document.getElementById('closeTable').onclick=()=>document.getElementById('tableBox').classList.remove('show');
 </script>
 </body>
 </html>
