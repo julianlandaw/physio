@@ -220,6 +220,9 @@ const k31html = document.getElementById("k31html"); k31html.innerHTML = 0;
 const Vd1numhtml = document.getElementById("Vd1numhtml"); Vd1numhtml.innerHTML = 0;
 const Vd2numhtml = document.getElementById("Vd2numhtml"); Vd2numhtml.innerHTML = 0;
 const Vd3numhtml = document.getElementById("Vd3numhtml"); Vd3numhtml.innerHTML = 0;
+const Q2numhtml = document.getElementById("Q2numhtml"); Q2numhtml.innerHTML = 0;
+const Q3numhtml = document.getElementById("Q3numhtml"); Q3numhtml.innerHTML = 0;
+const Clnumhtml = document.getElementById("Clnumhtml"); Clnumhtml.innerHTML = 0;
 const contextsensitivehalflifehtml = document.getElementById("contextsensitivehalflifehtml"); contextsensitivehalflifehtml.innerHTML = 0;
 
 // ============================
@@ -1483,6 +1486,9 @@ function dfsolve() {
   Vd1numhtml.innerHTML = roundToSignificantFigures(params.Vd1, 3);
   Vd2numhtml.innerHTML = roundToSignificantFigures(params.Vd2, 3);
   Vd3numhtml.innerHTML = roundToSignificantFigures(params.Vd3, 3);
+  Q2numhtml.innerHTML = roundToSignificantFigures(params.Vd1*k12, 3);
+  Q3numhtml.innerHTML = roundToSignificantFigures(params.Vd1*k13, 3);
+  Clnumhtml.innerHTML = roundToSignificantFigures(params.Vd1*k10, 3);
 
   // Context-sensitive half-life (CSHL)
   // Start at end of last rate-based input (infusions + finite-duration boluses),
