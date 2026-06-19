@@ -1602,13 +1602,13 @@ function dexmedetomidine() { // Dyck / Hannivoort-type models
   setInfusionUnit('µg/kg/hr');
 
   // Slightly adjusted, literature-consistent
-  Vd1num.value = 30;     // ↑ slightly
-  Vd2num.value = 430;
-  Vd3num.value = 900;
+  Vd1num.value = 360;     // ↑ slightly
+  Vd2num.value = 491;
+  Vd3num.value = 934;
 
-  Clnum.value  = 10;
-  Q2num.value  = 40;
-  Q3num.value  = 8;
+  Clnum.value  = 12.9;
+  Q2num.value  = 24;
+  Q3num.value  = 8.9;
 
   ke0num.value = 0.06;   // critical fix
 
@@ -1641,12 +1641,12 @@ function diazepam() {
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 600; // 42/70*1000;
-  Vd2num.value = 257; // 18/70*1000;
-  Vd3num.value = 550; // 38.5/70*1000;
-  Clnum.value = 9; // 39.3/70;
-  Q2num.value = 43; // 300/70;
-  Q3num.value = 11; // 76.7/70;
+  Vd1num.value = 500;
+  Vd2num.value = 1667; // 18/70*1000;
+  Vd3num.value = 7500; // 38.5/70*1000;
+  Clnum.value = 5; // 39.3/70;
+  Q2num.value = 25; // 300/70;
+  Q3num.value = 7.5; // 76.7/70;
   ke0num.value = 0.2;
   syncMicroInputsFromClearanceInputs();
   dfsolve();
@@ -1715,12 +1715,12 @@ function sufentanil() {
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 25/70*1000;
-  Vd2num.value = 150/70*1000;
-  Vd3num.value = 500/70*1000;
-  Clnum.value = 1/70*1000;
-  Q2num.value = 1.2/70*1000;
-  Q3num.value = 0.3/70*1000;
+  Vd1num.value = 100;
+  Vd2num.value = 250;
+  Vd3num.value = 833;
+  Clnum.value = 3;
+  Q2num.value = 15;
+  Q3num.value = 5;
   ke0num.value = 1.5;
   syncMicroInputsFromClearanceInputs();
   dfsolve();
@@ -1731,12 +1731,12 @@ function alfentanil() {
   setDisplayUnit('ng/mL');
   setBolusUnit('µg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 0.9*1000;
-  Vd2num.value = 1.5*1000;
-  Vd3num.value = 3*1000;
-  Clnum.value = 6.4;
-  Q2num.value = 1/70*1000;
-  Q3num.value = 0.3/70*1000;
+  Vd1num.value = 150;
+  Vd2num.value = 300;
+  Vd3num.value = 600;
+  Clnum.value = 5.25;
+  Q2num.value = 30;
+  Q3num.value = 9;
   ke0num.value = 2;
   syncMicroInputsFromClearanceInputs();
   dfsolve();
@@ -1864,12 +1864,12 @@ function bupivacaine() {
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('µg/kg/min');
-  Vd1num.value = 142 + 6.0/7;
-  Vd2num.value = 714 + 2.0/7;
-  Vd3num.value = 2857 + 1.0/7;
-  Clnum.value = 3 + 4.0/7;
-  Q2num.value = 11 + 3.0/7;
-  Q3num.value = 7 + 1.0/7;
+  Vd1num.value = 150;
+  Vd2num.value = 300;
+  Vd3num.value = 600;
+  Clnum.value = 3;
+  Q2num.value = 15;
+  Q3num.value = 6;
   ke0num.value = null;
   syncMicroInputsFromClearanceInputs();
   dfsolve();
