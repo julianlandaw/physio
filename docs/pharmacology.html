@@ -1,118 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Start your development with Steller landing page.">
-    <meta name="author" content="Devcrud">
-    <title>Pharmacology</title>
-    <!-- font icons -->
-    <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
-    <!-- Bootstrap + Steller main styles -->
-	<link rel="stylesheet" href="assets/css/steller.css">
-    <!-- <style>body {background-image: url('assets/imgs/background.jpeg'); background-size: 100% 100%; background-repeat: no-repeat; background-attachment: fixed; background-position: center}</style> -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="Interactive pharmacokinetic teaching tools for three-compartment models and context-sensitive half-times.">
+  <meta name="author" content="Julian Landaw">
+  <title>Pharmacology: Three-Compartment Models</title>
 
-    <!-- Include Plotly library -->
-    <script src="assets/css/plotly.js"></script>
+  <!-- Bootstrap + Steller main styles -->
+  <link rel="stylesheet" href="assets/css/steller.css">
+  <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
+  <script src="assets/js/math.js" type="text/javascript"></script>
+  <script src="assets/js/plotly.js"></script>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        label, input {
-            margin-bottom: 10px;
-            display: block;
-        }
-    </style>
-    
+  <style>
+    body {
+      background-image: url('assets/imgs/background.jpeg');
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+    .navbar {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(6px);
+    }
+    section {
+      padding: 80px 0;
+    }
+    h1 {
+      font-weight: 700;
+    }
+    h2 {
+      font-weight: 650;
+    }
+    .card {
+      border: none;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    footer {
+      background: #222;
+      color: #bbb;
+      padding: 20px 0;
+      text-align: center;
+    }
+    .concept-list li {
+      margin-bottom: 0.75rem;
+    }
+    .teaching-box {
+      background: rgba(248, 249, 250, 0.95);
+      border-left: 4px solid #007bff;
+      padding: 1rem 1.25rem;
+      margin: 1.25rem 0;
+      border-radius: 0.5rem;
+    }
+    .tool-link-row a {
+      margin: 0.35rem;
+    }
+    .copyright-badge {
+      position: fixed;
+      left: 16px;
+      bottom: 12px;
+      z-index: 9999;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      font-size: 12.5px;
+      line-height: 1.2;
+      color: #fff;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: saturate(120%) blur(2px);
+      -webkit-backdrop-filter: saturate(120%) blur(2px);
+      padding: 6px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      pointer-events: none; /* so it doesn't block clicks */
+    }
+    @media (prefers-color-scheme: light) {
+      .copyright-badge { background: rgba(0,0,0,0.45); color: #fff; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .copyright-badge { background: rgba(0,0,0,0.55); color: #f2f2f2; }
+    }
+    @media (max-width: 480px) {
+      .copyright-badge { font-size: 11.5px; right: 10px; bottom: 10px; padding: 5px 8px; }
+    }
+  </style>
 </head>
 <body>
-    <!-- Page navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top" data-spy="affix" data-offset-top="0">
-        <div class="container">
-            <a class="navbar-brand" href="index.html"><img src="assets/imgs/chaos.jpeg" alt=""></a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg fixed-top navbar-light">
+    <div class="container">
+      <a class="navbar-brand" href="index.html"><img src="assets/imgs/chaos.jpeg" alt="Home"></a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item"><a class="nav-link" href="#overview">Overview</a></li>
+          <li class="nav-item"><a class="nav-link" href="#three-compartment-model">Three-Compartment Model</a></li>
+          <li class="nav-item"><a class="nav-link" href="#context-sensitive-times">Context-Sensitive Times</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
 
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav ml-auto align-items-center">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#onecompartment">One Compartment Model</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#twocompartment">Two Compartment Model</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#threecompartment">Three Compartment Model</a>
-                    </li>
-                </ul>
-            </div>
-        </div>          
-    </nav>
-    <!-- End of page navigation -->
-
-    <section id="onecompartment" class="section mt-3" style="margin: 20px">
-    <h1>One Compartment Model</h1>
-        <p>
-            The <a class="btn btn-light rounded" href='onecompartmentmodel.html'>One Compartment Model</a> follows the following differential equation:
-        </p>
-        <div align="center"><img src="assets/imgs/onecompartmentmodel.svg" width="400px"></img></div>
-        <p>
-            where <i>V</i><sub><i>d</i>, central</sub> is the volume of distribution of the central compartment, <i>b</i> is the amount bolused into the compartment (e.g. via an IV infusion), and <i>C<sub>l</sub></i> is the clearance.
-        </p>
-    </section>
-
-    <section id="twocompartment" class="section mt-3" style="margin: 20px">
-        <h1>Two Compartment Model</h1>
-        <p>
-            The <a class="btn btn-light rounded" href='twocompartmentmodel.html'>Two Compartment Model</a> follows the following system of differential equations:
-        </p>
-        <div align="center"><img src="assets/imgs/twocompartmentmodel.svg" width="600px"></img></div>
-        <p>
-            where <i>V</i><sub><i>d</i>, central</sub> is the volume of distribution of the central compartment, <i>V</i><sub><i>d</i>, peripheral</sub> is the volume of distribution of the peripheral compartment, <i>b</i> is the amount bolused into the compartment (e.g. via an IV infusion), <i>C<sub>l</sub></i> is the clearance, and <i>k</i> is the distribution rate between the two compartments. 
+  <!-- Overview Section -->
+  <section id="overview">
+    <div class="container">
+      <div class="card">
+        <h1 class="display-4 mb-4">Pharmacokinetic Modeling Tools</h1>
+        <p class="lead">
+          These interactive tools focus on <strong>three-compartment pharmacokinetic modeling</strong>:
+          how an IV drug moves between plasma and tissue compartments, how it is eliminated, and how
+          concentration falls after an infusion is stopped.
         </p>
         <p>
-            In a two compartment model, there are two sources of a drug escaping the central compartment - distribution (i.e. movement to the peripheral compartment) and elimination. The rates of these are governed by <i>k</i> and <i>C<sub>l</sub></i>. It can be shown that the half-lives of distribution and elimination are (<i>k</i> ln(2))/<i>V</i><sub><i>d</i>, central</sub> and (<i>C<sub>l</sub></i> ln(2))/<i>V</i><sub><i>d</i>, central</sub>, respectively, which are termed <i>t</i><sub>1/2,a</sub> and <i>t</i><sub>1/2,b</sub>. 
+          The goal is to make multicompartment pharmacokinetics visually intuitive. Instead of thinking
+          of the body as one well-mixed container, these models show how drug can rapidly enter the central
+          compartment, distribute into fast and slow tissue groups, and later return from those tissues as
+          elimination continues.
         </p>
-    </section>
-
-    <section id="threecompartment" class="section mt-3" style="margin: 20px">
-        <h1>Three Compartment Model</h1>
-        <p>
-            The <a class="btn btn-light rounded" href='threecompartmentmodel.html'>Three Compartment Model</a> follows the same set of differential equations as the two compartment model but with an additional peripheral compartment.
-    </section>
-    <!-- Page Footer -->
-    <footer class="page-footer">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-sm-6">
-                    <p>Copyright <script>document.write(new Date().getFullYear())</script> &copy; Julian Landaw</p>
-                </div>
-                <!-- 
-                <div class="col-sm-6">
-                    <div class="socials">
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-facebook"></i></a>
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-google"></i></a>
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-github"></i></a>
-                        <a class="social-item" href="javascript:void(0)"><i class="ti-twitter"></i></a>
-                    </div>
-                </div>
-                -->
-            </div>
+        <div class="text-center mt-3 tool-link-row">
+          <a class="btn btn-outline-primary btn-lg rounded-pill" href="threecompartmentmodel.html">Open Three-Compartment Model</a>
+          <a class="btn btn-outline-primary btn-lg rounded-pill" href="csht_three_compartment_web_simulator.html">Open Context-Sensitive Time Simulator</a>
         </div>
-    </footer> 
-    <!-- End of page footer -->
-	
-	<!-- core  -->
-    <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
-    <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
-    <!-- bootstrap 3 affix -->
-	<script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
+      </div>
+    </div>
+  </section>
 
-    <!-- steller js -->
-    <script src="assets/js/steller.js"></script>
-    
+  <!-- Three-Compartment Model Section -->
+  <section id="three-compartment-model">
+    <div class="container">
+      <div class="card">
+        <h1 class="display-4 mb-4">Three-Compartment Model</h1>
+        <p class="lead">
+          The <a href="threecompartmentmodel.html">three-compartment model</a> is a pharmacokinetic model
+          that represents the body as three connected mathematical spaces, or compartments.
+        </p>
+        <p>
+          These compartments are not literal anatomic boxes. Instead, each compartment approximates a group
+          of tissues with similar distribution behavior. For IV anesthetic drugs, this framework helps explain
+          why plasma concentration often decreases quickly at first, then more slowly over time.
+        </p>
+
+        <ul class="concept-list">
+          <li>
+            <strong>Central compartment:</strong> Represents plasma and rapidly equilibrating tissues. IV drug
+            enters this compartment first, and plasma concentration is usually modeled as the amount of drug
+            in this compartment divided by the central volume of distribution.
+          </li>
+          <li>
+            <strong>Rapid peripheral compartment:</strong> Represents tissues that equilibrate relatively quickly
+            with the central compartment, often highly perfused tissue groups. Drug moves reversibly between
+            this compartment and the central compartment.
+          </li>
+          <li>
+            <strong>Slow peripheral compartment:</strong> Represents tissues that equilibrate more slowly because
+            of lower perfusion, larger capacity, or slower tissue binding. Drug also moves reversibly between
+            this compartment and the central compartment.
+          </li>
+          <li>
+            <strong>Elimination:</strong> Clearance is modeled as occurring from the central compartment. This
+            summarizes irreversible removal processes such as metabolism and excretion.
+          </li>
+        </ul>
+
+        <div class="teaching-box">
+          <strong>Core idea:</strong> after a bolus or infusion, central concentration falls because drug is both
+          eliminated from the body and redistributed into peripheral compartments. Later, drug can return from
+          peripheral compartments back into the central compartment, producing a multi-exponential concentration-time curve.
+        </div>
+
+        <p>
+          Use the three-compartment model tool to explore how compartment volumes, intercompartmental clearances,
+          and systemic clearance shape the plasma concentration-time curve.
+        </p>
+        <div class="text-center mt-3">
+          <a class="btn btn-outline-primary btn-lg rounded-pill" href="threecompartmentmodel.html">Explore the Model</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Context-Sensitive Times Section -->
+  <section id="context-sensitive-times">
+    <div class="container">
+      <div class="card">
+        <h1 class="display-4 mb-4">Context-Sensitive Times</h1>
+        <p class="lead">
+          The <a href="csht_three_compartment_web_simulator.html">context-sensitive time simulator</a>
+          estimates how long it takes for drug amount or concentration in the central compartment to decrease
+          after an infusion is stopped.
+        </p>
+        <p>
+          A classic example is the <strong>context-sensitive half-time</strong>: the time required for the central
+          compartment concentration to decrease by 50% after terminating an infusion. It is called
+          <em>context-sensitive</em> because the answer depends on the context of the infusion, especially the
+          infusion duration and the amount of drug that has accumulated in peripheral compartments.
+        </p>
+
+        <ul class="concept-list">
+          <li>
+            <strong>Short infusion:</strong> Less drug has accumulated in peripheral compartments, so the central
+            compartment concentration may fall quickly after the infusion stops.
+          </li>
+          <li>
+            <strong>Long infusion:</strong> More drug may have distributed into peripheral compartments. After the
+            infusion stops, drug can redistribute from tissues back into the central compartment, slowing the decline.
+          </li>
+          <li>
+            <strong>50% decrement time:</strong> The simulator illustrates how long it takes to lose 50% of the central
+            compartment drug concentration after stopping the infusion.
+          </li>
+          <li>
+            <strong>Other decrement times:</strong> The same concept can be extended to 20%, 80%, 90%, or other decreases,
+            depending on the educational or clinical question.
+          </li>
+        </ul>
+
+        <div class="teaching-box">
+          <strong>Teaching point:</strong> a drug's terminal half-life alone does not reliably predict recovery after an infusion.
+          Recovery is strongly influenced by redistribution, clearance, infusion duration, and the amount of drug stored in
+          peripheral compartments.
+        </div>
+
+        <p>
+          Use the simulator to visualize why two drugs with similar terminal half-lives may have different recovery profiles,
+          and why the same drug can have different decrement times after brief versus prolonged infusions.
+        </p>
+        <div class="text-center mt-3">
+          <a class="btn btn-outline-primary btn-lg rounded-pill" href="csht_three_compartment_web_simulator.html">Explore Context-Sensitive Times</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="copyright-badge">Copyright © <script>document.write(new Date().getFullYear())</script> Julian W. Landaw, MD, PhD.</div>
+
+  <!-- JS -->
+  <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
+  <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
+  <script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
+  <script src="assets/js/steller.js"></script>
 </body>
 </html>
