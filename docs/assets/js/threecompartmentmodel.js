@@ -1542,12 +1542,12 @@ function propofol() {
 
   // Marsh model (validated)
   Vd1num.value = 228;
-  Vd2num.value = 463;
-  Vd3num.value = 2740;
+  Vd2num.value = 464;
+  Vd3num.value = 2895;
 
-  Clnum.value  = 27.7;
-  Q2num.value  = 51;
-  Q3num.value  = 26;
+  Clnum.value  = 27.1;
+  Q2num.value  = 25.5;
+  Q3num.value  = 9.6;
 
   ke0num.value = 0.26;
 
@@ -1659,13 +1659,13 @@ function fentanyl() {
   setInfusionUnit('µg/kg/hr');
 
   // Improved Shafer-type approximation
-  Vd1num.value = 60;
+  Vd1num.value = 80;
   Vd2num.value = 400;
   Vd3num.value = 3000;   // reduced
 
   Clnum.value  = 8;      // reduced
-  Q2num.value  = 25;
-  Q3num.value  = 10;
+  Q2num.value  = 12;
+  Q3num.value  = 4;
 
   ke0num.value = 0.11;
 
@@ -1678,12 +1678,12 @@ function hydromorphone() {
   setDisplayUnit('ng/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 20/70*1000;
-  Vd2num.value = 90/70*1000;
-  Vd3num.value = 70/70*1000;
-  Clnum.value = 0.75/70*1000;
-  Q2num.value = 1.5/70*1000;
-  Q3num.value = 0.4/70*1000;
+  Vd1num.value = 150;
+  Vd2num.value = 600;
+  Vd3num.value = 1500;
+  Clnum.value = 8;
+  Q2num.value = 25;
+  Q3num.value = 5;
   ke0num.value = 0.5;
   syncMicroInputsFromClearanceInputs();
   dfsolve();
@@ -1811,12 +1811,12 @@ function pancuronium() {
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 100;
-  Vd2num.value = 120;
-  Vd3num.value = 30;
+  Vd1num.value = 60;
+  Vd2num.value = 180;
+  Vd3num.value = 600;
   Clnum.value = 1.5;
-  Q2num.value = 8;
-  Q3num.value = 2;
+  Q2num.value = 9;
+  Q3num.value = 3;
   ke0num.value = 0.05;
   syncMicroInputsFromClearanceInputs();
   dfsolve();
@@ -1827,12 +1827,12 @@ function succinylcholine() {
   setDisplayUnit('µg/mL');
   setBolusUnit('mg/kg');
   setInfusionUnit('mg/kg/min');
-  Vd1num.value = 10;
-  Vd2num.value = 20;
-  Vd3num.value = 50;
+  Vd1num.value = 50;
+  Vd2num.value = 100;
+  Vd3num.value = 150;
   Clnum.value = 300;
-  Q2num.value = 50;
-  Q3num.value = 5;
+  Q2num.value = 25;
+  Q3num.value = 10;
   ke0num.value = 0.197;
   syncMicroInputsFromClearanceInputs();
   dfsolve();

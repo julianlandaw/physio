@@ -1,27 +1,27 @@
-drug,display_unit,bolus_unit,infusion_unit,V1_mL_per_kg,V2_mL_per_kg,V3_mL_per_kg,Cl_mL_per_kg_min,Q2_mL_per_kg_min,Q3_mL_per_kg_min,ke0_per_min,notes
-propofol,µg/mL,mg/kg,µg/kg/min,228.0,463.0,2740.0,27.7,51.0,26.0,0.26,Marsh model (validated)
-etomidate,µg/mL,mg/kg,mg/kg/hr,64.0,214.0,700.0,9.0,43.0,7.0,0.45,Arden; V3 refined from 857
+drug,display_unit,bolus_unit,infusion_unit,V1_mL_per_kg,V2_mL_per_kg,V3_mL_per_kg,Cl_mL_per_kg_min,Q2_mL_per_kg_min,Q3_mL_per_kg_min,ke0_min^-1,notes
+propofol,µg/mL,mg/kg,µg/kg/min,228.0,464.0,2895.0,27.1,25.5,9.6,0.26,Marsh model (validated)
+etomidate,µg/mL,mg/kg,mg/kg/hr,64.0,214.0,700.0,9.0,43.0,7.0,0.45,Arden; V3 refined from 857 for slightly less deep accumulation
 ketamine,µg/mL,mg/kg,mg/kg/hr,286.0,571.0,1500.0,17.0,18.0,4.0,0.3,Domino / Clements / Hijazi-type models
-dexmedetomidine,ng/mL,µg/kg,µg/kg/hr,30.0,430.0,900.0,10.0,40.0,8.0,0.06,Dyck / Hannivoort-type models; slightly adjusted
+dexmedetomidine,ng/mL,µg/kg,µg/kg/hr,360.0,491.0,934.0,12.9,24.0,8.9,0.06,"Dyck / Hannivoort-type models; slightly adjusted, literature-consistent"
 midazolam,ng/mL,mg/kg,µg/kg/min,250.0,700.0,1800.0,6.4,15.0,4.0,0.07,Greenblatt; V1 and Q2 slightly reduced
-diazepam,µg/mL,mg/kg,mg/kg/hr,600.0,257.0,550.0,9.0,43.0,11.0,0.2,
-fentanyl,ng/mL,µg/kg,µg/kg/hr,60.0,400.0,3000.0,8.0,25.0,10.0,0.11,Improved Shafer-type approximation
-hydromorphone,ng/mL,mg/kg,mg/kg/hr,285.714286,1285.714286,1000.0,10.714286,21.428571,5.714286,0.5,
+diazepam,µg/mL,mg/kg,mg/kg/hr,500.0,1667.0,7500.0,5.0,25.0,7.5,0.2,
+fentanyl,ng/mL,µg/kg,µg/kg/hr,80.0,400.0,3000.0,8.0,12.0,4.0,0.11,Improved Shafer-type approximation
+hydromorphone,ng/mL,mg/kg,mg/kg/hr,150.0,600.0,1500.0,8.0,25.0,5.0,0.5,
 remifentanil,ng/mL,µg/kg,µg/kg/min,65.0,150.0,350.0,30.0,25.0,10.0,0.6,Minto; improved weight-normalized approximation
-sufentanil,ng/mL,µg/kg,µg/kg/hr,357.142857,2142.857143,7142.857143,14.285714,17.142857,4.285714,1.5,
-alfentanil,ng/mL,µg/kg,µg/kg/min,900.0,1500.0,3000.0,6.4,14.285714,4.285714,2.0,
-methadone,ng/mL,mg/kg,mg/kg/hr,307.142857,1072.857143,6914.285714,2.25,77.4,32.4,0.087,
+sufentanil,ng/mL,µg/kg,µg/kg/hr,100.0,250.0,833.0,3.0,15.0,5.0,1.5,
+alfentanil,ng/mL,µg/kg,µg/kg/min,150.0,300.0,600.0,5.25,30.0,9.0,2.0,
+methadone,ng/mL,mg/kg,mg/kg/hr,307.1428571429,1072.8571428571,6914.2857142857,2.25,77.4,32.4,0.087,
 rocuronium,µg/mL,mg/kg,mg/kg/hr,80.0,300.0,400.0,3.2,20.0,5.0,0.2,
-vecuronium,µg/mL,mg/kg,µg/kg/min,146.428571,113.142857,599.857143,7.285714,7.285714,1.357143,0.3,
+vecuronium,µg/mL,mg/kg,µg/kg/min,146.4285714286,113.1428571429,599.8571428571,7.2857142857,7.2857142857,1.3571428571,0.3,
 cisatracurium,µg/mL,mg/kg,µg/kg/min,40.0,60.0,45.0,5.0,10.0,2.0,0.0575,
-pancuronium,µg/mL,mg/kg,mg/kg/hr,100.0,120.0,30.0,1.5,8.0,2.0,0.05,
-succinylcholine,µg/mL,mg/kg,mg/kg/min,10.0,20.0,50.0,300.0,50.0,5.0,0.197,
+pancuronium,µg/mL,mg/kg,mg/kg/hr,60.0,180.0,600.0,1.5,9.0,3.0,0.05,
+succinylcholine,µg/mL,mg/kg,mg/kg/min,50.0,100.0,150.0,300.0,25.0,10.0,0.197,
 lidocaine,µg/mL,mg/kg,mg/kg/hr,500.0,1000.0,1500.0,10.0,10.0,5.0,,Standard PK; no effect-site model
-bupivacaine,µg/mL,mg/kg,µg/kg/min,142.857143,714.285714,2857.142857,3.571429,11.428571,7.142857,,
-phenylephrine,ng/mL,µg/kg,µg/kg/min,214.285714,357.142857,714.285714,17.142857,17.142857,11.428571,0.4,
-ephedrine,ng/mL,mg/kg,mg/kg/min,285.714286,857.142857,1714.285714,5.714286,10.0,7.142857,0.06,
-epinephrine,ng/mL,µg/kg,µg/kg/min,171.428571,357.142857,571.428571,21.428571,21.428571,14.285714,0.8,
-dobutamine,ng/mL,µg/kg,µg/kg/min,214.285714,428.571429,714.285714,14.285714,14.285714,10.0,0.3,
-dopamine,ng/mL,µg/kg,µg/kg/min,228.571429,428.571429,785.714286,12.857143,12.857143,8.571429,0.2,
-milrinone,ng/mL,µg/kg,µg/kg/min,285.714286,1000.0,2142.857143,2.857143,7.142857,4.285714,0.03,
-vasopressin,ng/mL,µg/kg,µg/kg/min,171.428571,357.142857,571.428571,4.285714,8.571429,5.714286,0.05,
+bupivacaine,µg/mL,mg/kg,µg/kg/min,150.0,300.0,600.0,3.0,15.0,6.0,,
+phenylephrine,ng/mL,µg/kg,µg/kg/min,214.2857142857,357.1428571429,714.2857142857,17.1428571429,17.1428571429,11.4285714286,0.4,
+ephedrine,ng/mL,mg/kg,mg/kg/min,285.7142857143,857.1428571429,1714.2857142857,5.7142857143,10.0,7.1428571429,0.06,
+epinephrine,ng/mL,µg/kg,µg/kg/min,171.4285714286,357.1428571429,571.4285714286,21.4285714286,21.4285714286,14.2857142857,0.8,
+dobutamine,ng/mL,µg/kg,µg/kg/min,214.2857142857,428.5714285714,714.2857142857,14.2857142857,14.2857142857,10.0,0.3,
+dopamine,ng/mL,µg/kg,µg/kg/min,228.5714285714,428.5714285714,785.7142857143,12.8571428571,12.8571428571,8.5714285714,0.2,
+milrinone,ng/mL,µg/kg,µg/kg/min,285.7142857143,1000.0,2142.8571428571,2.8571428571,7.1428571429,4.2857142857,0.03,
+vasopressin,ng/mL,µg/kg,µg/kg/min,171.4285714286,357.1428571429,571.4285714286,4.2857142857,8.5714285714,5.7142857143,0.05,
