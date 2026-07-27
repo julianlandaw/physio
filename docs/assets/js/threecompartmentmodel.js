@@ -33,9 +33,21 @@ function initDrawer() {
   const drawer = $('#paramsDrawer');
   const backdrop = $('#drawerBackdrop');
   const closeBtn = $('#drawerCloseBtn');
+  let previousFocus = null;
+
+  function setBackgroundInert(isInert) {
+    ['appHeader', 'appContent'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.toggleAttribute('inert', isInert);
+      el.setAttribute('aria-hidden', String(isInert));
+    });
+  }
 
   function openDrawer() {
+    previousFocus = document.activeElement;
     document.body.classList.add('drawer-open');
+    setBackgroundInert(true);
     btn?.setAttribute('aria-expanded', 'true');
     drawer?.setAttribute('aria-hidden', 'false');
     backdrop?.setAttribute('aria-hidden', 'false');
@@ -44,19 +56,43 @@ function initDrawer() {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     }), 260);
+    setTimeout(() => closeBtn?.focus(), 0);
   }
 
   function closeDrawer() {
     document.body.classList.remove('drawer-open');
+    setBackgroundInert(false);
     btn?.setAttribute('aria-expanded', 'false');
     drawer?.setAttribute('aria-hidden', 'true');
     backdrop?.setAttribute('aria-hidden', 'true');
+    const focusTarget = previousFocus && document.contains(previousFocus) ? previousFocus : btn;
+    focusTarget?.focus?.();
   }
 
   btn?.addEventListener('click', openDrawer);
   closeBtn?.addEventListener('click', closeDrawer);
   backdrop?.addEventListener('click', closeDrawer);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+  window.addEventListener('keydown', (e) => {
+    if (!document.body.classList.contains('drawer-open')) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeDrawer();
+      return;
+    }
+    if (e.key !== 'Tab' || !drawer) return;
+    const focusable = $$('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', drawer)
+      .filter(el => el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
 
   // Collapse cards (simple)
   $$('.card-header[data-collapse="true"]').forEach(h => {
@@ -67,6 +103,7 @@ function initDrawer() {
       const isHidden = body.style.display === 'none';
       body.style.display = isHidden ? 'block' : 'none';
       if (icon) icon.textContent = isHidden ? '▼' : '▲';
+      h.setAttribute('aria-expanded', String(isHidden));
       // Resize Plotly if plots are inside (they are not), but keep safe
       setTimeout(() => ['myDiv1','myDiv2','myDiv3'].forEach(id => {
         const el = document.getElementById(id);
@@ -85,11 +122,12 @@ function initDrawer() {
     if (!body) return;
     body.style.display = collapsed ? 'none' : 'block';
     if (icon) icon.textContent = collapsed ? '▲' : '▼';
+    header?.setAttribute('aria-expanded', String(!collapsed));
   };
-  collapseById('parameterCard',true);
+  collapseById('parameterCard', false);
   collapseById('scheduleCard', true);
   collapseById('compareCard', true);
-  collapseById('simulationCard', true);
+  collapseById('simulationCard', false);
   collapseById('volumeCard', true);
   collapseById('pharmCard', true);
 }
@@ -235,11 +273,20 @@ const UNITS = {
 };
 let currentUnit = UNITS['mg/mL'];
 
-function setDisplayUnit(unitName) {
-  currentUnit = UNITS[unitName] || UNITS['mg/mL'];
-  initialphtml.innerHTML = `[<i>P</i>]<sub>init</sub> (${unitName})`;
-  concentrationunitshtml1.innerHTML = unitName;
-  concentrationunitshtml2.innerHTML = unitName;
+function formatInputValue(value) {
+  return Number.isFinite(value) ? String(roundToSignificantFigures(value, 10)) : '';
+}
+
+function setDisplayUnit(unitName, preserveValue = true) {
+  const nextUnit = UNITS[unitName] || UNITS['mg/mL'];
+  if (preserveValue && initialpnum && currentUnit.factor !== nextUnit.factor) {
+    const value = parseFloat(initialpnum.value);
+    if (Number.isFinite(value)) initialpnum.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
+  }
+  currentUnit = nextUnit;
+  initialphtml.innerHTML = `[<i>P</i>]<sub>init</sub> (${currentUnit.name})`;
+  concentrationunitshtml1.innerHTML = currentUnit.name;
+  concentrationunitshtml2.innerHTML = currentUnit.name;
 }
 
 const BOLUSUNITS = {
@@ -288,6 +335,16 @@ function convertInfusionValueToMgKgMin(value, unitObj = currentInfusionUnit, wei
   return normalized / Math.max(weightKg, 1e-9);
 }
 
+function convertMgKgToBolusValue(valueMgKg, unitObj, weightKg = getWeightKg()) {
+  const perKgValue = unitObj?.perKg ? valueMgKg : valueMgKg * weightKg;
+  return perKgValue * (unitObj?.factor ?? 1);
+}
+
+function convertMgKgMinToInfusionValue(valueMgKgMin, unitObj, weightKg = getWeightKg()) {
+  const perKgValue = unitObj?.perKg ? valueMgKgMin : valueMgKgMin * weightKg;
+  return perKgValue * (unitObj?.factor ?? 1);
+}
+
 function convertBolusToMgKg(value, unitObj = currentBolusUnit) {
   return convertBolusValueToMgKg(value, unitObj, getWeightKg());
 }
@@ -314,15 +371,38 @@ function initializeUnitSelectors() {
   populateUnitSelect(infusionUnitSelect, INFUSIONUNITS, INFUSION_UNIT_ORDER);
 }
 
-function setBolusUnit(unitName) {
-  currentBolusUnit = BOLUSUNITS[unitName] || BOLUSUNITS['mg/kg'];
+function rescaleScheduleInputs(selector, convert) {
+  $$(selector).forEach(input => {
+    const value = parseFloat(input.value);
+    if (Number.isFinite(value)) input.value = formatInputValue(convert(value));
+  });
+}
+
+function setBolusUnit(unitName, preserveValues = true) {
+  const previousUnit = currentBolusUnit;
+  const nextUnit = BOLUSUNITS[unitName] || BOLUSUNITS['mg/kg'];
+  if (preserveValues && previousUnit.name !== nextUnit.name) {
+    const weightKg = getWeightKg();
+    const convert = value => convertMgKgToBolusValue(convertBolusValueToMgKg(value, previousUnit, weightKg), nextUnit, weightKg);
+    if (bnum && Number.isFinite(parseFloat(bnum.value))) bnum.value = formatInputValue(convert(parseFloat(bnum.value)));
+    rescaleScheduleInputs('#bolusEventsTable input[data-field="dose"]', convert);
+  }
+  currentBolusUnit = nextUnit;
   bhtml.innerHTML = `Bolus (${currentBolusUnit.name})`;
   if (bolusUnitSelect) bolusUnitSelect.value = currentBolusUnit.name;
   updateScheduleUnitLabels();
 }
 
-function setInfusionUnit(unitName) {
-  currentInfusionUnit = INFUSIONUNITS[unitName] || INFUSIONUNITS['mg/kg/min'];
+function setInfusionUnit(unitName, preserveValues = true) {
+  const previousUnit = currentInfusionUnit;
+  const nextUnit = INFUSIONUNITS[unitName] || INFUSIONUNITS['mg/kg/min'];
+  if (preserveValues && previousUnit.name !== nextUnit.name) {
+    const weightKg = getWeightKg();
+    const convert = value => convertMgKgMinToInfusionValue(convertInfusionValueToMgKgMin(value, previousUnit, weightKg), nextUnit, weightKg);
+    if (infusionnum && Number.isFinite(parseFloat(infusionnum.value))) infusionnum.value = formatInputValue(convert(parseFloat(infusionnum.value)));
+    rescaleScheduleInputs('#infusionEventsTable input[data-field="rate"]', convert);
+  }
+  currentInfusionUnit = nextUnit;
   infusionhtml.innerHTML = `Infusion (${currentInfusionUnit.name})`;
   if (infusionUnitSelect) infusionUnitSelect.value = currentInfusionUnit.name;
   updateScheduleUnitLabels();
@@ -471,6 +551,64 @@ function buildInputRateFromSchedule(schedule, dt, tfinal) {
   });
 
   return { u, instant };
+}
+
+function updateRegimenOverview(params, schedule) {
+  const drug = DRUGS.find(d => d.id === currentDrug);
+  const drugLabel = drug?.label || 'Custom model';
+  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  setText('summaryDrug', drugLabel);
+  setText('summaryWeight', `${formatInputValue(params.weightKg)} kg`);
+  setText('summaryModel', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes');
+
+  let segments = [];
+  let description = '';
+  if (schedule?.enabled) {
+    const boluses = schedule.boluses || [];
+    const infusions = schedule.infusions || [];
+    description = `${boluses.length} bolus${boluses.length === 1 ? '' : 'es'} · ${infusions.length} infusion segment${infusions.length === 1 ? '' : 's'}`;
+    segments = [
+      ...boluses.map((event, index) => ({ start: event.time, end: event.duration > 0 ? event.time + event.duration : event.time, type: 'bolus', label: `Bolus ${index + 1}` })),
+      ...infusions.map((event, index) => ({ start: event.start, end: event.end, type: 'infusion', label: `Infusion ${index + 1}` }))
+    ];
+  } else {
+    description = `Bolus ${formatInputValue(parseFloatSafe(bnum.value, 0))} ${currentBolusUnit.name} over ${formatInputValue(params.tbolus)} min · infusion ${formatInputValue(parseFloatSafe(infusionnum.value, 0))} ${currentInfusionUnit.name} for ${formatInputValue(params.tinfusion)} min`;
+    segments = [
+      { start: 0, end: params.tbolus, type: 'bolus', label: 'Bolus' },
+      { start: params.tbolus, end: params.tbolus + params.tinfusion, type: 'infusion', label: 'Infusion' }
+    ];
+  }
+  setText('summaryDose', description);
+  setText('doseTimelineText', `0–${formatInputValue(params.tfinal)} min`);
+
+  const track = document.getElementById('doseTimelineTrack');
+  if (!track) return;
+  track.textContent = '';
+  const validSegments = segments.filter(segment => Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.start <= params.tfinal && segment.end >= 0);
+  track.setAttribute('aria-label', `${description}; simulation duration ${formatInputValue(params.tfinal)} minutes.`);
+  validSegments.forEach(segment => {
+    const start = clamp(segment.start, 0, params.tfinal);
+    const end = clamp(segment.end, 0, params.tfinal);
+    const marker = document.createElement('span');
+    marker.className = `dose-timeline__segment dose-timeline__segment--${segment.type}`;
+    marker.style.left = `${(start / params.tfinal) * 100}%`;
+    marker.style.width = `${Math.max(1.2, ((Math.max(end, start) - start) / params.tfinal) * 100)}%`;
+    marker.title = `${segment.label}: ${formatInputValue(start)}–${formatInputValue(end)} min`;
+    marker.setAttribute('aria-hidden', 'true');
+    track.appendChild(marker);
+  });
+}
+
+function initDistributionDetails() {
+  const details = document.getElementById('distributionDetails');
+  if (!details) return;
+  details.addEventListener('toggle', () => {
+    if (!details.open) return;
+    setTimeout(() => ['myDiv2', 'myDiv3'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && window.Plotly) Plotly.Plots.resize(el);
+    }), 0);
+  });
 }
 
 function ensureScheduleUI() {
@@ -819,8 +957,8 @@ function loadStrategyToInputs(id) {
   else syncMicroInputsFromClearanceInputs();
   updatePkInputVisibility();
 
-  if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus);
-  if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion);
+  if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus, false);
+  if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion, false);
   if (s.schedule) setScheduleToDOM(s.schedule);
   activeStrategyId = s.id;
   renderStrategyList();
@@ -984,6 +1122,7 @@ function simulateStrategy(state) {
     xs3[i+1] = a31*x1 + a32*x2 + a33*x3 + u*a35;
     ces[i+1] = a41*x1 + a42*x2 + a43*x3 + a44*ce + u*a45;
   }
+  if (schedule?.enabled && sched.instant?.[N]) xs1[N] += sched.instant[N];
   const cp = xs1.map(x => x / p.Vd1);
   const ce = ces.slice();
   return { ts, cp, ce };
@@ -1272,8 +1411,86 @@ function toArray(m) {
   return [m];
 }
 
+function validateSimulationInputs() {
+  const errors = [];
+  const invalidIds = new Set();
+  const addError = (id, message) => { errors.push(message); if (id) invalidIds.add(id); };
+  const readNumber = (id, label, { min = -Infinity, strictlyPositive = false, optional = false } = {}) => {
+    const el = document.getElementById(id);
+    const raw = el?.value?.trim();
+    if (optional && raw === '') return 0;
+    const value = Number(raw);
+    if (!Number.isFinite(value) || (strictlyPositive ? value <= 0 : value < min)) {
+      addError(id, `${label} must be ${strictlyPositive ? 'greater than 0' : `at least ${min}`}.`);
+      return null;
+    }
+    return value;
+  };
+
+  $$('.form-control.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  readNumber('weight', 'Weight', { strictlyPositive: true });
+  readNumber('tfinal', 'Final time', { strictlyPositive: true });
+  readNumber('initialp', 'Initial concentration', { min: 0 });
+  readNumber('Vd1', 'V1', { strictlyPositive: true });
+  readNumber('b', 'Bolus dose', { min: 0 });
+  readNumber('tbolus', 'Bolus time', { min: 0 });
+  readNumber('infusion', 'Infusion rate', { min: 0 });
+  readNumber('tinfusion', 'Infusion time', { min: 0 });
+  readNumber('ke0', 'ke0', { min: 0, optional: true });
+
+  if (getPkInputMode() === 'microconstants') {
+    const k12 = readNumber('k12input', 'k12', { min: 0 });
+    const k21 = readNumber('k21input', 'k21', { min: 0 });
+    const k13 = readNumber('k13input', 'k13', { min: 0 });
+    const k31 = readNumber('k31input', 'k31', { min: 0 });
+    readNumber('k10input', 'k10', { min: 0 });
+    if (k12 > 0 && k21 <= 0) addError('k21input', 'k21 must be greater than 0 when k12 is greater than 0.');
+    if (k13 > 0 && k31 <= 0) addError('k31input', 'k31 must be greater than 0 when k13 is greater than 0.');
+  } else {
+    const v2 = readNumber('Vd2', 'V2', { min: 0 });
+    const v3 = readNumber('Vd3', 'V3', { min: 0 });
+    const q2 = readNumber('Q2', 'Q2', { min: 0 });
+    const q3 = readNumber('Q3', 'Q3', { min: 0 });
+    readNumber('Cl', 'Clearance', { min: 0 });
+    if (q2 > 0 && v2 <= 0) addError('Vd2', 'V2 must be greater than 0 when Q2 is greater than 0.');
+    if (q3 > 0 && v3 <= 0) addError('Vd3', 'V3 must be greater than 0 when Q3 is greater than 0.');
+  }
+
+  const schedule = getScheduleFromDOM();
+  if (schedule.enabled) {
+    $$('#bolusEventsTable tbody tr').forEach((row, index) => {
+      const time = Number(row.querySelector('[data-field="time"]')?.value);
+      const dose = Number(row.querySelector('[data-field="dose"]')?.value);
+      const duration = Number(row.querySelector('[data-field="duration"]')?.value);
+      if (!Number.isFinite(time) || time < 0 || !Number.isFinite(dose) || dose < 0 || !Number.isFinite(duration) || duration < 0) {
+        addError(null, `Bolus ${index + 1} must have non-negative time, dose, and duration.`);
+        $$('input', row).forEach(el => el.classList.add('is-invalid'));
+      }
+    });
+    $$('#infusionEventsTable tbody tr').forEach((row, index) => {
+      const start = Number(row.querySelector('[data-field="start"]')?.value);
+      const end = Number(row.querySelector('[data-field="end"]')?.value);
+      const rate = Number(row.querySelector('[data-field="rate"]')?.value);
+      if (!Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end < start || !Number.isFinite(rate) || rate < 0) {
+        addError(null, `Infusion ${index + 1} must have non-negative start/end/rate values, with end at or after start.`);
+        $$('input', row).forEach(el => el.classList.add('is-invalid'));
+      }
+    });
+  }
+
+  invalidIds.forEach(id => document.getElementById(id)?.classList.add('is-invalid'));
+  const summary = document.getElementById('validationSummary');
+  if (summary) {
+    summary.hidden = errors.length === 0;
+    summary.textContent = errors.length ? `Simulation not updated: ${errors.join(' ')}` : '';
+  }
+  return errors.length === 0;
+}
+
 function dfsolve() {
   let params = { b: [], Cl: [], Q2: [], Q3: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tinfusion: [], initialp: [], tfinal: [], dt: [], ke0: [], weightKg: [] };
+
+  if (!validateSimulationInputs()) return;
 
   if (getPkInputMode() === "microconstants") syncClearanceInputsFromMicroInputs();
   else syncMicroInputsFromClearanceInputs();
@@ -1339,6 +1556,7 @@ function dfsolve() {
   const schedRates = buildInputRateFromSchedule(schedule, params.dt, params.tfinal);
   const uArr = schedRates.u;
   const instArr = schedRates.instant;
+  updateRegimenOverview(params, schedule);
 
   
   let counter = 0;
@@ -1380,6 +1598,10 @@ function dfsolve() {
     ces[counter+1] = cen;
     counter++;
   }
+
+  // A bolus at exactly t_final affects the reported final plasma concentration,
+  // but does not instantaneously change the effect-site concentration.
+  if (schedule?.enabled && instArr?.[N]) xs1[N] += instArr[N];
 
   const yFactor = currentUnit.factor;
   const unitLabel = currentUnit.name;
@@ -1442,7 +1664,13 @@ function dfsolve() {
   Plotly.newPlot('myDiv3', [trace_p2], layout3, PLOT_CONFIG);
 
   // Results
-  pfinalhtml.innerHTML = roundToSignificantFigures(yFactor * xs1[N] / params.Vd1, 3);
+  const finalCp = roundToSignificantFigures(yFactor * xs1[N] / params.Vd1, 3);
+  const finalCe = roundToSignificantFigures(yFactor * ces[N], 3);
+  pfinalhtml.innerHTML = finalCp;
+  document.getElementById('keyFinalCp').textContent = finalCp;
+  document.getElementById('keyFinalCe').textContent = finalCe;
+  document.getElementById('keyFinalCpUnit').textContent = unitLabel;
+  document.getElementById('keyFinalCeUnit').textContent = unitLabel;
   const uLast = (Number.isFinite(params.b) ? params.b : 0);
   const pss = params.Cl > 0 ? uLast / params.Cl : 0;
   psshtml.innerHTML = roundToSignificantFigures(yFactor * pss, 3);
@@ -1477,6 +1705,7 @@ function dfsolve() {
     gammahtml.innerHTML = roundToSignificantFigures(gamma, 3);
     termhalflifehtml.innerHTML = roundToSignificantFigures(termhalflife, 3);
   }
+  document.getElementById('keyTerminalHalfLife').textContent = termhalflifehtml.textContent;
 
   k10html.innerHTML = roundToSignificantFigures(k10, 3);
   k12html.innerHTML = roundToSignificantFigures(k12, 3);
@@ -1516,6 +1745,7 @@ function dfsolve() {
   }
 
   contextsensitivehalflifehtml.innerHTML = roundToSignificantFigures(cshl, 3);
+  document.getElementById('keyContextHalfLife').textContent = contextsensitivehalflifehtml.textContent;
 
 }
 
@@ -2173,6 +2403,7 @@ function wireInputs() {
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());
   document.getElementById('oneCompBtn')?.addEventListener('click', () => onecompartment());
+  document.getElementById('summaryParamsBtn')?.addEventListener('click', () => document.getElementById('paramsBtn')?.click());
 }
 
 (function init() {
@@ -2183,6 +2414,7 @@ function wireInputs() {
   ensureTherapeuticToggle();
   ensureScheduleUI();
   ensureCompareUI();
+  initDistributionDetails();
   wireInputs();
   updatePkInputVisibility();
   syncMicroInputsFromClearanceInputs();

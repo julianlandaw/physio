@@ -20,7 +20,7 @@
 
 <body>
   <!-- Sticky app bar -->
-  <header class="appbar" role="banner">
+  <header class="appbar" id="appHeader" role="banner">
     <div class="appbar__left">
       <div class="brand">
         <div class="brand__title">Three Compartment Model</div>
@@ -65,10 +65,10 @@
   <div class="drawer-backdrop" id="drawerBackdrop" tabindex="-1" aria-hidden="true"></div>
 
   <!-- Right parameters drawer -->
-  <aside class="drawer" id="paramsDrawer" aria-hidden="true">
+  <aside class="drawer" id="paramsDrawer" role="dialog" aria-modal="true" aria-labelledby="paramsDrawerTitle" aria-hidden="true">
     <div class="drawer__header">
       <div>
-        <div class="drawer__title">Parameters</div>
+        <div class="drawer__title" id="paramsDrawerTitle">Parameters</div>
         <div class="drawer__hint">Adjust dosing, PK, and simulation settings</div>
       </div>
       <button class="btn btn-sm btn-outline-secondary" id="drawerCloseBtn" type="button" aria-label="Close parameters">
@@ -77,12 +77,13 @@
     </div>
 
     <div class="drawer__body">
+      <div id="validationSummary" class="validation-summary" role="alert" aria-live="assertive" hidden></div>
       <!-- ====== Parameter cards (mostly your existing markup, moved into the drawer) ====== -->
 
       <!-- Bolus and Infusion Parameters -->
       <div class="card shadow-sm mb-3" id="parameterCard">
-        <div class="card-header" data-collapse="true">Bolus &amp; Infusion <span class="toggle-icon">▼</span></div>
-        <div class="card-body">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="parameterCardBody" aria-expanded="false">Bolus &amp; Infusion <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="parameterCardBody">
           <div class="param-row">
             <label class="label" for="bolusUnitSelect">Bolus unit</label>
             <select class="form-control" id="bolusUnitSelect" aria-label="Bolus unit"></select>
@@ -114,8 +115,8 @@
 
       <!-- Dosing Schedule (advanced) -->
       <div class="card shadow-sm mb-3" id="scheduleCard">
-        <div class="card-header" data-collapse="true">Dosing Schedule (advanced) <span class="toggle-icon">▼</span></div>
-        <div class="card-body">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="scheduleCardBody" aria-expanded="false">Dosing Schedule (advanced) <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="scheduleCardBody">
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="useSchedule" />
             <label class="form-check-label" for="useSchedule">Use schedule (multiple boluses + variable infusions)</label>
@@ -179,8 +180,8 @@
 
       <!-- Compare strategies -->
       <div class="card shadow-sm mb-3" id="compareCard">
-        <div class="card-header" data-collapse="true">Compare Strategies <span class="toggle-icon">▼</span></div>
-        <div class="card-body">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="compareCardBody" aria-expanded="false">Compare Strategies <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="compareCardBody">
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" id="compareMode" />
             <label class="form-check-label" for="compareMode">Enable comparison overlay</label>
@@ -198,8 +199,8 @@
 
       <!-- Simulation Parameters -->
       <div class="card shadow-sm mb-3" id="simulationCard">
-        <div class="card-header" data-collapse="true">Simulation <span class="toggle-icon">▼</span></div>
-        <div class="card-body">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="simulationCardBody" aria-expanded="false">Simulation <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="simulationCardBody">
           <div class="param-row">
             <label id="weighthtml" class="label" for="weight">Weight (kg)</label>
             <input type="number" class="form-control" id="weight" value="70" min="0.1" step="0.1" inputmode="decimal" />
@@ -219,8 +220,8 @@
 
       <!-- Volumes -->
       <div class="card shadow-sm mb-3" id="volumeCard">
-        <div class="card-header" data-collapse="true">Volumes <span class="toggle-icon">▼</span></div>
-        <div class="card-body">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="volumeCardBody" aria-expanded="false">Volumes <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="volumeCardBody">
           <div class="param-row">
             <div id="Vd1html" class="label"></div>
             <input type="number" class="form-control" id="Vd1" value="70" />
@@ -238,8 +239,8 @@
 
       <!-- Pharmacokinetics -->
       <div class="card shadow-sm mb-3" id="pharmCard">
-        <div class="card-header" data-collapse="true">Pharmacokinetics <span class="toggle-icon">▼</span></div>
-        <div class="card-body">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="pharmCardBody" aria-expanded="false">Pharmacokinetics <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="pharmCardBody">
           <div class="param-row">
             <label class="label" for="pkInputMode">PK input mode</label>
             <select class="form-control" id="pkInputMode">
@@ -299,33 +300,71 @@
   </aside>
 
   <!-- Main content -->
-  <main class="app-content" role="main">
+  <main class="app-content" id="appContent" role="main">
+    <section class="regimen-overview" aria-labelledby="regimenHeading">
+      <div class="regimen-overview__heading">
+        <div>
+          <p class="eyebrow">Current simulation</p>
+          <h1 id="regimenHeading">Current regimen</h1>
+        </div>
+        <button class="btn btn-primary" type="button" id="summaryParamsBtn">Edit parameters</button>
+      </div>
+      <div class="regimen-grid">
+        <div class="regimen-item"><span class="regimen-item__label">Drug</span><strong id="summaryDrug">Propofol</strong></div>
+        <div class="regimen-item"><span class="regimen-item__label">Patient weight</span><strong id="summaryWeight">70 kg</strong></div>
+        <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Dosing plan</span><strong id="summaryDose">—</strong></div>
+        <div class="regimen-item"><span class="regimen-item__label">PK input</span><strong id="summaryModel">Clearance &amp; volumes</strong></div>
+      </div>
+    </section>
+
     <section class="content-section">
       <div class="content-header">
-        <h2 class="h5 m-0">Plots</h2>
-        <div class="text-muted small">Cp/Ce + peripheral compartments</div>
+        <div>
+          <p class="eyebrow">Primary view</p>
+          <h2 class="h4 m-0">Concentration over time</h2>
+        </div>
+        <div class="text-muted small">Central plasma and effect-site concentration</div>
       </div>
 
-      <div class="card shadow-sm">
+      <div class="card shadow-sm primary-plot-card">
         <div class="card-body">
-          <div id="myDiv1" class="plot"></div>
-          <div class="row mt-2">
-            <div class="col-lg-6 mb-3"><div id="myDiv2" class="plot plot--small"></div></div>
-            <div class="col-lg-6 mb-3"><div id="myDiv3" class="plot plot--small"></div></div>
+          <div id="myDiv1" class="plot plot--primary"></div>
+          <div class="dose-timeline" aria-live="polite">
+            <div class="dose-timeline__header"><span>Dosing timeline</span><span id="doseTimelineText">—</span></div>
+            <div class="dose-timeline__track" id="doseTimelineTrack" aria-label="Dosing timeline"></div>
           </div>
+          <details class="distribution-details" id="distributionDetails">
+            <summary>Show distribution compartments</summary>
+            <div class="row mt-3">
+              <div class="col-lg-6 mb-3"><div id="myDiv2" class="plot plot--small"></div></div>
+              <div class="col-lg-6 mb-3"><div id="myDiv3" class="plot plot--small"></div></div>
+            </div>
+          </details>
         </div>
       </div>
     </section>
 
     <section class="content-section">
       <div class="content-header">
-        <h2 class="h5 m-0">Results</h2>
-        <div class="text-muted small">Derived PK constants + half-lives</div>
+        <div>
+          <p class="eyebrow">At a glance</p>
+          <h2 class="h4 m-0">Simulation results</h2>
+        </div>
+        <div class="text-muted small">Key outputs and model details</div>
       </div>
 
       <div class="card shadow-sm">
         <div class="card-body">
-          <div class="table-responsive">
+          <div class="result-grid" aria-label="Key simulation results">
+            <div class="result-card"><span>Final plasma concentration</span><strong id="keyFinalCp">0</strong><small id="keyFinalCpUnit">mg/mL</small></div>
+            <div class="result-card"><span>Final effect-site concentration</span><strong id="keyFinalCe">0</strong><small id="keyFinalCeUnit">mg/mL</small></div>
+            <div class="result-card"><span>Terminal half-life</span><strong id="keyTerminalHalfLife">0</strong><small>min</small></div>
+            <div class="result-card"><span>Context-sensitive half-life</span><strong id="keyContextHalfLife">0</strong><small>min</small></div>
+          </div>
+
+          <details class="model-details">
+            <summary>Show model constants and derived rates</summary>
+            <div class="table-responsive mt-3">
             <table class="table table-bordered table-sm text-center">
               <thead class="table-light">
                 <tr><th>Parameter</th><th>Value</th><th>Units</th></tr>
@@ -351,7 +390,8 @@
                 <tr><td>[P]<sub>ss</sub></td><td><div id="psshtml"></div></td><td><div id="concentrationunitshtml2"></div></td></tr>
               </tbody>
             </table>
-          </div>
+            </div>
+          </details>
 
           <hr class="my-3" />
           <h6 class="mb-2">Comparison (Cp/Ce)</h6>
