@@ -8872,6 +8872,20 @@ body.dark-mode .validation-summary {
   margin-bottom: 20px;
 }
 
+.regimen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pdf-report-header {
+  display: none;
+}
+
+.pdf-dose-details {
+  display: none;
+}
+
 .regimen-overview h1 {
   margin: 0;
   color: var(--text);
@@ -9034,10 +9048,118 @@ body.dark-mode .validation-summary {
   .app-content { padding: 20px 12px 30px; }
   .regimen-overview { margin-bottom: 22px; padding: 16px; }
   .regimen-overview__heading { align-items: flex-start; flex-direction: column; }
-  .regimen-overview__heading .btn { width: 100%; }
+  .regimen-actions { width: 100%; }
+  .regimen-actions .btn { flex: 1 1 0; }
   .regimen-grid,
   .result-grid { grid-template-columns: 1fr; }
   .regimen-item--wide { grid-column: auto; }
   .plot--primary { height: 400px; }
   .content-header { align-items: flex-start; flex-direction: column; }
+}
+
+@media print {
+  @page { size: auto; margin: 12mm; }
+
+  html, body {
+    height: auto;
+    background: #fff !important;
+  }
+
+  body {
+    padding: 0 !important;
+    color: #111 !important;
+    font-size: 10pt;
+  }
+
+  .appbar,
+  .drawer,
+  .drawer-backdrop,
+  .regimen-actions,
+  .copyright-badge,
+  #therapeuticToggleContainer {
+    display: none !important;
+  }
+
+  .app-content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .pdf-report-header {
+    display: block;
+    margin: 0 0 7mm;
+    padding-bottom: 4mm;
+    border-bottom: 2px solid #ff7a57;
+  }
+
+  .pdf-report-header p,
+  .pdf-report-header h1,
+  .pdf-report-header span { margin: 0; }
+  .pdf-report-header p { color: #ff7a57; font-size: 8pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .pdf-report-header h1 { font-size: 20pt; }
+  .pdf-report-header span { color: #555; font-size: 9pt; }
+
+  .regimen-overview,
+  .result-card,
+  .distribution-details,
+  .model-details,
+  .content-section {
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .regimen-overview {
+    margin-bottom: 6mm;
+    padding: 4mm;
+    background: #fff;
+  }
+
+  .regimen-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .regimen-item { padding: 3mm; }
+  .content-section { margin-bottom: 6mm; }
+  .content-header { margin: 0 0 3mm; }
+  .primary-plot-card .card-body { padding: 3mm; }
+  .plot--primary { height: 110mm; }
+  .plot--small { height: 70mm; }
+  .dose-timeline { margin: 0 3mm; }
+  .pdf-dose-details {
+    display: block;
+    margin: 4mm 3mm 0;
+    padding: 4mm 0 0;
+    border-top: 1px solid #ced4da;
+  }
+  .pdf-dose-details h3 {
+    margin: 0 0 2mm;
+    font-size: 12pt;
+  }
+  .pdf-dose-details h4 {
+    margin: 3mm 0 1mm;
+    font-size: 9pt;
+  }
+  .pdf-dose-note { margin: 0; color: #555; font-size: 8pt; }
+  .pdf-dose-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+  }
+  .pdf-dose-table th,
+  .pdf-dose-table td {
+    padding: 1.5mm 2mm;
+    border: 1px solid #ced4da;
+    text-align: left;
+  }
+  .pdf-dose-table th { background: #f1f3f5; }
+  .distribution-details {
+    break-before: page;
+    page-break-before: always;
+  }
+  .distribution-details summary,
+  .model-details summary { display: none; }
+  .distribution-details,
+  .model-details { border-top: 0; }
+  .result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .result-card { padding: 3mm; }
+  .result-card strong { font-size: 16pt; }
+  .table { font-size: 8pt; }
 }
