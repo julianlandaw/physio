@@ -8552,7 +8552,8 @@ body {
   max-width: 520px;
 }
 
-.drugsearch input {
+.drugsearch input,
+.drugsearch select {
   min-width: 220px;
 }
 
@@ -8631,6 +8632,93 @@ body.drawer-open .drawer-backdrop {
 
 .content-section {
   margin-bottom: 16px;
+}
+
+/* Keep the primary visual reference available while reviewing the summary/results.
+   Restrict this to generous desktop viewports so the sticky panel never crowds form content. */
+@media (min-width: 992px) and (min-height: 760px) {
+  .content-section--plot {
+    position: sticky;
+    top: var(--appbar-h);
+    z-index: 20;
+    padding: 10px 0 16px;
+    background: var(--bg);
+  }
+
+  .content-section--plot .plot--primary {
+    height: min(480px, calc(100vh - 255px));
+    min-height: 380px;
+  }
+}
+
+/* Desktop working dashboard: the graph is the primary workspace, with the
+   current regimen immediately alongside it for rapid review and editing. */
+@media (min-width: 992px) {
+  .app-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+    grid-template-areas:
+      "plot regimen"
+      "plot status"
+      "results results";
+    align-items: start;
+    column-gap: 22px;
+    row-gap: 16px;
+  }
+
+  .regimen-overview {
+    grid-area: regimen;
+    margin: 0;
+    padding: 18px;
+  }
+
+  .regimen-overview__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .regimen-actions {
+    width: 100%;
+  }
+
+  .regimen-actions .btn {
+    flex: 1 1 0;
+  }
+
+  .regimen-overview .regimen-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .regimen-overview .regimen-item {
+    padding: 10px;
+  }
+
+  .regimen-overview .regimen-item--wide {
+    grid-column: span 2;
+  }
+
+  .simulation-status {
+    grid-area: status;
+    margin: 0;
+  }
+
+  .content-section--plot {
+    grid-area: plot;
+    align-self: start;
+    margin: 0;
+  }
+
+  .content-section:not(.content-section--plot) {
+    grid-area: results;
+    margin-bottom: 0;
+  }
+
+  .copyright-badge {
+    grid-column: 1 / -1;
+  }
 }
 
 .content-header {
@@ -8771,7 +8859,8 @@ body.dark-mode .validation-summary {
   }
 
   /* Allow input to shrink and fill available space */
-  .drugsearch input {
+  .drugsearch input,
+  .drugsearch select {
     flex: 1 1 auto;
     min-width: 0;              /* key: prevents overflow */
     width: 100%;
@@ -8907,7 +8996,7 @@ body.dark-mode .validation-summary {
 .result-grid { display: grid; gap: 12px; }
 
 .regimen-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.result-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 
 .regimen-item,
 .result-card {
@@ -8940,6 +9029,50 @@ body.dark-mode .validation-summary {
   font-size: .96rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#summarySource,
+#summaryDose {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.preset-source-link {
+  display: inline-block;
+  margin-top: 7px;
+  font-size: .82rem;
+}
+
+.simulation-help {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .86rem;
+}
+
+.simulation-status {
+  margin: -14px 0 18px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+  font-size: .86rem;
+}
+
+.simulation-status[data-state="error"] {
+  color: #842029;
+  border-color: #dc3545;
+  background: #f8d7da;
+  font-weight: 650;
+}
+
+body.dark-mode .simulation-status[data-state="error"] {
+  color: #f5c2c7;
+  border-color: #b02a37;
+  background: #4a1f25;
 }
 
 .primary-plot-card .card-body {
@@ -9081,6 +9214,7 @@ body.dark-mode .validation-summary {
   }
 
   .app-content {
+    display: block;
     max-width: none;
     padding: 0;
   }
@@ -9118,6 +9252,7 @@ body.dark-mode .validation-summary {
   .regimen-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .regimen-item { padding: 3mm; }
   .content-section { margin-bottom: 6mm; }
+  .content-section--plot { position: static; padding: 0; }
   .content-header { margin: 0 0 3mm; }
   .primary-plot-card .card-body { padding: 3mm; }
   .plot--primary { height: 110mm; }

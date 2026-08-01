@@ -2,7 +2,7 @@
    Clean UI wiring + existing PK/PD model logic.
    Notes:
    - Keeps your internal math the same.
-   - Adds: top-bar drug search/datalist, right drawer.
+   - Adds: categorized drug preset picker, right drawer.
 */
 
 // ============================
@@ -161,6 +161,12 @@ function applyPlotTheme() {
 
 function toggleDarkMode() {
   document.body.classList.toggle('dark-mode');
+  const btn = document.getElementById('darkModeBtnTop');
+  if (btn) {
+    const enabled = document.body.classList.contains('dark-mode');
+    btn.setAttribute('aria-pressed', String(enabled));
+    btn.textContent = enabled ? 'Light mode' : 'Dark mode';
+  }
   applyPlotTheme();
   if (window.dfsolve) dfsolve();
 }
@@ -173,7 +179,10 @@ function toggleScale() {
   Plotly.relayout('myDiv2', {'yaxis.type': newType});
   Plotly.relayout('myDiv3', {'yaxis.type': newType});
   const btn = document.getElementById('scaleToggleBtnTop');
-  if (btn) btn.textContent = isLogScale ? 'Linear' : 'Log';
+  if (btn) {
+    btn.textContent = isLogScale ? 'Linear Y-axis' : 'Log Y-axis';
+    btn.setAttribute('aria-pressed', String(isLogScale));
+  }
 }
 
 // ============================
@@ -222,13 +231,13 @@ const infusionhtml = document.getElementById("infusionhtml");
 infusionhtml.innerHTML = "Infusion (mg/kg/min)";
 const infusionnum = document.getElementById("infusion");
 const tbolushtml = document.getElementById("tbolushtml");
-tbolushtml.innerHTML = "Bolus Time (min)";
+tbolushtml.innerHTML = "Loading-dose duration (min)";
 const tbolusnum = document.getElementById("tbolus");
 const tinfusionhtml = document.getElementById("tinfusionhtml");
-tinfusionhtml.innerHTML = "Infusion Time (min)";
+tinfusionhtml.innerHTML = "Infusion duration (min)";
 const tinfusionnum = document.getElementById("tinfusion");
 const weighthtml = document.getElementById("weighthtml");
-if (weighthtml) weighthtml.innerHTML = "Weight (kg)";
+if (weighthtml) weighthtml.innerHTML = "Patient weight (kg)";
 const weightnum = document.getElementById("weight");
 const bolusUnitSelect = document.getElementById("bolusUnitSelect");
 const infusionUnitSelect = document.getElementById("infusionUnitSelect");
@@ -441,10 +450,10 @@ function addBolusRow({ time = 0, dose = 0, duration = 0 } = {}) {
   if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="time" value="${time}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="dose" value="${dose}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="duration" value="${duration}"></td>
-    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove">×</button></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="time" value="${time}" aria-label="Bolus time in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="dose" value="${dose}" aria-label="Bolus dose"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="duration" value="${duration}" aria-label="Bolus duration in minutes"></td>
+    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove bolus">×</button></td>
   `;
   tbl.tBodies[0].appendChild(tr);
 }
@@ -454,10 +463,10 @@ function addInfusionRow({ start = 0, end = 0, rate = 0 } = {}) {
   if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="start" value="${start}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="end" value="${end}"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="rate" value="${rate}"></td>
-    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove">×</button></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="start" value="${start}" aria-label="Infusion start time in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="end" value="${end}" aria-label="Infusion end time in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="rate" value="${rate}" aria-label="Infusion rate"></td>
+    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove infusion segment">×</button></td>
   `;
   tbl.tBodies[0].appendChild(tr);
 }
@@ -560,6 +569,7 @@ function updateRegimenOverview(params, schedule) {
   setText('summaryDrug', drugLabel);
   setText('summaryWeight', `${formatInputValue(params.weightKg)} kg`);
   setText('summaryModel', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes');
+  setText('summarySource', drug?.note || 'Custom parameters — review volumes, clearances, effect-site rate, units, and source assumptions before interpreting this simulation.');
 
   let segments = [];
   let description = '';
@@ -723,6 +733,7 @@ function ensureScheduleUI() {
   const addI = document.getElementById('addInfusionEventBtn');
   const clrB = document.getElementById('clearBolusEventsBtn');
   const clrI = document.getElementById('clearInfusionEventsBtn');
+  const convertBasicBtn = document.getElementById('loadScheduleExampleBtn');
   if (!useCb || !bolusTbl || !infTbl || !addB || !addI || !clrB || !clrI) return;
 
   useCb.checked = false;
@@ -737,6 +748,16 @@ function ensureScheduleUI() {
   addI.addEventListener('click', () => { addInfusionRow(); dfsolve(); });
   clrB.addEventListener('click', () => { clearTable(bolusTbl); addBolusRow({ time: 0, dose: 0, duration: 0 }); dfsolve(); });
   clrI.addEventListener('click', () => { clearTable(infTbl); addInfusionRow({ start: 0, end: 0, rate: 0 }); dfsolve(); });
+  convertBasicBtn?.addEventListener('click', () => {
+    const duration = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
+    setScheduleToDOM({
+      enabled: true,
+      boluses: [{ time: 0, dose: parseFloatSafe(bnum.value, 0), duration }],
+      infusions: [{ start: duration, end: duration + Math.max(0, parseFloatSafe(tinfusionnum.value, 0)), rate: parseFloatSafe(infusionnum.value, 0) }]
+    });
+    disableLegacyBolusInfusionInputs(true);
+    dfsolve();
+  });
 
   bolusTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
   infTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
@@ -1588,7 +1609,15 @@ function validateSimulationInputs() {
     summary.hidden = errors.length === 0;
     summary.textContent = errors.length ? `Simulation not updated: ${errors.join(' ')}` : '';
   }
+  setSimulationStatus(errors.length ? 'Results are not updated. Correct the highlighted parameters.' : 'Simulation is up to date.', errors.length ? 'error' : 'ok');
   return errors.length === 0;
+}
+
+function setSimulationStatus(message, state = 'ok') {
+  const status = document.getElementById('simulationStatus');
+  if (!status) return;
+  status.textContent = message;
+  status.dataset.state = state;
 }
 
 function dfsolve() {
@@ -1775,6 +1804,13 @@ function dfsolve() {
   document.getElementById('keyFinalCe').textContent = finalCe;
   document.getElementById('keyFinalCpUnit').textContent = unitLabel;
   document.getElementById('keyFinalCeUnit').textContent = unitLabel;
+  const peakCpIndex = trace_cp.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0);
+  const peakCeIndex = trace_ce.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0);
+  document.getElementById('keyPeakCp').textContent = roundToSignificantFigures(trace_cp.y[peakCpIndex], 3);
+  document.getElementById('keyPeakCe').textContent = roundToSignificantFigures(trace_ce.y[peakCeIndex], 3);
+  document.getElementById('keyPeakCpUnit').textContent = unitLabel;
+  document.getElementById('keyPeakCeUnit').textContent = unitLabel;
+  document.getElementById('keyTmaxCe').textContent = roundToSignificantFigures(ts[peakCeIndex], 3);
   const uLast = (Number.isFinite(params.b) ? params.b : 0);
   const pss = params.Cl > 0 ? uLast / params.Cl : 0;
   psshtml.innerHTML = roundToSignificantFigures(yFactor * pss, 3);
@@ -2322,70 +2358,74 @@ function vasopressin() {
 }
 
 // ============================
-// Top-bar drug search: datalist + apply button
+// Drug preset library
 // ============================
 const DRUGS = [
-  { id: 'propofol', label: 'Propofol' },
-  { id: 'etomidate', label: 'Etomidate' },
-  { id: 'ketamine', label: 'Ketamine' },
-  { id: 'dexmedetomidine', label: 'Dexmedetomidine' },
-  { id: 'midazolam', label: 'Midazolam' },
-  { id: 'diazepam', label: 'Diazepam' },
-  { id: 'fentanyl', label: 'Fentanyl' },
-  { id: 'hydromorphone', label: 'Hydromorphone' },
-  { id: 'remifentanil', label: 'Remifentanil' },
-  { id: 'sufentanil', label: 'Sufentanil' },
-  { id: 'alfentanil', label: 'Alfentanil' },
-  { id: 'methadone', label: 'Methadone' },
-  { id: 'rocuronium', label: 'Rocuronium' },
-  { id: 'vecuronium', label: 'Vecuronium' },
-  { id: 'cisatracurium', label: 'Cisatracurium' },
-  { id: 'pancuronium', label: 'Pancuronium' },
-  { id: 'succinylcholine', label: 'Succinylcholine' },
-  { id: 'lidocaine', label: 'Lidocaine' },
-  { id: 'bupivacaine', label: 'Bupivacaine' },
-  { id: 'phenylephrine', label: 'Phenylephrine' },
-  { id: 'ephedrine', label: 'Ephedrine' },
-  { id: 'epinephrine', label: 'Epinephrine' },
-  { id: 'dobutamine', label: 'Dobutamine' },
-  { id: 'dopamine', label: 'Dopamine' },
-  { id: 'milrinone', label: 'Milrinone' },
-  { id: 'vasopressin', label: 'Vasopressin' }
+  { id: 'propofol', label: 'Propofol', group: 'Hypnotics & sedatives', note: 'Marsh model (validated preset parameters).' },
+  { id: 'etomidate', label: 'Etomidate', group: 'Hypnotics & sedatives', note: 'Arden-derived preset; V3 is refined for less deep accumulation.' },
+  { id: 'ketamine', label: 'Ketamine', group: 'Hypnotics & sedatives', note: 'Domino / Clements / Hijazi-type preset.' },
+  { id: 'dexmedetomidine', label: 'Dexmedetomidine', group: 'Hypnotics & sedatives', note: 'Dyck / Hannivoort-type preset; literature-consistent adjustment.' },
+  { id: 'midazolam', label: 'Midazolam', group: 'Hypnotics & sedatives', note: 'Greenblatt-derived preset with adjusted V1 and Q2.' },
+  { id: 'diazepam', label: 'Diazepam', group: 'Hypnotics & sedatives', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'fentanyl', label: 'Fentanyl', group: 'Opioid analgesics', note: 'Shafer-type approximation preset.' },
+  { id: 'hydromorphone', label: 'Hydromorphone', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'remifentanil', label: 'Remifentanil', group: 'Opioid analgesics', note: 'Weight-normalized Minto approximation preset.' },
+  { id: 'sufentanil', label: 'Sufentanil', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'alfentanil', label: 'Alfentanil', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'methadone', label: 'Methadone', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'rocuronium', label: 'Rocuronium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'vecuronium', label: 'Vecuronium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'cisatracurium', label: 'Cisatracurium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'pancuronium', label: 'Pancuronium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'succinylcholine', label: 'Succinylcholine', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'lidocaine', label: 'Lidocaine', group: 'Local anesthetics', note: 'Standard PK preset; no validated effect-site model is assumed.' },
+  { id: 'bupivacaine', label: 'Bupivacaine', group: 'Local anesthetics', note: 'Site preset parameters; no validated effect-site model is assumed.' },
+  { id: 'phenylephrine', label: 'Phenylephrine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'ephedrine', label: 'Ephedrine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'epinephrine', label: 'Epinephrine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'dobutamine', label: 'Dobutamine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'dopamine', label: 'Dopamine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'milrinone', label: 'Milrinone', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
+  { id: 'vasopressin', label: 'Vasopressin', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' }
 ];
 
-function populateDrugDatalist() {
-  const dl = document.getElementById('drugDatalist');
-  if (!dl) return;
-  dl.innerHTML = '';
-  DRUGS.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d.label;
-    opt.dataset.drugId = d.id;
-    dl.appendChild(opt);
+function populateDrugPicker() {
+  ['drugPicker', 'drawerDrugPicker'].forEach(id => {
+    const picker = document.getElementById(id);
+    if (!picker) return;
+    picker.textContent = '';
+    const custom = document.createElement('option');
+    custom.value = '';
+    custom.textContent = 'Custom model (keep current parameters)';
+    picker.appendChild(custom);
+    const groups = [...new Set(DRUGS.map(d => d.group))];
+    groups.forEach(groupName => {
+      const group = document.createElement('optgroup');
+      group.label = groupName;
+      DRUGS.filter(d => d.group === groupName).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.label;
+        group.appendChild(opt);
+      });
+      picker.appendChild(group);
+    });
   });
-}
-
-
-function resolveDrugIdFromInput(text) {
-  if (!text) return null;
-  const t = text.trim().toLowerCase();
-
-  const exactLabel = DRUGS.find(d => d.label.toLowerCase() === t);
-  if (exactLabel) return exactLabel.id;
-
-  const exactId = DRUGS.find(d => d.id.toLowerCase() === t);
-  if (exactId) return exactId.id;
-
-  return null;
 }
 
 
 function setCurrentDrugLabel() {
   const label = document.getElementById('currentDrugLabel');
   if (!label) return;
+  const pickers = [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')].filter(Boolean);
   const d = DRUGS.find(x => x.id === currentDrug);
-  if (!d) { label.textContent = 'No drug selected'; return; }
+  if (!d) {
+    label.textContent = 'Custom model';
+    pickers.forEach(picker => { picker.value = ''; });
+    return;
+  }
   label.textContent = `${d.label} — units: ${currentUnit.name}`;
+  pickers.forEach(picker => { picker.value = d.id; });
 }
 
 function applyDrugById(id) {
@@ -2396,25 +2436,9 @@ function applyDrugById(id) {
   fn();                 // runs the preset (sets units + PK + dfsolve())
   setCurrentDrugLabel();
 
-  // Update input to the canonical label (nice UX)
-  const inp = document.getElementById('drugSearch');
-  const d = DRUGS.find(x => x.id === id);
-  if (inp && d) inp.value = d.label;
-
-  // Optional: dismiss keyboard on mobile after selection
-  inp?.blur?.();
-}
-
-
-function maybeAutoApplyDrugFromInput() {
-  const inp = document.getElementById('drugSearch');
-  if (!inp) return;
-
-  // Only apply if it's an exact match for a known drug
-  const id = resolveDrugIdFromInput(inp.value);
-  if (!id) return;
-
-  applyDrugById(id);
+  [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')]
+    .filter(Boolean)
+    .forEach(picker => { picker.value = id; });
 }
 
 
@@ -2475,34 +2499,17 @@ function wireInputs() {
   document.getElementById('scaleToggleBtnTop')?.addEventListener('click', () => toggleScale());
   document.getElementById('darkModeBtnTop')?.addEventListener('click', () => toggleDarkMode());
 
-  const drugInput = document.getElementById('drugSearch');
-
-  // Key UX: tapping the field selects all so typing replaces "Propofol"
-  drugInput?.addEventListener('focus', () => {
-    setTimeout(() => drugInput.select(), 0);
-  });
-
-  // Immediate apply when user selects a real drug (exact match)
-  drugInput?.addEventListener('input', () => {
-    maybeAutoApplyDrugFromInput();
-  });
-
-  // Clear button
-  document.getElementById('drugClearBtn')?.addEventListener('click', () => {
-    if (!drugInput) return;
-    drugInput.value = '';
-    drugInput.focus();
-  });
-
-  // Dropdown button: clear + focus to show full list
-  document.getElementById('drugDropdownBtn')?.addEventListener('click', () => {
-    if (!drugInput) return;
-
-    drugInput.value = '';
-    drugInput.focus();
-
-    // iOS/Safari sometimes needs an input event to show suggestions
-    drugInput.dispatchEvent(new Event('input', { bubbles: true }));
+  ['drugPicker', 'drawerDrugPicker'].forEach(id => {
+    const drugPicker = document.getElementById(id);
+    drugPicker?.addEventListener('change', () => {
+      if (drugPicker.value) {
+        applyDrugById(drugPicker.value);
+        return;
+      }
+      currentDrug = null;
+      setCurrentDrugLabel();
+      dfsolve();
+    });
   });
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());
@@ -2514,7 +2521,7 @@ function wireInputs() {
 (function init() {
   applyPlotTheme();
   initDrawer();
-  populateDrugDatalist();
+  populateDrugPicker();
   initializeUnitSelectors();
   ensureTherapeuticToggle();
   ensureScheduleUI();

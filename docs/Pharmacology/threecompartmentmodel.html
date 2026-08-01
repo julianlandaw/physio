@@ -28,31 +28,18 @@
       </div>
 
       
-      <div class="drugsearch" role="search">
-        <label class="sr-only" for="drugSearch">Drug search</label>
-
-        <div class="drugsearch__field">
-          <input
-            id="drugSearch"
-            class="form-control form-control-sm"
-            type="text"
-            placeholder="Search or select a drug…"
-            list="drugDatalist"
-            autocomplete="off"
-          />
-          <button class="drugsearch__icon" type="button" id="drugClearBtn" aria-label="Clear drug">×</button>
-          <button class="drugsearch__icon" type="button" id="drugDropdownBtn" aria-label="Show drug list">▾</button>
-        </div>
-
-        <datalist id="drugDatalist"></datalist>
+      <div class="drugsearch">
+        <label class="sr-only" for="drugPicker">Drug preset library</label>
+        <select id="drugPicker" class="form-control form-control-sm" aria-describedby="drugPickerHelp"></select>
+        <span class="sr-only" id="drugPickerHelp">Drug presets are grouped by clinical class. Choose Custom model to keep and edit the current parameters.</span>
       </div>
 
     </div>
 
     <div class="appbar__right">
       <div class="btn-group btn-group-sm" role="group" aria-label="Display controls">
-        <button class="btn btn-outline-secondary" type="button" id="scaleToggleBtnTop">Log</button>
-        <button class="btn btn-outline-secondary" type="button" id="darkModeBtnTop">Dark</button>
+        <button class="btn btn-outline-secondary" type="button" id="scaleToggleBtnTop" aria-pressed="false" title="Toggle logarithmic concentration (Y) axis">Log Y-axis</button>
+        <button class="btn btn-outline-secondary" type="button" id="darkModeBtnTop" aria-pressed="false">Dark mode</button>
       </div>
 
       <button class="btn btn-sm btn-primary" type="button" id="paramsBtn" aria-controls="paramsDrawer" aria-expanded="false">
@@ -82,8 +69,17 @@
 
       <!-- Bolus and Infusion Parameters -->
       <div class="card shadow-sm mb-3" id="parameterCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="parameterCardBody" aria-expanded="false">Bolus &amp; Infusion <span class="toggle-icon">▼</span></button>
+        <button class="card-header" type="button" data-collapse="true" aria-controls="parameterCardBody" aria-expanded="false">Quick setup: patient &amp; dosing <span class="toggle-icon">▼</span></button>
         <div class="card-body" id="parameterCardBody">
+          <div class="param-row">
+            <label class="label" for="drawerDrugPicker">Drug preset</label>
+            <select id="drawerDrugPicker" class="form-control" aria-describedby="drawerDrugPickerHelp"></select>
+            <span class="sr-only" id="drawerDrugPickerHelp">Drug presets are grouped by clinical class. Choose Custom model to keep and edit the current parameters.</span>
+          </div>
+          <div class="param-row">
+            <label id="weighthtml" class="label" for="weight">Patient weight (kg)</label>
+            <input type="number" class="form-control" id="weight" value="70" min="0.1" step="0.1" inputmode="decimal" />
+          </div>
           <div class="param-row">
             <label class="label" for="bolusUnitSelect">Bolus unit</label>
             <select class="form-control" id="bolusUnitSelect" aria-label="Bolus unit"></select>
@@ -92,21 +88,21 @@
             <label class="label" for="infusionUnitSelect">Infusion unit</label>
             <select class="form-control" id="infusionUnitSelect" aria-label="Infusion unit"></select>
           </div>
-          <div class="param-note">Use per-kg dosing (mg/kg, µg/kg/min) or absolute dosing (mg, mg/min, mg/hr). Absolute units are converted internally using patient weight.</div>
+          <div class="param-note" id="doseUnitsHelp">Use per-kg dosing (mg/kg, µg/kg/min) or absolute dosing (mg, mg/min, mg/hr). Absolute units are converted internally using patient weight.</div>
           <div class="param-row">
-            <div id="bhtml" class="label"></div>
-            <input type="number" class="form-control" id="b" value="0.1" min="0" step="0.01" inputmode="decimal" />
+            <label id="bhtml" class="label" for="b"></label>
+            <input type="number" class="form-control" id="b" value="0.1" min="0" step="0.01" inputmode="decimal" aria-describedby="doseUnitsHelp" />
           </div>
           <div class="param-row">
-            <div id="tbolushtml" class="label"></div>
+            <label id="tbolushtml" class="label" for="tbolus"></label>
             <input type="number" class="form-control" id="tbolus" value="0.1" min="0" step="0.1" inputmode="decimal" />
           </div>
           <div class="param-row">
-            <div id="infusionhtml" class="label"></div>
-            <input type="number" class="form-control" id="infusion" value="0" min="0" step="0.01" inputmode="decimal" />
+            <label id="infusionhtml" class="label" for="infusion"></label>
+            <input type="number" class="form-control" id="infusion" value="0" min="0" step="0.01" inputmode="decimal" aria-describedby="doseUnitsHelp" />
           </div>
           <div class="param-row">
-            <div id="tinfusionhtml" class="label"></div>
+            <label id="tinfusionhtml" class="label" for="tinfusion"></label>
             <input type="number" class="form-control" id="tinfusion" value="240" min="0" step="0.1" inputmode="decimal" />
           </div>
         </div>
@@ -129,8 +125,9 @@
 
           <div class="small text-muted mb-3">
             Times are minutes from t=0. Bolus dose uses the current <b>Bolus</b> unit; infusion rate uses the current
-            <b>Infusion</b> unit. A bolus with duration 0 is treated as instantaneous.
+            <b>Infusion</b> unit. A bolus with duration 0 is treated as instantaneous. Enabling a schedule replaces the basic dosing fields above.
           </div>
+          <button class="btn btn-sm btn-outline-secondary mb-3" type="button" id="loadScheduleExampleBtn">Convert basic dosing to schedule</button>
 
           <div class="d-flex justify-content-between align-items-center mb-1">
             <strong>Boluses</strong>
@@ -187,11 +184,11 @@
             <label class="form-check-label" for="compareMode">Enable comparison overlay</label>
           </div>
           <div class="d-flex gap-2 mb-2">
-            <button class="btn btn-sm btn-primary" type="button" id="addStrategyBtn">Add strategy from current inputs</button>
+            <button class="btn btn-sm btn-primary" type="button" id="addStrategyBtn">Save current regimen</button>
             <button class="btn btn-sm btn-outline-secondary" type="button" id="clearStrategiesBtn">Clear</button>
           </div>
           <div class="small text-muted mb-2">
-            Tip: adjust your dosing schedule (boluses/infusions) or PK parameters, then click “Add” again to capture another strategy.
+            Save a baseline, adjust dosing or PK parameters, then save another regimen to compare. The active regimen is always shown on the plot.
           </div>
           <div id="strategyList" class="list-group"></div>
         </div>
@@ -202,16 +199,11 @@
         <button class="card-header" type="button" data-collapse="true" aria-controls="simulationCardBody" aria-expanded="false">Simulation <span class="toggle-icon">▼</span></button>
         <div class="card-body" id="simulationCardBody">
           <div class="param-row">
-            <label id="weighthtml" class="label" for="weight">Weight (kg)</label>
-            <input type="number" class="form-control" id="weight" value="70" min="0.1" step="0.1" inputmode="decimal" />
-          </div>
-          <div class="param-note">Absolute bolus/rate units are converted internally to mg/kg or mg/kg/min using patient weight.</div>
-          <div class="param-row">
-            <div id="initialphtml" class="label"></div>
+            <label id="initialphtml" class="label" for="initialp"></label>
             <input type="number" class="form-control" id="initialp" value="0" />
           </div>
           <div class="param-row">
-            <div id="tfinalhtml" class="label"></div>
+            <label id="tfinalhtml" class="label" for="tfinal"></label>
             <input type="number" class="form-control" id="tfinal" value="240" min="0" step="0.1" inputmode="decimal" />
           </div>
         </div>
@@ -223,15 +215,15 @@
         <button class="card-header" type="button" data-collapse="true" aria-controls="volumeCardBody" aria-expanded="false">Volumes <span class="toggle-icon">▼</span></button>
         <div class="card-body" id="volumeCardBody">
           <div class="param-row">
-            <div id="Vd1html" class="label"></div>
+            <label id="Vd1html" class="label" for="Vd1" title="Central-compartment volume"></label>
             <input type="number" class="form-control" id="Vd1" value="70" />
           </div>
           <div class="param-row pk-clearance-volume-row">
-            <div id="Vd2html" class="label"></div>
+            <label id="Vd2html" class="label" for="Vd2" title="Rapid peripheral-compartment volume"></label>
             <input type="number" class="form-control" id="Vd2" value="60" />
           </div>
           <div class="param-row pk-clearance-volume-row">
-            <div id="Vd3html" class="label"></div>
+            <label id="Vd3html" class="label" for="Vd3" title="Slow peripheral-compartment volume"></label>
             <input type="number" class="form-control" id="Vd3" value="60" />
           </div>
         </div>
@@ -250,41 +242,41 @@
           </div>
 
           <div class="param-row pk-clearance-row">
-            <div id="Clhtml" class="label"></div>
+            <label id="Clhtml" class="label" for="Cl" title="Systemic clearance"></label>
             <input type="number" class="form-control" id="Cl" value="50" />
           </div>
           <div class="param-row pk-clearance-row">
-            <div id="Q2html" class="label"></div>
+            <label id="Q2html" class="label" for="Q2" title="Intercompartmental clearance between V1 and V2"></label>
             <input type="number" class="form-control" id="Q2" value="0.2" />
           </div>
           <div class="param-row pk-clearance-row">
-            <div id="Q3html" class="label"></div>
+            <label id="Q3html" class="label" for="Q3" title="Intercompartmental clearance between V1 and V3"></label>
             <input type="number" class="form-control" id="Q3" value="0.2" />
           </div>
 
           <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k10inputhtml" class="label"></div>
+            <label id="k10inputhtml" class="label" for="k10input" title="Elimination rate constant"></label>
             <input type="number" class="form-control" id="k10input" value="0.1" min="0" step="0.001" inputmode="decimal" />
           </div>
           <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k12inputhtml" class="label"></div>
+            <label id="k12inputhtml" class="label" for="k12input"></label>
             <input type="number" class="form-control" id="k12input" value="0.1" min="0" step="0.001" inputmode="decimal" />
           </div>
           <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k21inputhtml" class="label"></div>
+            <label id="k21inputhtml" class="label" for="k21input"></label>
             <input type="number" class="form-control" id="k21input" value="0.1" min="0" step="0.001" inputmode="decimal" />
           </div>
           <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k13inputhtml" class="label"></div>
+            <label id="k13inputhtml" class="label" for="k13input"></label>
             <input type="number" class="form-control" id="k13input" value="0.1" min="0" step="0.001" inputmode="decimal" />
           </div>
           <div class="param-row pk-micro-row" style="display:none;">
-            <div id="k31inputhtml" class="label"></div>
+            <label id="k31inputhtml" class="label" for="k31input"></label>
             <input type="number" class="form-control" id="k31input" value="0.1" min="0" step="0.001" inputmode="decimal" />
           </div>
 
           <div class="param-row">
-            <div id="ke0html" class="label"></div>
+            <label id="ke0html" class="label" for="ke0" title="Effect-site equilibration rate constant"></label>
             <input type="number" class="form-control" id="ke0" value="0.2" />
           </div>
         </div>
@@ -293,7 +285,7 @@
       <div class="divider"></div>
 
       <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-outline-danger" type="button" id="resetBtn">Reset</button>
+        <button class="btn btn-sm btn-outline-danger" type="button" id="resetBtn">Load example</button>
         <button class="btn btn-sm btn-outline-secondary" type="button" id="oneCompBtn">One Compartment</button>
       </div>
     </div>
@@ -322,16 +314,20 @@
         <div class="regimen-item"><span class="regimen-item__label">Patient weight</span><strong id="summaryWeight">70 kg</strong></div>
         <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Dosing plan</span><strong id="summaryDose">—</strong></div>
         <div class="regimen-item"><span class="regimen-item__label">PK input</span><strong id="summaryModel">Clearance &amp; volumes</strong></div>
+        <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Preset/model note</span><strong id="summarySource">—</strong><a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv">View preset parameter table</a></div>
       </div>
+      <p class="simulation-help">Start by selecting a drug, then set patient weight and dosing in <strong>Edit parameters</strong>. This educational PK simulation is not a dosing recommendation; verify any clinical decision against current guidance and patient-specific factors.</p>
     </section>
 
-    <section class="content-section">
+    <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">Simulation is up to date.</div>
+
+    <section class="content-section content-section--plot">
       <div class="content-header">
         <div>
           <p class="eyebrow">Primary view</p>
           <h2 class="h4 m-0">Concentration over time</h2>
         </div>
-        <div class="text-muted small">Central plasma and effect-site concentration</div>
+        <div class="text-muted small">Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.</div>
       </div>
 
       <div class="card shadow-sm primary-plot-card">
@@ -367,7 +363,10 @@
 
       <div class="card shadow-sm">
         <div class="card-body">
-          <div class="result-grid" aria-label="Key simulation results">
+          <div class="result-grid" aria-label="Key simulation results" aria-live="polite">
+            <div class="result-card"><span>Peak plasma concentration</span><strong id="keyPeakCp">0</strong><small id="keyPeakCpUnit">mg/mL</small></div>
+            <div class="result-card"><span>Peak effect-site concentration</span><strong id="keyPeakCe">0</strong><small id="keyPeakCeUnit">mg/mL</small></div>
+            <div class="result-card"><span>Time to peak effect site</span><strong id="keyTmaxCe">0</strong><small>min</small></div>
             <div class="result-card"><span>Final plasma concentration</span><strong id="keyFinalCp">0</strong><small id="keyFinalCpUnit">mg/mL</small></div>
             <div class="result-card"><span>Final effect-site concentration</span><strong id="keyFinalCe">0</strong><small id="keyFinalCeUnit">mg/mL</small></div>
             <div class="result-card"><span>Terminal half-life</span><strong id="keyTerminalHalfLife">0</strong><small>min</small></div>
