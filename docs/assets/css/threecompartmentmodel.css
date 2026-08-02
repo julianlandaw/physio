@@ -8642,23 +8642,6 @@ body.drawer-open .drawer-backdrop {
   margin-bottom: 16px;
 }
 
-/* Keep the primary visual reference available while reviewing the summary/results.
-   Restrict this to generous desktop viewports so the sticky panel never crowds form content. */
-@media (min-width: 992px) and (min-height: 760px) {
-  .content-section--plot {
-    position: sticky;
-    top: var(--appbar-h);
-    z-index: 20;
-    padding: 10px 0 16px;
-    background: var(--bg);
-  }
-
-  .content-section--plot .plot--primary {
-    height: min(480px, calc(100vh - 255px));
-    min-height: 380px;
-  }
-}
-
 /* Desktop working dashboard: the graph is the primary workspace, with the
    current regimen immediately alongside it for rapid review and editing. */
 @media (min-width: 992px) {
@@ -9138,8 +9121,9 @@ body.dark-mode .simulation-status[data-state="error"] {
 .dose-timeline {
   /* Match Plotly's primary-chart margins (left 60px, right 30px) so timeline
      time positions line up with the graph's x-axis. */
-  margin: -18px 30px 0 60px;
-  padding: 12px 0 4px;
+  margin: 0 30px;
+  margin-left: 60px;
+  padding: 8px 0 4px;
 }
 
 .dose-timeline__header {
