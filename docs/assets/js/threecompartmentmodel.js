@@ -1,3 +1,8 @@
+/*
+   Copyright (c) 2026 Julian W. Landaw
+   SPDX-License-Identifier: MIT
+*/
+
 /* threecompartmentmodel.js
    Clean UI wiring + existing PK/PD model logic.
    Notes:
@@ -612,7 +617,37 @@ function updateRegimenOverview(params, schedule) {
     track.appendChild(marker);
   });
 
+  updateMainDoseEditor(schedule);
   updatePdfDoseProtocol(params, schedule);
+}
+
+function updateMainDoseEditor(schedule) {
+  const bolusInput = document.getElementById('mainBolusAmount');
+  const infusionInput = document.getElementById('mainInfusionRate');
+  const bolusUnit = document.getElementById('mainBolusUnit');
+  const infusionUnit = document.getElementById('mainInfusionUnit');
+  const hint = document.getElementById('quickDoseEditorHint');
+  if (!bolusInput || !infusionInput) return;
+
+  if (bolusUnit) bolusUnit.textContent = currentBolusUnit.name;
+  if (infusionUnit) infusionUnit.textContent = currentInfusionUnit.name;
+
+  if (schedule?.enabled) {
+    const firstBolus = schedule.boluses?.[0];
+    const firstInfusion = schedule.infusions?.[0];
+    bolusInput.value = firstBolus ? formatInputValue(firstBolus.dose) : '';
+    infusionInput.value = firstInfusion ? formatInputValue(firstInfusion.rate) : '';
+    bolusInput.disabled = !firstBolus;
+    infusionInput.disabled = !firstInfusion;
+    if (hint) hint.textContent = 'Schedule active: updates the first bolus and first infusion segment.';
+    return;
+  }
+
+  bolusInput.value = bnum ? formatInputValue(parseFloatSafe(bnum.value, 0)) : '';
+  infusionInput.value = infusionnum ? formatInputValue(parseFloatSafe(infusionnum.value, 0)) : '';
+  bolusInput.disabled = false;
+  infusionInput.disabled = false;
+  if (hint) hint.textContent = 'Updates the current bolus and infusion.';
 }
 
 // ============================
@@ -2626,6 +2661,31 @@ function reset() {
   dfsolve();
 }
 
+function applyMainDoseAdjustment(type) {
+  const input = document.getElementById(type === 'bolus' ? 'mainBolusAmount' : 'mainInfusionRate');
+  const value = Number(input?.value);
+  if (!Number.isFinite(value) || value < 0) {
+    input?.classList.add('is-invalid');
+    setSimulationStatus(`${type === 'bolus' ? 'Bolus amount' : 'Infusion rate'} must be zero or greater.`, 'error');
+    return;
+  }
+  input?.classList.remove('is-invalid');
+
+  const schedule = getScheduleFromDOM();
+  if (schedule.enabled) {
+    const events = type === 'bolus' ? schedule.boluses : schedule.infusions;
+    const field = type === 'bolus' ? 'dose' : 'rate';
+    if (!events?.length) return;
+    events[0][field] = value;
+    setScheduleToDOM(schedule);
+  } else if (type === 'bolus' && bnum) {
+    bnum.value = value;
+  } else if (type === 'infusion' && infusionnum) {
+    infusionnum.value = value;
+  }
+  dfsolve();
+}
+
 
 function wireInputs() {
   [
@@ -2667,6 +2727,9 @@ function wireInputs() {
       dfsolve();
     });
   });
+
+  document.getElementById('mainBolusAmount')?.addEventListener('change', () => applyMainDoseAdjustment('bolus'));
+  document.getElementById('mainInfusionRate')?.addEventListener('change', () => applyMainDoseAdjustment('infusion'));
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());
   document.getElementById('oneCompBtn')?.addEventListener('click', () => onecompartment());

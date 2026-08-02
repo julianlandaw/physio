@@ -1,3 +1,7 @@
+<!--
+  Copyright (c) 2026 Julian W. Landaw
+  SPDX-License-Identifier: MIT
+-->
 <!doctype html>
 <html lang="en">
 <head>
@@ -316,6 +320,20 @@
         <div class="regimen-item"><span class="regimen-item__label">PK input</span><strong id="summaryModel">Clearance &amp; volumes</strong></div>
         <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Preset/model note</span><strong id="summarySource">—</strong><a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv">View preset parameter table</a></div>
       </div>
+      <section class="quick-dose-editor" aria-labelledby="quickDoseEditorHeading">
+        <div class="quick-dose-editor__heading">
+          <span id="quickDoseEditorHeading">Quick dose adjustments</span>
+          <small id="quickDoseEditorHint">Updates the current bolus and infusion.</small>
+        </div>
+        <div class="quick-dose-editor__fields">
+          <label for="mainBolusAmount">Bolus <span id="mainBolusUnit">mg/kg</span>
+            <input type="number" class="form-control form-control-sm" id="mainBolusAmount" min="0" step="0.01" inputmode="decimal" />
+          </label>
+          <label for="mainInfusionRate">Infusion <span id="mainInfusionUnit">mg/kg/min</span>
+            <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="0.01" inputmode="decimal" />
+          </label>
+        </div>
+      </section>
       <p class="simulation-help">Start by selecting a drug, then set patient weight and dosing in <strong>Edit parameters</strong>. This educational PK simulation is not a dosing recommendation; verify any clinical decision against current guidance and patient-specific factors.</p>
     </section>
 

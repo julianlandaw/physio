@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Julian W. Landaw
+ * SPDX-License-Identifier: MIT
+ */
+
 var PCslider = document.getElementById("PCslider");
 var PChtml = document.getElementById("PChtml");
 PChtml.innerHTML = "Pressure Control (cm H<sub>2</sub>O)";

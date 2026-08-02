@@ -1,3 +1,11 @@
+/*
+ * Copyright (c) 2026 Julian W. Landaw
+ * SPDX-License-Identifier: MIT
+ *
+ * Third-party notices embedded in or supplied with vendored assets remain
+ * applicable to those assets.
+ */
+
 /* Subset extracted from steller.css for threecompartmentmodel.html */
 :root {
   --blue: #79A9F5;
@@ -9044,6 +9052,50 @@ body.dark-mode .validation-summary {
   font-size: .82rem;
 }
 
+.quick-dose-editor {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.quick-dose-editor__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  font-size: .86rem;
+  font-weight: 700;
+}
+
+.quick-dose-editor__heading small {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 400;
+  text-align: right;
+}
+
+.quick-dose-editor__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.quick-dose-editor__fields label {
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.quick-dose-editor__fields input {
+  width: 100%;
+  margin-top: 4px;
+  text-align: right;
+}
+
 .simulation-help {
   margin: 16px 0 0;
   padding-top: 14px;
@@ -9220,6 +9272,8 @@ body.dark-mode .simulation-status[data-state="error"] {
   .regimen-item--wide { grid-column: auto; }
   .plot--primary { height: 400px; }
   .content-header { align-items: flex-start; flex-direction: column; }
+  .quick-dose-editor__heading { align-items: flex-start; flex-direction: column; }
+  .quick-dose-editor__heading small { text-align: left; }
 }
 
 @media print {

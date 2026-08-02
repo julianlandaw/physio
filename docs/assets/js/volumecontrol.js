@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2026 Julian W. Landaw
+ * SPDX-License-Identifier: MIT
+ */
+
 var TVslider = document.getElementById("TVslider");
 var TVhtml = document.getElementById("TVhtml");
 TVhtml.innerHTML = "Volume Control (mL)";
