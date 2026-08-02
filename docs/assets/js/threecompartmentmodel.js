@@ -578,14 +578,14 @@ function updateRegimenOverview(params, schedule) {
     const infusions = schedule.infusions || [];
     description = `${boluses.length} bolus${boluses.length === 1 ? '' : 'es'} · ${infusions.length} infusion segment${infusions.length === 1 ? '' : 's'}`;
     segments = [
-      ...boluses.map((event, index) => ({ start: event.time, end: event.duration > 0 ? event.time + event.duration : event.time, type: 'bolus', label: `Bolus ${index + 1}` })),
-      ...infusions.map((event, index) => ({ start: event.start, end: event.end, type: 'infusion', label: `Infusion ${index + 1}` }))
+      ...boluses.map((event, index) => ({ start: event.time, end: event.duration > 0 ? event.time + event.duration : event.time, type: 'bolus', index, label: `Bolus ${index + 1}` })),
+      ...infusions.map((event, index) => ({ start: event.start, end: event.end, type: 'infusion', index, label: `Infusion ${index + 1}` }))
     ];
   } else {
     description = `Bolus ${formatInputValue(parseFloatSafe(bnum.value, 0))} ${currentBolusUnit.name} over ${formatInputValue(params.tbolus)} min · infusion ${formatInputValue(parseFloatSafe(infusionnum.value, 0))} ${currentInfusionUnit.name} for ${formatInputValue(params.tinfusion)} min`;
     segments = [
-      { start: 0, end: params.tbolus, type: 'bolus', label: 'Bolus' },
-      { start: params.tbolus, end: params.tbolus + params.tinfusion, type: 'infusion', label: 'Infusion' }
+      { start: 0, end: params.tbolus, type: 'bolus', index: 0, label: 'Bolus' },
+      { start: params.tbolus, end: params.tbolus + params.tinfusion, type: 'infusion', index: 0, label: 'Infusion' }
     ];
   }
   setText('summaryDose', description);
@@ -601,14 +601,170 @@ function updateRegimenOverview(params, schedule) {
     const end = clamp(segment.end, 0, params.tfinal);
     const marker = document.createElement('span');
     marker.className = `dose-timeline__segment dose-timeline__segment--${segment.type}`;
+    marker.dataset.eventType = segment.type;
+    marker.dataset.eventIndex = String(segment.index);
     marker.style.left = `${(start / params.tfinal) * 100}%`;
     marker.style.width = `${Math.max(1.2, ((Math.max(end, start) - start) / params.tfinal) * 100)}%`;
-    marker.title = `${segment.label}: ${formatInputValue(start)}–${formatInputValue(end)} min`;
-    marker.setAttribute('aria-hidden', 'true');
+    marker.title = `${segment.label}: ${formatInputValue(start)}–${formatInputValue(end)} min. Click to remove.`;
+    marker.setAttribute('role', 'button');
+    marker.setAttribute('tabindex', '0');
+    marker.setAttribute('aria-label', `Remove ${segment.label} at ${formatInputValue(start)} minutes`);
     track.appendChild(marker);
   });
 
   updatePdfDoseProtocol(params, schedule);
+}
+
+// ============================
+// Direct timeline editing
+// ============================
+function getTimelineTimeFromPointer(event, track) {
+  const rect = track.getBoundingClientRect();
+  const tfinal = Math.max(0.1, parseFloatSafe(tfinalnum?.value, 0.1));
+  const fraction = clamp((event.clientX - rect.left) / Math.max(rect.width, 1), 0, 1);
+  return clamp(Math.round(fraction * tfinal * 10) / 10, 0, tfinal);
+}
+
+function getEditableTimelineSchedule() {
+  const current = getScheduleFromDOM();
+  if (current.enabled) return current;
+  const bolusDuration = Math.max(0, parseFloatSafe(tbolusnum?.value, 0));
+  return {
+    enabled: true,
+    boluses: [{ time: 0, dose: Math.max(0, parseFloatSafe(bnum?.value, 0)), duration: bolusDuration }],
+    infusions: [{
+      start: bolusDuration,
+      end: bolusDuration + Math.max(0, parseFloatSafe(tinfusionnum?.value, 0)),
+      rate: Math.max(0, parseFloatSafe(infusionnum?.value, 0))
+    }]
+  };
+}
+
+function timelineDefaultBolusDose(schedule) {
+  const last = schedule.boluses[schedule.boluses.length - 1];
+  return last?.dose || Math.max(parseFloatSafe(bnum?.value, 0), 0.01);
+}
+
+function timelineDefaultInfusionRate(schedule) {
+  const last = schedule.infusions[schedule.infusions.length - 1];
+  return last?.rate || Math.max(parseFloatSafe(infusionnum?.value, 0), 0.01);
+}
+
+function commitTimelineSchedule(schedule, message) {
+  setScheduleToDOM(schedule);
+  disableLegacyBolusInfusionInputs(true);
+  expandDrawerCard('scheduleCard');
+  dfsolve();
+  setSimulationStatus(message, 'ok');
+}
+
+function expandDrawerCard(id) {
+  const card = document.getElementById(id);
+  const header = card?.querySelector('.card-header');
+  const body = header?.nextElementSibling;
+  if (!body) return;
+  body.style.display = 'block';
+  header?.setAttribute('aria-expanded', 'true');
+  const icon = header?.querySelector('.toggle-icon');
+  if (icon) icon.textContent = '▼';
+}
+
+function removeTimelineEvent(type, index) {
+  const schedule = getEditableTimelineSchedule();
+  const events = type === 'bolus' ? schedule.boluses : schedule.infusions;
+  if (!Number.isInteger(index) || index < 0 || index >= events.length) return;
+  events.splice(index, 1);
+  commitTimelineSchedule(schedule, `${type === 'bolus' ? 'Bolus' : 'Infusion'} removed from the schedule.`);
+}
+
+function ensureTimelineEditor() {
+  const track = document.getElementById('doseTimelineTrack');
+  if (!track || track.dataset.timelineEditorReady === 'true') return;
+  track.dataset.timelineEditorReady = 'true';
+
+  let pointerStart = null;
+  let dragging = false;
+  let draft = null;
+
+  const clearDraft = () => {
+    draft?.remove();
+    draft = null;
+    track.classList.remove('is-dragging');
+  };
+
+  const renderDraft = (start, end) => {
+    if (!draft) {
+      draft = document.createElement('span');
+      draft.className = 'dose-timeline__draft';
+      track.appendChild(draft);
+    }
+    const tfinal = Math.max(0.1, parseFloatSafe(tfinalnum?.value, 0.1));
+    const left = Math.min(start, end);
+    const width = Math.max(0.5, Math.abs(end - start) / tfinal * 100);
+    draft.style.left = `${left / tfinal * 100}%`;
+    draft.style.width = `${width}%`;
+  };
+
+  track.addEventListener('pointerdown', event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    const segment = event.target.closest('.dose-timeline__segment');
+    pointerStart = { x: event.clientX, time: getTimelineTimeFromPointer(event, track), segment };
+    dragging = false;
+    if (!segment) {
+      track.setPointerCapture?.(event.pointerId);
+      event.preventDefault();
+    }
+  });
+
+  track.addEventListener('pointermove', event => {
+    if (!pointerStart || pointerStart.segment) return;
+    const currentTime = getTimelineTimeFromPointer(event, track);
+    if (Math.abs(event.clientX - pointerStart.x) > 6) dragging = true;
+    if (dragging) {
+      track.classList.add('is-dragging');
+      renderDraft(pointerStart.time, currentTime);
+    }
+  });
+
+  track.addEventListener('pointerup', event => {
+    if (!pointerStart) return;
+    const start = pointerStart;
+    const endTime = getTimelineTimeFromPointer(event, track);
+    pointerStart = null;
+    clearDraft();
+
+    if (start.segment) {
+      if (Math.abs(event.clientX - start.x) <= 6) {
+        removeTimelineEvent(start.segment.dataset.eventType, Number(start.segment.dataset.eventIndex));
+      }
+      return;
+    }
+
+    const schedule = getEditableTimelineSchedule();
+    if (dragging) {
+      const infusionStart = Math.min(start.time, endTime);
+      const infusionEnd = Math.max(infusionStart + 0.1, Math.max(start.time, endTime));
+      schedule.infusions.push({ start: infusionStart, end: infusionEnd, rate: timelineDefaultInfusionRate(schedule) });
+      commitTimelineSchedule(schedule, `Infusion added from ${formatInputValue(infusionStart)} to ${formatInputValue(infusionEnd)} min. Adjust its rate in the schedule table if needed.`);
+    } else {
+      schedule.boluses.push({ time: start.time, dose: timelineDefaultBolusDose(schedule), duration: 0 });
+      commitTimelineSchedule(schedule, `Bolus added at ${formatInputValue(start.time)} min. Adjust its dose in the schedule table if needed.`);
+    }
+    dragging = false;
+  });
+
+  track.addEventListener('pointercancel', () => {
+    pointerStart = null;
+    dragging = false;
+    clearDraft();
+  });
+
+  track.addEventListener('keydown', event => {
+    const segment = event.target.closest('.dose-timeline__segment');
+    if (!segment || !['Enter', ' ', 'Delete', 'Backspace'].includes(event.key)) return;
+    event.preventDefault();
+    removeTimelineEvent(segment.dataset.eventType, Number(segment.dataset.eventIndex));
+  });
 }
 
 function updatePdfDoseProtocol(params, schedule) {
@@ -2525,6 +2681,7 @@ function wireInputs() {
   initializeUnitSelectors();
   ensureTherapeuticToggle();
   ensureScheduleUI();
+  ensureTimelineEditor();
   ensureCompareUI();
   initDistributionDetails();
   wireInputs();

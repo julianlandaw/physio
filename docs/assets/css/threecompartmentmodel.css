@@ -9084,7 +9084,9 @@ body.dark-mode .simulation-status[data-state="error"] {
 }
 
 .dose-timeline {
-  margin: 4px 10px 0;
+  /* Match Plotly's primary-chart margins (left 60px, right 30px) so timeline
+     time positions line up with the graph's x-axis. */
+  margin: -18px 30px 0 60px;
   padding: 12px 0 4px;
 }
 
@@ -9098,12 +9100,22 @@ body.dark-mode .simulation-status[data-state="error"] {
   font-weight: 650;
 }
 
+.dose-timeline__help {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 400;
+}
+
 .dose-timeline__track {
   position: relative;
   height: 11px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--border);
+  cursor: crosshair;
+  touch-action: none;
 }
 
 .dose-timeline__segment {
@@ -9112,6 +9124,26 @@ body.dark-mode .simulation-status[data-state="error"] {
   bottom: 0;
   min-width: 3px;
   border-radius: 999px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.dose-timeline__segment:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+
+.dose-timeline__track.is-dragging { cursor: ew-resize; }
+
+.dose-timeline__draft {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  min-width: 3px;
+  border: 1px dashed #1f77b4;
+  border-radius: 999px;
+  background: rgba(31, 119, 180, .35);
+  pointer-events: none;
 }
 
 .dose-timeline__segment--bolus { background: #ff7a57; }
