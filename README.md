@@ -5,91 +5,138 @@ SPDX-License-Identifier: MIT
 
 # Physio
 
-Physio is a static educational website containing interactive physiology and pharmacology simulations. It is designed for exploration and teaching; it is not a clinical decision-support system and does not provide patient-specific dosing advice.
+Physio is a static educational website for physiology and pharmacology. Its `docs/` directory contains the published site, interactive respiratory and pharmacokinetic simulations, supporting teaching material, visual assets, parameter data, and local copies of browser libraries.
 
-## Included tools
+The project is intended for teaching and exploration. It is not clinical decision-support software and does not provide patient-specific treatment or dosing advice.
 
-- **Three-compartment pharmacokinetic model** — `docs/Pharmacology/threecompartmentmodel.html`
-  - Selectable drug presets, custom PK parameters, and clearance or microconstant input modes.
-  - Bolus, infusion, and multi-event dosing schedules.
-  - Central plasma (Cp), effect-site (Ce), distribution-compartment, half-life, and comparison views.
-  - Direct timeline editing: click to add a bolus, drag to add an infusion, and click an event to remove it.
-  - Printable simulation report and dark/log-scale display controls.
-- **Respiratory simulations** — pressure-control and volume-control tools in `docs/Respiratory/`.
-- **Supporting educational material** — pages, notebooks, source PDFs, and parameter tables under `docs/`.
+## Run the website locally
 
-## Run locally
-
-The site is static. Serve the `docs/` directory from a local web server so browser loading behavior matches deployment:
+Serve `docs/` from a local web server:
 
 ```bash
 python3 -m http.server 8000 --directory docs
 ```
 
-Then open [http://localhost:8000/Pharmacology/threecompartmentmodel.html](http://localhost:8000/Pharmacology/threecompartmentmodel.html).
+Then browse to:
 
-## Using the three-compartment model
+- [Home page](http://localhost:8000/)
+- [Pharmacology landing page](http://localhost:8000/Pharmacology/pharmacology.html)
+- [Three-compartment PK model](http://localhost:8000/Pharmacology/threecompartmentmodel.html)
+- [Respiratory physiology page](http://localhost:8000/Respiratory/respiratory.html)
 
-1. Choose a preset from the grouped drug picker, or choose **Custom model** to retain and edit the current values.
-2. Use the **Quick setup: patient & dosing** panel for patient weight, units, bolus amount, and infusion rate/duration.
-3. Review the graph and the Current Regimen panel. The main panel also has quick bolus and infusion amount controls.
-4. For multiple dosing events, enable **Dosing Schedule**, use the schedule tables, or edit directly on the dosing timeline:
-   - Click empty timeline space to add a bolus.
-   - Drag across empty timeline space to add an infusion segment.
-   - Click a dose marker/bar to remove it.
-5. Use **Compare Strategies** to save and overlay alternative regimens.
+Using a server rather than opening files directly helps browser loading behavior match deployment.
 
-When a timeline edit is made, the model converts the simple regimen into an editable schedule. The schedule table remains the precise, keyboard-accessible way to refine event times, doses, and rates.
-
-## Project layout
+## Repository map
 
 ```text
-docs/
-├── Pharmacology/
-│   ├── threecompartmentmodel.html   # Application markup
-│   ├── anesthetic_drug_pk_parameters.csv
-│   ├── anesthetic_drug_pk_microconstants.csv
-│   ├── DrugModels/                  # Reference material and source PDFs
-│   └── CoPilotHelp/                 # Supporting data and working material
-├── Respiratory/                     # Respiratory simulations
-└── assets/
-    ├── js/threecompartmentmodel.js  # Model, UI state, and interactions
-    └── css/threecompartmentmodel.css # Model-specific styling
+.
+├── README.md                         # This repository guide
+├── LICENSE                           # MIT license for original project code
+└── docs/                             # Static website root
+    ├── index.html                    # Site home page
+    ├── Pharmacology/                 # PK tools, data, and references
+    ├── Respiratory/                  # Ventilator/respiratory teaching tools
+    ├── PhysiologyDiscussion/         # TeX and notebook teaching material
+    └── assets/                       # Shared CSS, JS, media, PDFs, and vendors
 ```
 
-The pharmacology page loads its model code and styles from:
+## `docs/`: website root
 
-- `docs/assets/js/threecompartmentmodel.js`
-- `docs/assets/css/threecompartmentmodel.css`
+`docs/index.html` is the main landing page. It links the site’s physiology and pharmacology content and loads the shared Steller/Bootstrap presentation assets.
 
-It also uses locally vendored Math.js, Plotly, Bootstrap, and jQuery assets.
+### `docs/Pharmacology/`
 
-## Development notes
+This directory contains the pharmacology teaching tools and the data used to support them.
 
-- The model uses minutes for time. Units displayed in the UI are converted internally as needed.
-- Drug presets and model notes are listed in the application and in `docs/Pharmacology/anesthetic_drug_pk_parameters.csv`.
-- Keep solver/model changes separate from UI-only changes whenever possible.
-- For a basic static check after editing, verify the HTML and inspect the page in a browser. `git diff --check` is useful for detecting whitespace errors.
+| Item | Purpose |
+| --- | --- |
+| `pharmacology.html` | Landing page for the pharmacology section. |
+| `threecompartmentmodel.html` | Main interactive three-compartment pharmacokinetic model. |
+| `csht_three_compartment_web_simulator.html` | Compact context-sensitive half-time simulator. |
+| `anesthetic_drug_pk_parameters.csv` | Preset clearance/volume parameters and notes. |
+| `anesthetic_drug_pk_microconstants.csv` | Derived microconstant parameter table. |
+| `druginfo.txt` | Supporting drug information. |
+| `DrugModels/` | Drug-specific source PDFs/text and related PK reference material. |
+| `CoPilotHelp/` | Working data, preset exports, therapeutic-range data, and reference plots used during model development. |
 
-## Clinical and model limitations
+#### Three-compartment model
 
-The simulations are educational visualizations. They do not replace current prescribing information, local policy, validated clinical dosing tools, clinician judgment, or patient-specific assessment. Preset assumptions may not apply to every population or clinical scenario. Review source material in `docs/Pharmacology/DrugModels/` and verify parameters before using them for teaching or research.
+The main model is implemented by:
 
-## Copyright and licensing
+- `docs/Pharmacology/threecompartmentmodel.html` — application markup and local library references.
+- `docs/assets/js/threecompartmentmodel.js` — PK/PD solver, drug presets, schedule handling, graph creation, comparison workflow, validation, export, and UI logic.
+- `docs/assets/css/threecompartmentmodel.css` — responsive dashboard layout, drawer, graph/timeline, dark mode, and print styling.
 
-Copyright © 2026 Julian W. Landaw. This repository's original code is available under the [MIT License](LICENSE).
+Key capabilities include:
 
-For clear ownership and reuse terms, the recommended approach is:
+- Grouped drug-preset selection or custom PK input.
+- Clearance/volume or microconstant model entry.
+- Weight-aware unit conversion for bolus and infusion dosing.
+- Basic bolus/infusion regimen plus multi-event schedules.
+- Editable dosing timeline: click to add a bolus, drag to add an infusion, and click an event to remove it.
+- Direct main-screen bolus and infusion-rate controls.
+- Cp/Ce concentration plots, distribution-compartment plots, half-life metrics, comparisons, therapeutic-range overlays where available, dark mode, log Y-axis, and PDF export.
 
-1. The repository-level `LICENSE` file contains the reuse terms for the original project code.
-2. Original maintained HTML, JavaScript, and CSS files carry a short copyright/SPDX header; vendored third-party libraries and generated outputs are left unchanged.
-3. Retain existing third-party notices and licenses for Math.js, Plotly, Bootstrap, jQuery, and any other external material.
+The parameter tables and `DrugModels/` are reference resources. Preset/model assumptions must be reviewed before teaching or research use.
 
-The project header used for original JavaScript, CSS, HTML, and source files is:
+### `docs/Respiratory/`
+
+This directory contains self-contained respiratory physiology pages:
+
+| File | Purpose |
+| --- | --- |
+| `respiratory.html` | Respiratory ventilator physiology overview. |
+| `pressure_control_simulator.html` | Interactive pressure-control ventilator simulator. |
+| `volume_control_simulator.html` | Interactive volume-control ventilator simulator. |
+
+Their supporting JavaScript is in `docs/assets/js/pressurecontrol.js` and `docs/assets/js/volumecontrol.js`. Related diagrams are in `docs/assets/imgs/`.
+
+### `docs/PhysiologyDiscussion/`
+
+This directory contains longer-form teaching material:
+
+- `Physiology.tex` — LaTeX source document.
+- `RespiratoryPhysiology.ipynb` — Jupyter notebook.
+- `Physiology.log`, `Physiology.tex.bbl`, and `Physiology.tex.blg` — generated LaTeX build artifacts.
+
+Edit the `.tex` or `.ipynb` sources rather than generated LaTeX outputs.
+
+### `docs/assets/`
+
+Shared website resources are organized as follows:
+
+| Directory/file | Purpose |
+| --- | --- |
+| `assets/css/` | Compiled styles. `threecompartmentmodel.css` is model-specific; `threecompartmentmodel_old.css` is the prior model stylesheet. `steller.css` is the shared site theme. |
+| `assets/js/` | Original simulation scripts plus local Math.js, Plotly, and Steller theme scripts. |
+| `assets/scss/` | Source SCSS for the shared Steller theme and its Bootstrap dependency. |
+| `assets/imgs/` | Site images, diagrams, SVGs, GIFs, and video media. |
+| `assets/pdfs/` | Site PDF material, including the CV. |
+| `assets/vendors/` | Vendored Bootstrap, jQuery, and Themify Icons assets. |
+
+Do not edit minified or vendored files unless deliberately upgrading a dependency. Prefer changing the original page, its dedicated script, or its dedicated stylesheet.
+
+## Development workflow
+
+- Use the page-specific HTML, CSS, and JavaScript for interface/model work.
+- Keep solver or parameter changes separate from presentation-only changes when possible.
+- Preserve vendor files and third-party license notices.
+- Preserve source PDFs and generated artifacts unless the task explicitly calls for changing them.
+- Open affected pages in a browser after changes; run `git diff --check` to catch whitespace errors.
+
+## Clinical and scientific limitations
+
+All simulations are educational visualizations. They do not replace prescribing information, local policy, validated clinical dosing tools, clinician judgment, or patient-specific assessment. Drug-preset parameters and therapeutic ranges can have population- and context-specific limitations. Verify the relevant source material before relying on a model for teaching, research, or clinical discussion.
+
+## License and copyright
+
+Copyright © 2026 Julian W. Landaw. Original project code is available under the [MIT License](LICENSE).
+
+Original maintained source files use short SPDX headers:
 
 ```text
 Copyright (c) 2026 Julian W. Landaw
 SPDX-License-Identifier: MIT
 ```
 
-Third-party code and assets retain their own notices and licenses.
+Third-party libraries, themes, fonts, reference PDFs, and other external material retain their own notices and licenses. The MIT license does not remove those obligations.
