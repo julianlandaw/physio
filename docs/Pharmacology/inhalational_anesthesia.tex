@@ -61,6 +61,36 @@ Low $\lambda_{b:g}$ means that little anesthetic must dissolve in blood before a
 
 Vaporizer-off washout is not simply exponential with one time constant. Circuit replacement, pulmonary elimination, redistribution from vessel-rich tissue, muscle, and fat, and their different perfusion/solubility time constants all contribute. This is why a teaching model should display both end-tidal fraction and tissue-equivalent states.
 
+\section{Worked teaching example: sevoflurane wash-in and washout}
+Consider an illustrative, not patient-specific, controlled-ventilation scenario.  Select sevoflurane in the simulator and use the inputs in Table~\ref{tab:sevoexample}.  The values describe the simplified apparatus-and-patient model; they are not a prescription, a recommended vaporizer setting, or a substitute for monitored clinical care.  In particular, clinical inspired and end-tidal concentrations must be selected and adjusted by qualified clinicians using the actual machine, patient, and monitoring context.
+
+\begin{table}[h]
+\centering
+\caption{Illustrative sevoflurane simulator inputs.}
+\label{tab:sevoexample}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Simulator input & Example value \\
+\midrule
+Agent & Sevoflurane ($\lambda_{b:g}=0.65$; reference MAC $=2.1\%$) \\
+Vaporizer fraction & $2.0\%$ \\
+Fresh-gas flow & $4.0$ L/min \\
+Alveolar ventilation & $4.0$ L/min \\
+Functional residual capacity & $2.5$ L \\
+Breathing-circuit volume & $2.0$ L \\
+Cardiac output & $5.0$ L/min \\
+Vaporizer off time & $60$ min \\
+Total simulation time & $120$ min \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the start, $F_I$, $F_A$, and all tissue-equivalent fractions are zero.  The $2.0\%$ vaporizer setting first fills the circuit, so the inspired fraction rises before the alveolar fraction.  In the current simulator implementation, the example produces approximately $F_A=1.08\%$ at 5 minutes, $1.39\%$ at 15 minutes, and $1.56\%$ just before the 60-minute vaporizer-off time.  The latter corresponds to about $0.74$ of the displayed reference MAC ($1.56/2.1$).  The vessel-rich equivalent rises rapidly behind $F_A$ (about $1.56\%$ at 60 minutes), whereas muscle and fat rise much more slowly (about $0.62\%$ and $0.05\%$, respectively).  These numerical values are outputs of this teaching model, not predicted clinical end-tidal concentrations.
+
+At 60 minutes the simulator changes $F_V$ from $2.0\%$ to zero.  Fresh gas and ventilation then clear the circuit and alveoli: in this example $F_A$ falls to roughly $0.93\%$ one minute later and approaches zero by about 75 minutes.  The vessel-rich group follows during this early washout, while muscle and fat remain nonzero because they are slower compartments.  The first plot therefore shows the delivery and rapid end-tidal response; the tissue plot makes the delayed reservoir behavior visible; and the uptake plot is highest early, when the alveolar--venous gradient is greatest, then declines as the compartments equilibrate.
+
+Useful counterfactuals are to increase fresh-gas flow or alveolar ventilation, which shortens circuit/alveolar turnover in this model, and to increase cardiac output, which increases early pulmonary uptake and tends to slow the rise of $F_A$.  Changing only the vaporizer-off time demonstrates why a longer exposure loads the slower tissue groups more strongly.  These are qualitative physiologic lessons; the exact sizes and time courses should not be extrapolated to clinical management.
+
 \section{Numerical implementation}
 The webpage integrates the five state variables $[F_I,F_A,F_{VRG},F_{muscle},F_{fat}]^T$ with fourth-order Runge--Kutta integration at a fixed short time step. Inputs are held constant across a step; after the chosen vaporizer-off time, $F_V$ is set to zero. Fractions are constrained to nonnegative values. The implementation is intended to reveal causal relationships, not to reproduce a particular anesthesia machine or commercial gas analyzer.
 
