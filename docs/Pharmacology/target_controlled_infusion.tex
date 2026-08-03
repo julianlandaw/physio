@@ -1,0 +1,148 @@
+% Copyright (c) 2026 Julian W. Landaw
+% SPDX-License-Identifier: MIT
+
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=red!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!70!black
+}
+
+\title{Target-Controlled Infusion: Goals, Models, and the Educational Controller}
+\author{Julian W. Landaw}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Target-controlled infusion (TCI) is a model-based method for varying an intravenous infusion rate to approach a user-selected predicted concentration. This note explains the objectives of TCI, derives a three-compartment pharmacokinetic (PK) model with an effect-site compartment, and gives the discrete-time feedback law used by the accompanying web simulator. The simulator's controller is intentionally simple: it is an educational, constrained, one-step predictive controller. It is \emph{not} a certified infusion-pump algorithm and must not be used to determine patient treatment.
+\end{abstract}
+
+\section{What TCI is trying to do}
+
+With a conventional infusion, the user chooses a rate $u(t)$ directly. With TCI, the user chooses a target concentration $C^\star(t)$ and the software calculates a time-varying rate. Depending on the system, the target can be the predicted central plasma concentration $C_p$ or a predicted effect-site concentration $C_e$. The basic objectives are
+\begin{enumerate}
+  \item approach the selected target without excessive overshoot;
+  \item maintain the target despite distribution into peripheral compartments and elimination; and
+  \item respect practical delivery constraints, such as $0 \leq u(t) \leq u_{\max}$.
+\end{enumerate}
+
+Commercial TCI systems combine a selected population PK or PK/PD model with device-specific target algorithms. The result is a prediction, not a measured concentration. Model error, patient covariates, concurrent drugs, and changing physiology can all cause the prediction to differ from a patient's actual response \cite{TCIreview,PKPDreview}. Thus a concentration target must never be interpreted as a treatment recommendation by itself.
+
+\section{Three-compartment PK model}
+
+Let $x_1$, $x_2$, and $x_3$ be drug amounts per unit body weight in the central, rapidly equilibrating peripheral, and slowly equilibrating peripheral compartments, respectively. Let $u(t)$ be an infusion rate in mass per unit body weight per unit time. With microconstants $k_{ij}$, the PK model is
+\begin{align}
+ \dot{x}_1 &= -(k_{10}+k_{12}+k_{13})x_1 + k_{21}x_2 + k_{31}x_3 + u, \\
+ \dot{x}_2 &= k_{12}x_1-k_{21}x_2, \\
+ \dot{x}_3 &= k_{13}x_1-k_{31}x_3.
+\end{align}
+Elimination occurs from the central compartment through $k_{10}$. The predicted central plasma concentration is
+\begin{equation}
+ C_p = \frac{x_1}{V_1},
+\end{equation}
+where $V_1$ is the central volume per unit body weight. When volumes and clearances are supplied instead of microconstants,
+\begin{equation}
+ k_{10}=\frac{Cl}{V_1},\qquad k_{12}=\frac{Q_2}{V_1},\qquad k_{21}=\frac{Q_2}{V_2},\qquad
+ k_{13}=\frac{Q_3}{V_1},\qquad k_{31}=\frac{Q_3}{V_3}.
+\end{equation}
+
+\section{Effect-site model}
+
+An effect compartment is a mathematical representation of delayed equilibration between plasma and a drug effect. It does not hold a physical drug mass. The usual first-order relation is
+\begin{equation}
+ \dot{C}_e = k_{e0}(C_p-C_e)=k_{e0}\left(\frac{x_1}{V_1}-C_e\right),
+\end{equation}
+where $k_{e0}$ is an equilibration constant. An effect-site target requires a nonzero, appropriate $k_{e0}$; otherwise the model cannot meaningfully predict $C_e$.
+
+Define the state vector
+\begin{equation}
+ z = \begin{bmatrix}x_1 & x_2 & x_3 & C_e\end{bmatrix}^{T}.
+\end{equation}
+The continuous model can then be written compactly as
+\begin{equation}
+ \dot{z}=Az+Bu,
+\end{equation}
+where
+\begin{equation}
+ A=
+ \begin{bmatrix}
+ -(k_{10}+k_{12}+k_{13}) & k_{21} & k_{31} & 0 \\
+ k_{12} & -k_{21} & 0 & 0 \\
+ k_{13} & 0 & -k_{31} & 0 \\
+ k_{e0}/V_1 & 0 & 0 & -k_{e0}
+ \end{bmatrix},
+ \qquad
+ B=\begin{bmatrix}1 & 0 & 0 & 0\end{bmatrix}^{T}.
+\end{equation}
+
+\section{Discrete-time prediction}
+
+The simulator uses a time step $\Delta t=0.1$ minutes and assumes the rate is constant within a step (a zero-order hold). Exact discretization of the linear model gives
+\begin{equation}
+ z_{n+1}=A_dz_n+B_du_n,
+\end{equation}
+with
+\begin{equation}
+ \begin{bmatrix}A_d & B_d\\0&1\end{bmatrix}
+ =\exp\left(
+ \begin{bmatrix}A&B\\0&0\end{bmatrix}\Delta t
+ \right).
+\end{equation}
+The matrix exponential is useful here because it captures the linear compartment dynamics over the full time step rather than applying a first-order Euler approximation.
+
+For a plasma target, let $c_p^T=[1/V_1,0,0,0]$. The next predicted plasma concentration is
+\begin{equation}
+ C_{p,n+1}=\underbrace{c_p^TA_dz_n}_{\widehat{C}_{p,n+1}^{(0)}}+
+ \underbrace{c_p^TB_d}_{g_p}u_n.
+\end{equation}
+Here $\widehat{C}_{p,n+1}^{(0)}$ is the next concentration predicted with zero new infusion and $g_p$ is the next-step concentration gain per unit rate. Similarly, for an effect-site target with $c_e^T=[0,0,0,1]$,
+\begin{equation}
+ C_{e,n+1}=\underbrace{c_e^TA_dz_n}_{\widehat{C}_{e,n+1}^{(0)}}+
+ \underbrace{c_e^TB_d}_{g_e}u_n.
+\end{equation}
+
+\section{Controller implemented in the simulator}
+
+At each time step, the simulator selects either $(\widehat{C}^{(0)},g)=(\widehat{C}_{p}^{(0)},g_p)$ for a plasma target or $(\widehat{C}_{e}^{(0)},g_e)$ for an effect-site target. If there were no delivery constraints, choosing the rate that places the \emph{next} predicted concentration exactly at target gives
+\begin{equation}
+ u_n^{\mathrm{raw}}=\frac{C^\star-\widehat{C}_{n+1}^{(0)}}{g}.
+\end{equation}
+The actual displayed rate is constrained to be nonnegative and not exceed the user-selected maximum:
+\begin{equation}
+ \boxed{
+ u_n=\min\left\{u_{\max},\max\left[0,\frac{C^\star-\widehat{C}_{n+1}^{(0)}}{g}\right]\right\}.}
+\end{equation}
+If the selected stop time has been reached, the controller instead sets $u_n=0$. The state is then advanced with the same discrete model, and the calculation repeats at the next step.
+
+This is a constrained receding-horizon controller with a horizon of one sample. It naturally tends to use the maximum allowable rate early, decreases the rate as the predicted concentration approaches target, and continues to adjust for redistribution and elimination. Because it cannot remove drug, it can only respond to predicted overshoot by setting the rate to zero.
+
+\section{What this controller does \emph{not} do}
+
+The educational implementation deliberately omits several features that may appear in clinical or research TCI systems:
+\begin{itemize}
+  \item patient-specific covariates beyond the entered model and weight;
+  \item measured concentration or physiologic feedback;
+  \item explicit multi-step optimization, target-horizon selection, or robust control;
+  \item commercial effect-site peak-timing and bolus-planning logic;
+  \item pump mechanics, syringe concentration, occlusion detection, or independent safety checks; and
+  \item a pharmacodynamic response model such as a sigmoid $E_{\max}$ relationship.
+\end{itemize}
+Consequently, the calculated curve is best understood as an illustration of how a PK/PD model can translate a concentration target into a changing infusion rate. It is not an instruction for patient administration.
+
+\begin{thebibliography}{9}
+\bibitem{TCIreview}
+H. Singh et al. \emph{Target-controlled infusion -- Past, present, and future}. Indian Journal of Anaesthesia, 2024. \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC11463930/}
+
+\bibitem{PKPDreview}
+L. G. M. et al. \emph{General Purpose Pharmacokinetic-Pharmacodynamic Models for Target-Controlled Infusion of Anaesthetic Drugs: A Narrative Review}. 2022. \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9101974/}
+\end{thebibliography}
+
+\end{document}
