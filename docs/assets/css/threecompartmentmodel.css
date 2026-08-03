@@ -9131,7 +9131,8 @@ body.dark-mode .simulation-status[data-state="error"] {
      time positions line up with the graph's x-axis. */
   margin: 0 30px;
   margin-left: 60px;
-  padding: 24px 0 4px;
+  /* Leave space for the labels above bolus markers. */
+  padding: 38px 0 4px;
 }
 
 .dose-timeline__header {
