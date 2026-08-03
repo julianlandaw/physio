@@ -1,0 +1,56 @@
+<!--
+  Copyright (c) 2026 Julian W. Landaw
+  SPDX-License-Identifier: MIT
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Educational simulation of inhalational anesthetic wash-in, uptake, distribution, and washout.">
+  <title>Inhalational Anesthetic Uptake Simulator</title>
+  <link rel="stylesheet" href="../assets/css/inhalational_anesthesia.css">
+  <script src="../assets/js/plotly.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="back-link" href="pharmacology.html">← Pharmacology</a>
+    <div><p class="eyebrow">Educational physiology simulator</p><h1>Inhalational anesthetic uptake</h1></div>
+    <button class="button button--secondary" id="resetBtn" type="button">Reset example</button>
+  </header>
+
+  <main class="layout">
+    <aside class="controls" aria-label="Simulation controls">
+      <section class="panel"><h2>Agent and delivery</h2>
+        <label>Agent <select id="agent"></select></label>
+        <label>Vaporizer setting <span><input id="vaporizer" type="number" min="0" step="0.1" value="2"> vol%</span></label>
+        <label>Fresh-gas flow <span><input id="fgf" type="number" min="0.1" step="0.1" value="4"> L/min</span></label>
+        <label>Vaporizer off at <span><input id="offTime" type="number" min="0" step="1" value="60"> min</span></label>
+      </section>
+      <section class="panel"><h2>Lung and circulation</h2>
+        <label>Alveolar ventilation <span><input id="va" type="number" min="0.1" step="0.1" value="4"> L/min</span></label>
+        <label>Functional residual capacity <span><input id="frc" type="number" min="0.2" step="0.1" value="2.5"> L</span></label>
+        <label>Breathing-circuit volume <span><input id="circuitVolume" type="number" min="0.1" step="0.1" value="2"> L</span></label>
+        <label>Cardiac output <span><input id="co" type="number" min="0.5" step="0.1" value="5"> L/min</span></label>
+        <label>Simulation duration <span><input id="duration" type="number" min="1" max="360" step="1" value="120"> min</span></label>
+      </section>
+      <section class="panel panel--agent"><h2>Agent properties</h2>
+        <dl><div><dt>Blood:gas coefficient</dt><dd id="bloodGas">—</dd></div><div><dt>Reference MAC</dt><dd id="mac">—</dd></div></dl>
+        <p id="agentNote">—</p>
+      </section>
+      <section class="panel panel--note"><strong>How to explore</strong><p>Compare low and high fresh-gas flow, change cardiac output, or turn the vaporizer off. End-tidal fraction approximates alveolar fraction in this simplified model.</p></section>
+    </aside>
+
+    <section class="workspace">
+      <section class="summary" aria-live="polite">
+        <div><span>Inspired fraction</span><strong id="metricFi">0%</strong></div><div><span>End-tidal / alveolar</span><strong id="metricFa">0%</strong></div><div><span>Vessel-rich equivalent</span><strong id="metricVrg">0%</strong></div><div><span>Alveolar MAC fraction</span><strong id="metricMac">0.00</strong></div><div><span>FA/FI</span><strong id="metricRatio">—</strong></div>
+      </section>
+      <section class="chart-panel"><div class="chart-heading"><div><p class="eyebrow">Wash-in and washout</p><h2>Inspired, alveolar, and vessel-rich partial-pressure fractions</h2></div><p>Solid lines are model states; the dashed line is the vaporizer setting.</p></div><div id="fractionPlot" class="plot"></div></section>
+      <section class="chart-grid"><section class="chart-panel"><div class="chart-heading"><div><p class="eyebrow">Distribution</p><h2>Tissue partial-pressure equivalents</h2></div></div><div id="tissuePlot" class="plot plot--small"></div></section><section class="chart-panel"><div class="chart-heading"><div><p class="eyebrow">Pulmonary uptake</p><h2>Uptake from alveoli to blood</h2></div></div><div id="uptakePlot" class="plot plot--small"></div></section></section>
+      <section class="model-note"><h2>Model scope</h2><p>The model includes a well-mixed breathing circuit, alveoli, and vessel-rich, muscle, and fat tissue groups. It uses partial-pressure fractions, blood:gas solubility, cardiac output, and tissue perfusion. It does not model patient effort, V/Q mismatch, shunt, metabolism, compound A, vaporizer mechanics, scavenging, or measured gas analysis. It is for teaching—not clinical vaporizer setting or patient management.</p><p><a href="inhalational_anesthesia.tex">Read the detailed physiology and mathematics (LaTeX source)</a></p></section>
+    </section>
+  </main>
+  <footer>Copyright © 2026 Julian W. Landaw. Educational use only.</footer>
+  <script src="../assets/js/inhalational_anesthesia.js"></script>
+</body>
+</html>

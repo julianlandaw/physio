@@ -52,6 +52,8 @@ This directory contains the pharmacology teaching tools and the data used to sup
 | --- | --- |
 | `pharmacology.html` | Landing page for the pharmacology section. |
 | `threecompartmentmodel.html` | Main interactive three-compartment pharmacokinetic model. |
+| `inhalational_anesthesia.html` | Interactive educational simulator of volatile-anesthetic wash-in, uptake, distribution, and washout. |
+| `inhalational_anesthesia.tex` | Detailed physiology and mathematical derivation for the inhalational-anesthesia simulator. |
 | `csht_three_compartment_web_simulator.html` | Compact context-sensitive half-time simulator. |
 | `anesthetic_drug_pk_parameters.csv` | Preset clearance/volume parameters and notes. |
 | `anesthetic_drug_pk_microconstants.csv` | Derived microconstant parameter table. |

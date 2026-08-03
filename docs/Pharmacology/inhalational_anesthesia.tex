@@ -1,0 +1,75 @@
+% Copyright (c) 2026 Julian W. Landaw
+% SPDX-License-Identifier: MIT
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\title{Physiology and Mathematics of Inhalational Anesthesia}
+\author{Julian W. Landaw}
+\date{}
+\begin{document}
+\maketitle
+\begin{abstract}
+Inhalational anesthetics reach the brain through a coupled respiratory and circulatory system. Their speed of onset and recovery is determined not merely by a vaporizer setting, but by fresh-gas delivery, rebreathing, alveolar ventilation, blood solubility, cardiac output, and uptake by tissues. This document develops a teaching model with a breathing circuit, alveoli, and vessel-rich, muscle, and fat tissue groups. It documents the assumptions used by the accompanying interactive simulator and explains why it is not a clinical gas-delivery calculator.
+\end{abstract}
+\section{Partial pressure, fraction, and potency}
+For an inert volatile anesthetic, pharmacologic effect is governed most directly by partial pressure (or tension), not by total anesthetic mass. At a fixed barometric pressure, gas fraction $F$ and partial pressure $P$ are proportional: $P=F P_B$. Thus fractions can be used as normalized partial pressures in a teaching model.
+
+Minimum alveolar concentration (MAC) is a population reference for anesthetic potency: conventionally, the alveolar concentration preventing movement to a standard noxious stimulus in 50\% of subjects. It is not a universal measure of adequate anesthesia in an individual, and it varies with age, temperature, concomitant drugs, and clinical context. A displayed MAC fraction in the simulator is therefore only $F_A/\mathrm{MAC}_{ref}$.
+
+\section{The path from vaporizer to tissues}
+The model is deliberately physiologic rather than an IV-style mammillary model:
+\begin{equation}
+\text{vaporizer} \rightarrow \text{breathing circuit} \rightarrow \text{alveoli} \rightarrow \text{arterial blood} \rightarrow \{
+\text{vessel-rich},\text{muscle},\text{fat}\} \rightarrow \text{venous blood}.
+\end{equation}
+The vessel-rich group is a composite teaching compartment representing highly perfused tissues, including the brain. It is not a measured brain concentration. Muscle and fat receive less blood flow but can become important reservoirs during long exposures.
+
+\section{Circuit and alveolar mass balances}
+Let $F_V$, $F_I$, and $F_A$ be the vaporizer, circuit-inspired, and alveolar fractions. Let $V_C$ be circuit volume, $V_A$ functional residual capacity, $\dot V_{FGF}$ fresh-gas flow, and $\dot V_A$ alveolar ventilation. A well-mixed circuit gives
+\begin{equation}
+V_C\frac{dF_I}{dt}=\dot V_{FGF}(F_V-F_I)-\dot V_A(F_I-F_A).
+\label{eq:circuit}
+\end{equation}
+The first term replaces circuit gas with fresh gas; the second transfers gas between circuit and alveoli. The alveolar balance is
+\begin{equation}
+V_A\frac{dF_A}{dt}=\dot V_A(F_I-F_A)-U_{pulm},
+\label{eq:alveoli}
+\end{equation}
+where pulmonary uptake is approximated by
+\begin{equation}
+U_{pulm}=\dot Q\lambda_{b:g}(F_A-F_{\bar v}).
+\label{eq:uptake}
+\end{equation}
+Here $\dot Q$ is cardiac output, $\lambda_{b:g}$ is the blood:gas partition coefficient, and $F_{\bar v}$ is mixed venous anesthetic partial-pressure fraction. Equation~\ref{eq:uptake} summarizes the classic determinants of uptake: a greater alveolar--venous gradient, higher cardiac output, or greater blood solubility removes more anesthetic from alveoli and slows the rise of $F_A/F_I$.
+
+\section{Tissue groups and venous return}
+For a tissue group $j$ with volume $V_j$, perfusion $\dot Q_j$, tissue:blood partition coefficient $\lambda_{j:b}$, and normalized tissue tension $F_j$, a perfusion-limited approximation is
+\begin{equation}
+\frac{dF_j}{dt}=\frac{\dot Q_j}{V_j\lambda_{j:b}}(F_A-F_j).
+\label{eq:tissue}
+\end{equation}
+The model uses three groups: vessel-rich, muscle, and fat, with $\sum_j\dot Q_j=\dot Q$. Mixed venous fraction is perfusion weighted,
+\begin{equation}
+F_{\bar v}=\frac{1}{\dot Q}\sum_j \dot Q_jF_j.
+\label{eq:venous}
+\end{equation}
+The coupled system in Eqs.~\ref{eq:circuit}--\ref{eq:venous} produces familiar behavior. Early in an anesthetic, venous tension is low and uptake is high. Later, vessel-rich tissue equilibrates, decreasing uptake; muscle and fat can continue to accumulate anesthetic and contribute to delayed washout.
+
+\section{Wash-in, washout, and solubility}
+Low $\lambda_{b:g}$ means that little anesthetic must dissolve in blood before alveolar partial pressure rises. This produces a more rapid rise in $F_A/F_I$ and, after vaporizer discontinuation, more rapid elimination. Higher ventilation accelerates circuit/alveolar replacement, whereas higher cardiac output increases uptake from alveoli and can slow alveolar wash-in. Fresh-gas flow is particularly important when circuit volume and rebreathing are represented: low flow delays the approach of $F_I$ to the vaporizer fraction.
+
+Vaporizer-off washout is not simply exponential with one time constant. Circuit replacement, pulmonary elimination, redistribution from vessel-rich tissue, muscle, and fat, and their different perfusion/solubility time constants all contribute. This is why a teaching model should display both end-tidal fraction and tissue-equivalent states.
+
+\section{Numerical implementation}
+The webpage integrates the five state variables $[F_I,F_A,F_{VRG},F_{muscle},F_{fat}]^T$ with fourth-order Runge--Kutta integration at a fixed short time step. Inputs are held constant across a step; after the chosen vaporizer-off time, $F_V$ is set to zero. Fractions are constrained to nonnegative values. The implementation is intended to reveal causal relationships, not to reproduce a particular anesthesia machine or commercial gas analyzer.
+
+\section{Important omissions and safety limitations}
+The simulator omits airway dead space, spontaneous effort, V/Q mismatch, shunt, diffusion limitation, nonlinear tissue partitioning, metabolism, agent interaction, nitrous-oxide concentration and second-gas effects, altitude, humidification, ventilator mechanics, scavenging, vaporizer physics, and monitoring. It also uses generic tissue-group volumes and perfusion fractions rather than a patient-specific validated model. Therefore it must not be used to select vaporizer concentrations, judge anesthetic depth, manage emergence, or guide patient care.
+
+\begin{thebibliography}{9}
+\bibitem{EgerModel} B. I. Eger and colleagues. Clinical pharmacokinetics of inhalational anaesthetics. \emph{Clinical Pharmacokinetics}. 1987. \url{https://pubmed.ncbi.nlm.nih.gov/3555939/}
+\bibitem{VolatileModel} S. L. Shafer and colleagues. Optimizing target control of the vessel rich group with volatile anesthetics. \emph{Anesthesia \& Analgesia}. 2018. \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC6309525/}
+\bibitem{SevoLabel} DailyMed. Sevoflurane prescribing information: blood/gas solubility and reference MAC. \url{https://dailymed.nlm.nih.gov/dailymed/fda/fdaDrugXsl.cfm?setid=ea8bf997-2c71-4014-b18d-4f7ab45dfa19&type=display}
+\end{thebibliography}
+\end{document}
