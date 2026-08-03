@@ -2387,6 +2387,37 @@ function onecompartment() {
 // ============================
 // Drug presets (kept from your file; unchanged values)
 // ============================
+// These are educational starting points only. They are limited to presets with
+// a recognizable TCI use case and should never be used to control a real pump.
+const TCI_PRESETS = Object.freeze({
+  propofol: { targetType: 'cp', target: 2, maxRate: 200, note: 'Educational Propofol/Marsh starting point: Cp 2 µg/mL; maximum 200 µg/kg/min. Adjust only for simulation exploration.' },
+  dexmedetomidine: { targetType: 'cp', target: 0.6, maxRate: 6, note: 'Educational dexmedetomidine starting point: Cp 0.6 ng/mL; maximum 6 µg/kg/hr. This is not a clinical prescription.' },
+  remifentanil: { targetType: 'ce', target: 2, maxRate: 0.5, note: 'Educational remifentanil/Minto starting point: Ce 2 ng/mL; maximum 0.5 µg/kg/min. This is not a clinical prescription.' }
+});
+
+function applyTciPreset(id) {
+  const profile = TCI_PRESETS[id];
+  const enabled = document.getElementById('tciEnabled');
+  const targetType = document.getElementById('tciTargetType');
+  const target = document.getElementById('tciTarget');
+  const maxRate = document.getElementById('tciMaxRate');
+  const stopTime = document.getElementById('tciStopTime');
+  const note = document.getElementById('tciPresetNote');
+  if (!profile) {
+    if (enabled) enabled.disabled = false;
+    if (note) note.textContent = 'No curated educational TCI starting profile is available for this preset. TCI remains available; review and set the target and maximum rate for your simulation.';
+    updateTciControls();
+    return;
+  }
+  if (enabled) enabled.disabled = false;
+  if (targetType) targetType.value = profile.targetType;
+  if (target) target.value = profile.target;
+  if (maxRate) maxRate.value = profile.maxRate;
+  if (stopTime) stopTime.value = formatInputValue(parseFloatSafe(tfinalnum?.value, 255));
+  if (note) note.textContent = profile.note;
+  updateTciControls();
+}
+
 function propofol() {
   currentDrug = 'propofol';
   setDisplayUnit('µg/mL');
@@ -2917,7 +2948,9 @@ function applyDrugById(id) {
   if (typeof fn !== 'function') return;
 
   fn();                 // runs the preset (sets units + PK + dfsolve())
+  applyTciPreset(id);
   setCurrentDrugLabel();
+  dfsolve();
 
   [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')]
     .filter(Boolean)
@@ -2934,6 +2967,7 @@ function reset() {
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
   propofol();
+  applyTciPreset('propofol');
   if (weightnum) weightnum.value = 70;
   bnum.value = 1;
   tbolusnum.value = 1;
