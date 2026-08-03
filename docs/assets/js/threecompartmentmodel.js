@@ -30,6 +30,8 @@ function roundToSignificantFigures(num, sigFigs) {
   return math.round(num * factor) / factor;
 }
 
+const MAX_SIMULATION_MINUTES = 1440;
+
 // ============================
 // Drawer + collapsible cards
 // ============================
@@ -624,6 +626,8 @@ function updateRegimenOverview(params, schedule) {
 function updateMainDoseEditor(schedule) {
   const bolusInput = document.getElementById('mainBolusAmount');
   const infusionInput = document.getElementById('mainInfusionRate');
+  const bolusLabel = document.getElementById('mainBolusLabel');
+  const infusionLabel = document.getElementById('mainInfusionLabel');
   const bolusUnit = document.getElementById('mainBolusUnit');
   const infusionUnit = document.getElementById('mainInfusionUnit');
   const hint = document.getElementById('quickDoseEditorHint');
@@ -639,7 +643,9 @@ function updateMainDoseEditor(schedule) {
     infusionInput.value = firstInfusion ? formatInputValue(firstInfusion.rate) : '';
     bolusInput.disabled = !firstBolus;
     infusionInput.disabled = !firstInfusion;
-    if (hint) hint.textContent = 'Schedule active: updates the first bolus and first infusion segment.';
+    if (bolusLabel) bolusLabel.textContent = firstBolus ? 'Earliest bolus' : 'No scheduled bolus';
+    if (infusionLabel) infusionLabel.textContent = firstInfusion ? 'Earliest infusion' : 'No scheduled infusion';
+    if (hint) hint.textContent = 'Schedule active: these controls update the earliest events. Use the timeline or schedule table to edit other events.';
     return;
   }
 
@@ -647,6 +653,8 @@ function updateMainDoseEditor(schedule) {
   infusionInput.value = infusionnum ? formatInputValue(parseFloatSafe(infusionnum.value, 0)) : '';
   bolusInput.disabled = false;
   infusionInput.disabled = false;
+  if (bolusLabel) bolusLabel.textContent = 'Bolus';
+  if (infusionLabel) infusionLabel.textContent = 'Infusion';
   if (hint) hint.textContent = 'Updates the current bolus and infusion.';
 }
 
@@ -685,12 +693,13 @@ function timelineDefaultInfusionRate(schedule) {
   return last?.rate || Math.max(parseFloatSafe(infusionnum?.value, 0), 0.01);
 }
 
-function commitTimelineSchedule(schedule, message) {
+function commitTimelineSchedule(schedule, message, { undoSchedule = null } = {}) {
   setScheduleToDOM(schedule);
   disableLegacyBolusInfusionInputs(true);
   expandDrawerCard('scheduleCard');
   dfsolve();
-  setSimulationStatus(message, 'ok');
+  timelineUndoSchedule = undoSchedule;
+  setSimulationStatus(message, 'ok', { showUndo: Boolean(undoSchedule) });
 }
 
 function expandDrawerCard(id) {
@@ -706,10 +715,11 @@ function expandDrawerCard(id) {
 
 function removeTimelineEvent(type, index) {
   const schedule = getEditableTimelineSchedule();
+  const priorSchedule = JSON.parse(JSON.stringify(schedule));
   const events = type === 'bolus' ? schedule.boluses : schedule.infusions;
   if (!Number.isInteger(index) || index < 0 || index >= events.length) return;
   events.splice(index, 1);
-  commitTimelineSchedule(schedule, `${type === 'bolus' ? 'Bolus' : 'Infusion'} removed from the schedule.`);
+  commitTimelineSchedule(schedule, `${type === 'bolus' ? 'Bolus' : 'Infusion'} removed from the schedule.`, { undoSchedule: priorSchedule });
 }
 
 function ensureTimelineEditor() {
@@ -1745,7 +1755,10 @@ function validateSimulationInputs() {
 
   $$('.form-control.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   readNumber('weight', 'Weight', { strictlyPositive: true });
-  readNumber('tfinal', 'Final time', { strictlyPositive: true });
+  const finalTime = readNumber('tfinal', 'Final time', { strictlyPositive: true });
+  if (finalTime != null && finalTime > MAX_SIMULATION_MINUTES) {
+    addError('tfinal', `Final time must be no greater than ${MAX_SIMULATION_MINUTES} minutes.`);
+  }
   readNumber('initialp', 'Initial concentration', { min: 0 });
   readNumber('Vd1', 'V1', { strictlyPositive: true });
   readNumber('b', 'Bolus dose', { min: 0 });
@@ -1804,11 +1817,28 @@ function validateSimulationInputs() {
   return errors.length === 0;
 }
 
-function setSimulationStatus(message, state = 'ok') {
+let timelineUndoSchedule = null;
+
+function setSimulationStatus(message, state = 'ok', { showUndo = false } = {}) {
   const status = document.getElementById('simulationStatus');
-  if (!status) return;
-  status.textContent = message;
+  const text = document.getElementById('simulationStatusText');
+  const undoBtn = document.getElementById('undoTimelineBtn');
+  if (!status || !text) return;
+  text.textContent = message;
   status.dataset.state = state;
+  if (undoBtn) undoBtn.hidden = !showUndo;
+  if (!showUndo) timelineUndoSchedule = null;
+}
+
+function undoTimelineDeletion() {
+  if (!timelineUndoSchedule) return;
+  const restoredSchedule = timelineUndoSchedule;
+  timelineUndoSchedule = null;
+  setScheduleToDOM(restoredSchedule);
+  disableLegacyBolusInfusionInputs(true);
+  expandDrawerCard('scheduleCard');
+  dfsolve();
+  setSimulationStatus('Timeline deletion restored.', 'ok');
 }
 
 function dfsolve() {
@@ -2730,6 +2760,7 @@ function wireInputs() {
 
   document.getElementById('mainBolusAmount')?.addEventListener('change', () => applyMainDoseAdjustment('bolus'));
   document.getElementById('mainInfusionRate')?.addEventListener('change', () => applyMainDoseAdjustment('infusion'));
+  document.getElementById('undoTimelineBtn')?.addEventListener('click', undoTimelineDeletion);
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());
   document.getElementById('oneCompBtn')?.addEventListener('click', () => onecompartment());

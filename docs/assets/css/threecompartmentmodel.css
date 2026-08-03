@@ -9088,6 +9088,9 @@ body.dark-mode .validation-summary {
 }
 
 .simulation-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: -14px 0 18px;
   padding: 9px 12px;
   border: 1px solid var(--border);
@@ -9095,6 +9098,11 @@ body.dark-mode .validation-summary {
   color: var(--muted);
   background: var(--panel);
   font-size: .86rem;
+}
+
+.simulation-status__undo {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .simulation-status[data-state="error"] {

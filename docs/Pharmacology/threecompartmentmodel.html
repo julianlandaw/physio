@@ -208,8 +208,9 @@
           </div>
           <div class="param-row">
             <label id="tfinalhtml" class="label" for="tfinal"></label>
-            <input type="number" class="form-control" id="tfinal" value="240" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="tfinal" value="240" min="0" max="1440" step="0.1" inputmode="decimal" aria-describedby="tfinalHelp" />
           </div>
+          <div class="param-note" id="tfinalHelp">Maximum simulation duration: 1,440 minutes (24 hours), to keep the browser responsive.</div>
         </div>
       </div>
 
@@ -326,10 +327,10 @@
           <small id="quickDoseEditorHint">Updates the current bolus and infusion.</small>
         </div>
         <div class="quick-dose-editor__fields">
-          <label for="mainBolusAmount">Bolus <span id="mainBolusUnit">mg/kg</span>
+          <label for="mainBolusAmount"><span id="mainBolusLabel">Bolus</span> <span id="mainBolusUnit">mg/kg</span>
             <input type="number" class="form-control form-control-sm" id="mainBolusAmount" min="0" step="0.01" inputmode="decimal" />
           </label>
-          <label for="mainInfusionRate">Infusion <span id="mainInfusionUnit">mg/kg/min</span>
+          <label for="mainInfusionRate"><span id="mainInfusionLabel">Infusion</span> <span id="mainInfusionUnit">mg/kg/min</span>
             <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="0.01" inputmode="decimal" />
           </label>
         </div>
@@ -337,7 +338,10 @@
       <p class="simulation-help">Start by selecting a drug, then set patient weight and dosing in <strong>Edit parameters</strong>. This educational PK simulation is not a dosing recommendation; verify any clinical decision against current guidance and patient-specific factors.</p>
     </section>
 
-    <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">Simulation is up to date.</div>
+    <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">
+      <span id="simulationStatusText">Simulation is up to date.</span>
+      <button class="btn btn-sm btn-outline-secondary simulation-status__undo" type="button" id="undoTimelineBtn" hidden>Undo</button>
+    </div>
 
     <section class="content-section content-section--plot">
       <div class="content-header">
