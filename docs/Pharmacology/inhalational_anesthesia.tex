@@ -43,6 +43,17 @@ U_{pulm}=\dot Q\lambda_{b:g}(F_A-F_{\bar v}).
 \end{equation}
 Here $\dot Q$ is cardiac output, $\lambda_{b:g}$ is the blood:gas partition coefficient, and $F_{\bar v}$ is mixed venous anesthetic partial-pressure fraction. Equation~\ref{eq:uptake} summarizes the classic determinants of uptake: a greater alveolar--venous gradient, higher cardiac output, or greater blood solubility removes more anesthetic from alveoli and slows the rise of $F_A/F_I$.
 
+\section{Why fresh-gas flow and alveolar ventilation differ}
+Fresh-gas flow (FGF), $\dot V_{FGF}$, is a machine setting: the total flow of newly supplied carrier gas and volatile anesthetic into the breathing circuit.  Alveolar ventilation, $\dot V_A$, is a patient variable: the portion of minute ventilation that reaches gas-exchanging alveoli.  In a simple respiratory description,
+\begin{equation}
+\dot V_A=(V_T-V_D)f,
+\end{equation}
+where $V_T$ is tidal volume, $V_D$ is dead-space volume, and $f$ is respiratory frequency.  Thus changing respiratory rate, tidal volume, or dead space can change $\dot V_A$ without changing FGF; changing the machine flowmeters can change FGF without changing patient ventilation.
+
+The two flows need not be equal.  In a circle system with functioning one-way valves and carbon-dioxide absorbent, FGF can be less than alveolar ventilation: part of each inspired breath is then carbon-dioxide-free rebreathed gas, mixed with newly delivered gas.  This is the basic setting of low-flow anesthesia.  When FGF is higher, a larger fraction of circuit gas is replaced and excess gas is vented to scavenging; the inspired fraction more quickly approaches the vaporizer fraction.  The relationship is also affected by leaks, circuit compliance, ventilator design, patient uptake of oxygen and anesthetic, and the phase of ventilation, none of which are fully represented here.
+
+In the simulator, the default FGF and alveolar-ventilation values are both $4$ L/min for clarity, not because physiology requires equality.  A useful comparison is to hold $\dot V_A=4$ L/min and lower FGF to $1$ L/min.  The circuit-inspired fraction then approaches the vaporizer setting more slowly because the model has less newly delivered gas per minute.  Conversely, holding FGF fixed while raising $\dot V_A$ accelerates gas exchange between the circuit and alveolar compartment.  These controls are intentionally independent in Eq.~\ref{eq:circuit}; their separation is central to the model's representation of rebreathing and circuit wash-in.
+
 \section{Tissue groups and venous return}
 For a tissue group $j$ with volume $V_j$, perfusion $\dot Q_j$, tissue:blood partition coefficient $\lambda_{j:b}$, and normalized tissue tension $F_j$, a perfusion-limited approximation is
 \begin{equation}
