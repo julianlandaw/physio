@@ -8962,6 +8962,11 @@ body.dark-mode .validation-summary {
   display: none;
 }
 
+.pdf-report-meta,
+.pdf-report-disclaimer {
+  display: none;
+}
+
 .pdf-dose-details {
   display: none;
 }
@@ -9373,6 +9378,10 @@ body.dark-mode .simulation-status[data-state="error"] {
   .drawer,
   .drawer-backdrop,
   .regimen-actions,
+  .quick-dose-editor,
+  .simulation-help,
+  .simulation-status,
+  .timeline-event-editor,
   .copyright-badge,
   #therapeuticToggleContainer {
     display: none !important;
@@ -9397,6 +9406,21 @@ body.dark-mode .simulation-status[data-state="error"] {
   .pdf-report-header p { color: #ff7a57; font-size: 8pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
   .pdf-report-header h1 { font-size: 20pt; }
   .pdf-report-header span { color: #555; font-size: 9pt; }
+  .pdf-report-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1mm 6mm;
+    margin-top: 4mm;
+    color: #333;
+    font-size: 8.5pt;
+  }
+  .pdf-report-disclaimer {
+    display: block;
+    margin: 3mm 0 0;
+    color: #555;
+    font-size: 8pt;
+    font-style: italic;
+  }
 
   .regimen-overview,
   .result-card,
@@ -9421,8 +9445,11 @@ body.dark-mode .simulation-status[data-state="error"] {
   .content-header { margin: 0 0 3mm; }
   .primary-plot-card .card-body { padding: 3mm; }
   .plot--primary { height: 110mm; }
+  .tci-rate-panel { margin: 2mm 3mm 0; }
+  .plot--tci-rate { height: 55mm; }
   .plot--small { height: 70mm; }
   .dose-timeline { margin: 0 3mm; }
+  .dose-timeline__help { display: none; }
   .pdf-dose-details {
     display: block;
     margin: 4mm 3mm 0;

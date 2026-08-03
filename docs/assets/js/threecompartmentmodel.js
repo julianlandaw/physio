@@ -697,6 +697,7 @@ function updateRegimenOverview(params, schedule) {
   updateMainDoseEditor(tci.enabled ? { enabled: true, boluses: [], infusions: [] } : schedule);
   updateTciControls();
   updatePdfDoseProtocol(params, schedule);
+  updatePdfReportSummary(params, schedule);
 }
 
 function updateMainDoseEditor(schedule) {
@@ -1065,6 +1066,20 @@ function updatePdfDoseProtocol(params, schedule) {
   protocol.textContent = `Simulation duration: ${formatTime(params.tfinal)}.`;
   container.appendChild(protocol);
 
+  const tci = getTciConfig();
+  if (tci.enabled) {
+    addTable(
+      'Educational target-controlled infusion settings',
+      ['Target compartment', `Target (${currentUnit.name})`, `Maximum rate (${currentInfusionUnit.name})`, 'Infusion stop'],
+      [[tci.targetType === 'ce' ? 'Effect site (Ce)' : 'Plasma (Cp)', formatInputValue(tci.target), formatInputValue(document.getElementById('tciMaxRate')?.value), formatTime(Math.min(tci.stopTime, params.tfinal))]]
+    );
+    const note = document.createElement('p');
+    note.className = 'pdf-dose-note';
+    note.textContent = 'The calculated variable infusion rate is shown in the TCI rate graph above.';
+    container.appendChild(note);
+    return;
+  }
+
   if (schedule?.enabled) {
     addTable(
       'Bolus events',
@@ -1096,6 +1111,28 @@ function updatePdfDoseProtocol(params, schedule) {
   );
 }
 
+function updatePdfReportSummary(params, schedule) {
+  const container = document.getElementById('pdfReportMeta');
+  if (!container) return;
+  container.textContent = '';
+  const drug = DRUGS.find(item => item.id === currentDrug);
+  const tci = getTciConfig();
+  const items = [
+    ['Drug', drug?.label || 'Custom model'],
+    ['Patient weight', `${formatInputValue(params.weightKg)} kg`],
+    ['Simulation duration', `${formatInputValue(params.tfinal)} min`],
+    ['PK inputs', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes'],
+    ['Delivery strategy', tci.enabled ? `Educational TCI (${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target)` : (schedule?.enabled ? 'Custom dose schedule' : 'Bolus + infusion')]
+  ];
+  items.forEach(([label, value]) => {
+    const item = document.createElement('div');
+    const term = document.createElement('strong');
+    term.textContent = `${label}: `;
+    item.append(term, document.createTextNode(value));
+    container.appendChild(item);
+  });
+}
+
 function initDistributionDetails() {
   const details = document.getElementById('distributionDetails');
   if (!details) return;
@@ -1121,7 +1158,7 @@ function exportSimulationPdf() {
 
   // Plotly needs a layout pass once hidden detail panels become printable.
   setTimeout(() => {
-    ['myDiv1', 'myDiv2', 'myDiv3'].forEach(id => {
+    ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach(id => {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     });
@@ -1131,7 +1168,7 @@ function exportSimulationPdf() {
   window.addEventListener('afterprint', () => {
     document.body.classList.remove('print-report');
     expandableSections.forEach((section, index) => { section.open = priorStates[index]; });
-    setTimeout(() => ['myDiv1', 'myDiv2', 'myDiv3'].forEach(id => {
+    setTimeout(() => ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach(id => {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     }), 0);
