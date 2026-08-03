@@ -112,6 +112,36 @@
         </div>
       </div>
 
+      <div class="card shadow-sm mb-3" id="tciCard">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="tciCardBody" aria-expanded="false">Target-controlled infusion <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="tciCardBody">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="tciEnabled" />
+            <label class="form-check-label" for="tciEnabled">Use educational TCI mode</label>
+          </div>
+          <p class="param-note">This model calculates a variable infusion rate to approach a selected predicted concentration. It is for learning only—not infusion-pump control or a dosing recommendation.</p>
+          <div class="param-row">
+            <label class="label" for="tciTargetType">Target compartment</label>
+            <select class="form-control" id="tciTargetType">
+              <option value="cp">Plasma concentration (Cp)</option>
+              <option value="ce">Effect-site concentration (Ce)</option>
+            </select>
+          </div>
+          <div class="param-row">
+            <label class="label" for="tciTarget">Target <span id="tciTargetUnit">mg/mL</span></label>
+            <input class="form-control" id="tciTarget" type="number" value="0.003" min="0" step="0.001" inputmode="decimal" />
+          </div>
+          <div class="param-row">
+            <label class="label" for="tciMaxRate">Maximum rate <span id="tciMaxRateUnit">mg/kg/min</span></label>
+            <input class="form-control" id="tciMaxRate" type="number" value="0.2" min="0.001" step="0.01" inputmode="decimal" />
+          </div>
+          <div class="param-row">
+            <label class="label" for="tciStopTime">Stop infusion at (min)</label>
+            <input class="form-control" id="tciStopTime" type="number" value="255" min="0" step="0.1" inputmode="decimal" />
+          </div>
+        </div>
+      </div>
+
 
       <!-- Dosing Schedule (advanced) -->
       <div class="card shadow-sm mb-3" id="scheduleCard">
@@ -335,6 +365,23 @@
             <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="0.01" inputmode="decimal" />
           </label>
         </div>
+        <div class="quick-dose-editor__fields quick-dose-editor__fields--tci" id="mainTciControls" hidden>
+          <label for="mainTciTargetType">Target
+            <select class="form-control form-control-sm" id="mainTciTargetType">
+              <option value="cp">Plasma (Cp)</option>
+              <option value="ce">Effect site (Ce)</option>
+            </select>
+          </label>
+          <label for="mainTciTarget">Target <span id="mainTciTargetUnit">mg/mL</span>
+            <input type="number" class="form-control form-control-sm" id="mainTciTarget" min="0" step="0.001" inputmode="decimal" />
+          </label>
+          <label for="mainTciMaxRate">Maximum rate <span id="mainTciMaxRateUnit">mg/kg/min</span>
+            <input type="number" class="form-control form-control-sm" id="mainTciMaxRate" min="0.001" step="0.01" inputmode="decimal" />
+          </label>
+          <label for="mainTciStopTime">Stop at (min)
+            <input type="number" class="form-control form-control-sm" id="mainTciStopTime" min="0" step="0.1" inputmode="decimal" />
+          </label>
+        </div>
       </section>
       <p class="simulation-help">Start by selecting a drug, then set patient weight and dosing in <strong>Edit parameters</strong>. This educational PK simulation is not a dosing recommendation; verify any clinical decision against current guidance and patient-specific factors.</p>
     </section>
@@ -350,12 +397,16 @@
           <p class="eyebrow">Primary view</p>
           <h2 class="h4 m-0">Concentration over time</h2>
         </div>
-        <div class="text-muted small">Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.</div>
+        <div class="text-muted small" id="primaryPlotCaption">Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.</div>
       </div>
 
       <div class="card shadow-sm primary-plot-card">
         <div class="card-body">
           <div id="myDiv1" class="plot plot--primary"></div>
+          <div class="tci-rate-panel" id="tciRatePanel" hidden>
+            <div class="tci-rate-panel__heading">Educational TCI calculated infusion rate <span id="tciRateUnit">mg/kg/min</span></div>
+            <div id="tciRatePlot" class="plot plot--tci-rate"></div>
+          </div>
           <div class="dose-timeline" aria-live="polite">
             <div class="dose-timeline__header"><span>Dosing timeline <small class="dose-timeline__help">Click to add a bolus · drag to add an infusion · click a dose to edit it</small></span><span id="doseTimelineText">—</span></div>
             <div class="dose-timeline__track" id="doseTimelineTrack" aria-label="Editable dosing timeline"></div>

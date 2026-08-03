@@ -9126,6 +9126,23 @@ body.dark-mode .simulation-status[data-state="error"] {
   height: 480px;
 }
 
+.plot--tci-rate {
+  height: 185px;
+}
+
+.tci-rate-panel {
+  margin: 4px 30px 0 60px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.tci-rate-panel__heading {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 650;
+}
+
 .dose-timeline {
   /* Match Plotly's primary-chart margins (left 60px, right 30px) so timeline
      time positions line up with the graph's x-axis. */
@@ -9257,6 +9274,10 @@ body.dark-mode .simulation-status[data-state="error"] {
 
 .timeline-event-editor__actions { justify-content: flex-start; }
 
+.quick-dose-editor__fields--tci {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .distribution-details,
 .model-details {
   margin-top: 18px;
@@ -9327,6 +9348,8 @@ body.dark-mode .simulation-status[data-state="error"] {
   .result-grid { grid-template-columns: 1fr; }
   .regimen-item--wide { grid-column: auto; }
   .plot--primary { height: 400px; }
+  .tci-rate-panel { margin-right: 3px; margin-left: 3px; }
+  .quick-dose-editor__fields--tci { grid-template-columns: 1fr; }
   .content-header { align-items: flex-start; flex-direction: column; }
   .quick-dose-editor__heading { align-items: flex-start; flex-direction: column; }
   .quick-dose-editor__heading small { text-align: left; }

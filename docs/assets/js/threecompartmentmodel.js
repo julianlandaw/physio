@@ -59,7 +59,7 @@ function initDrawer() {
     drawer?.setAttribute('aria-hidden', 'false');
     backdrop?.setAttribute('aria-hidden', 'false');
     // Allow Plotly to re-measure after drawer animation
-    setTimeout(() => ['myDiv1','myDiv2','myDiv3'].forEach(id => {
+    setTimeout(() => ['myDiv1','myDiv2','myDiv3','tciRatePlot'].forEach(id => {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     }), 260);
@@ -112,7 +112,7 @@ function initDrawer() {
       if (icon) icon.textContent = isHidden ? '▼' : '▲';
       h.setAttribute('aria-expanded', String(isHidden));
       // Resize Plotly if plots are inside (they are not), but keep safe
-      setTimeout(() => ['myDiv1','myDiv2','myDiv3'].forEach(id => {
+      setTimeout(() => ['myDiv1','myDiv2','myDiv3','tciRatePlot'].forEach(id => {
         const el = document.getElementById(id);
         if (el && window.Plotly) Plotly.Plots.resize(el);
       }), 50);
@@ -299,10 +299,16 @@ function setDisplayUnit(unitName, preserveValue = true) {
     const value = parseFloat(initialpnum.value);
     if (Number.isFinite(value)) initialpnum.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
   }
+  const tciTarget = document.getElementById('tciTarget');
+  if (preserveValue && tciTarget && currentUnit.factor !== nextUnit.factor) {
+    const value = parseFloat(tciTarget.value);
+    if (Number.isFinite(value)) tciTarget.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
+  }
   currentUnit = nextUnit;
   initialphtml.innerHTML = `[<i>P</i>]<sub>init</sub> (${currentUnit.name})`;
   concentrationunitshtml1.innerHTML = currentUnit.name;
   concentrationunitshtml2.innerHTML = currentUnit.name;
+  updateTciControls?.();
 }
 
 const BOLUSUNITS = {
@@ -416,6 +422,8 @@ function setInfusionUnit(unitName, preserveValues = true) {
     const weightKg = getWeightKg();
     const convert = value => convertMgKgMinToInfusionValue(convertInfusionValueToMgKgMin(value, previousUnit, weightKg), nextUnit, weightKg);
     if (infusionnum && Number.isFinite(parseFloat(infusionnum.value))) infusionnum.value = formatInputValue(convert(parseFloat(infusionnum.value)));
+    const tciMaxRate = document.getElementById('tciMaxRate');
+    if (tciMaxRate && Number.isFinite(parseFloat(tciMaxRate.value))) tciMaxRate.value = formatInputValue(convert(parseFloat(tciMaxRate.value)));
     rescaleScheduleInputs('#infusionEventsTable input[data-field="rate"]', convert);
   }
   currentInfusionUnit = nextUnit;
@@ -435,6 +443,50 @@ function updateScheduleUnitLabels() {
   if (iSpan) iSpan.textContent = `(${iUnit})`;
   if (bBadge) bBadge.textContent = bUnit;
   if (iBadge) iBadge.textContent = iUnit;
+  ['tciMaxRateUnit', 'mainTciMaxRateUnit', 'tciRateUnit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = iUnit;
+  });
+}
+
+function getTciConfig() {
+  const enabled = Boolean(document.getElementById('tciEnabled')?.checked);
+  const targetType = document.getElementById('tciTargetType')?.value === 'ce' ? 'ce' : 'cp';
+  const target = parseFloatSafe(document.getElementById('tciTarget')?.value, 0);
+  const maxRate = convertInfusionValueToMgKgMin(document.getElementById('tciMaxRate')?.value, currentInfusionUnit, getWeightKg());
+  const stopTime = Math.max(0, parseFloatSafe(document.getElementById('tciStopTime')?.value, 0));
+  return { enabled, targetType, target, targetBase: target / currentUnit.factor, maxRate, stopTime };
+}
+
+function updateTciControls() {
+  const config = getTciConfig();
+  const targetUnit = currentUnit?.name || 'mg/mL';
+  ['tciTargetUnit', 'mainTciTargetUnit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = targetUnit;
+  });
+  const mainControls = document.getElementById('mainTciControls');
+  if (mainControls) mainControls.hidden = !config.enabled;
+  const mainTargetType = document.getElementById('mainTciTargetType');
+  const mainTarget = document.getElementById('mainTciTarget');
+  const mainMaxRate = document.getElementById('mainTciMaxRate');
+  const mainStopTime = document.getElementById('mainTciStopTime');
+  if (mainTargetType) mainTargetType.value = config.targetType;
+  if (mainTarget) mainTarget.value = formatInputValue(config.target);
+  if (mainMaxRate) mainMaxRate.value = document.getElementById('tciMaxRate')?.value || '';
+  if (mainStopTime) mainStopTime.value = document.getElementById('tciStopTime')?.value || '';
+}
+
+function applyMainTciAdjustment() {
+  const type = document.getElementById('mainTciTargetType')?.value;
+  const target = document.getElementById('mainTciTarget')?.value;
+  const maxRate = document.getElementById('mainTciMaxRate')?.value;
+  const stopTime = document.getElementById('mainTciStopTime')?.value;
+  if (type) document.getElementById('tciTargetType').value = type;
+  if (target !== undefined) document.getElementById('tciTarget').value = target;
+  if (maxRate !== undefined) document.getElementById('tciMaxRate').value = maxRate;
+  if (stopTime !== undefined) document.getElementById('tciStopTime').value = stopTime;
+  dfsolve();
 }
 
 function disableLegacyBolusInfusionInputs(disabled) {
@@ -580,7 +632,19 @@ function updateRegimenOverview(params, schedule) {
 
   let segments = [];
   let description = '';
-  if (schedule?.enabled) {
+  const tci = getTciConfig();
+  const plotCaption = document.getElementById('primaryPlotCaption');
+  if (plotCaption) {
+    plotCaption.textContent = tci.enabled
+      ? 'Cp = central plasma; Ce = effect site. The dashed green line is the educational TCI target; the rate chart shows calculated delivery.'
+      : 'Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.';
+  }
+  if (tci.enabled) {
+    const compartment = tci.targetType === 'ce' ? 'effect-site (Ce)' : 'plasma (Cp)';
+    const stopTime = Math.min(tci.stopTime, params.tfinal);
+    description = `Educational TCI · ${compartment} target ${formatInputValue(tci.target)} ${currentUnit.name} until ${formatInputValue(stopTime)} min · maximum ${formatInputValue(document.getElementById('tciMaxRate')?.value)} ${currentInfusionUnit.name}`;
+    segments = [{ start: 0, end: stopTime, type: 'infusion', index: -1, label: 'Educational TCI' }];
+  } else if (schedule?.enabled) {
     const boluses = schedule.boluses || [];
     const infusions = schedule.infusions || [];
     description = `${boluses.length} bolus${boluses.length === 1 ? '' : 'es'} · ${infusions.length} infusion segment${infusions.length === 1 ? '' : 's'}`;
@@ -612,22 +676,26 @@ function updateRegimenOverview(params, schedule) {
     marker.dataset.eventIndex = String(segment.index);
     marker.style.left = `${(start / params.tfinal) * 100}%`;
     marker.style.width = `${Math.max(1.2, ((Math.max(end, start) - start) / params.tfinal) * 100)}%`;
-    const eventDetails = getTimelineEventDetails(segment, schedule);
-    marker.title = `${eventDetails}. Click to edit.`;
-    marker.setAttribute('role', 'button');
-    marker.setAttribute('tabindex', '0');
-    marker.setAttribute('aria-label', `Edit ${eventDetails}`);
+    const eventDetails = tci.enabled ? description : getTimelineEventDetails(segment, schedule);
+    marker.title = tci.enabled ? eventDetails : `${eventDetails}. Click to edit.`;
+    if (!tci.enabled) {
+      marker.setAttribute('role', 'button');
+      marker.setAttribute('tabindex', '0');
+      marker.setAttribute('aria-label', `Edit ${eventDetails}`);
+    }
     const label = document.createElement('span');
     label.className = 'dose-timeline__segment-label';
-    label.textContent = segment.type === 'bolus'
+    label.textContent = tci.enabled ? `TCI 0–${formatInputValue(end)} min` : segment.type === 'bolus'
       ? `B ${formatInputValue(start)}m`
       : `Infusion ${formatInputValue(start)}–${formatInputValue(end)} min`;
     marker.appendChild(label);
     track.appendChild(marker);
   });
 
-  renderTimelineEventEditor(schedule);
-  updateMainDoseEditor(schedule);
+  track.dataset.tciMode = String(tci.enabled);
+  renderTimelineEventEditor(tci.enabled ? { enabled: false } : schedule);
+  updateMainDoseEditor(tci.enabled ? { enabled: true, boluses: [], infusions: [] } : schedule);
+  updateTciControls();
   updatePdfDoseProtocol(params, schedule);
 }
 
@@ -640,6 +708,17 @@ function updateMainDoseEditor(schedule) {
   const infusionUnit = document.getElementById('mainInfusionUnit');
   const hint = document.getElementById('quickDoseEditorHint');
   if (!bolusInput || !infusionInput) return;
+
+  if (getTciConfig().enabled) {
+    bolusInput.value = '';
+    infusionInput.value = '';
+    bolusInput.disabled = true;
+    infusionInput.disabled = true;
+    if (bolusLabel) bolusLabel.textContent = 'Manual bolus disabled';
+    if (infusionLabel) infusionLabel.textContent = 'Manual infusion disabled';
+    if (hint) hint.textContent = 'Educational TCI is active. Adjust the target and maximum rate above.';
+    return;
+  }
 
   if (bolusUnit) bolusUnit.textContent = currentBolusUnit.name;
   if (infusionUnit) infusionUnit.textContent = currentInfusionUnit.name;
@@ -876,6 +955,7 @@ function ensureTimelineEditor() {
   };
 
   track.addEventListener('pointerdown', event => {
+    if (getTciConfig().enabled) return;
     if (event.button !== undefined && event.button !== 0) return;
     const segment = event.target.closest('.dose-timeline__segment');
     pointerStart = { x: event.clientX, time: getTimelineTimeFromPointer(event, track), segment };
@@ -935,6 +1015,7 @@ function ensureTimelineEditor() {
   });
 
   track.addEventListener('keydown', event => {
+    if (getTciConfig().enabled) return;
     const segment = event.target.closest('.dose-timeline__segment');
     if (!segment || !['Enter', ' ', 'Delete', 'Backspace'].includes(event.key)) return;
     event.preventDefault();
@@ -1815,6 +1896,15 @@ function addEventMarkers(layout) {
   const finalTime = parseFloatSafe(document.getElementById('tfinal')?.value, 0);
   layout.shapes = [];
   layout.annotations = [];
+  const tci = getTciConfig();
+  if (tci.enabled) {
+    const stopTime = Math.min(tci.stopTime, finalTime);
+    if (stopTime > 0 && stopTime < finalTime) {
+      layout.shapes.push({ type: 'line', x0: stopTime, x1: stopTime, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: '#198754', width: 0.8, dash: 'dot' } });
+      layout.annotations.push({ x: stopTime, y: 1, xref: 'x', yref: 'paper', text: 'TCI stop', showarrow: false, yanchor: 'bottom', font: { color: '#198754', size: 10 } });
+    }
+    return layout;
+  }
   const schedule = getScheduleFromDOM();
 
   if (!schedule || !schedule.enabled) {
@@ -1897,6 +1987,15 @@ function validateSimulationInputs() {
   readNumber('infusion', 'Infusion rate', { min: 0 });
   readNumber('tinfusion', 'Infusion time', { min: 0 });
   readNumber('ke0', 'ke0', { min: 0, optional: true });
+  if (document.getElementById('tciEnabled')?.checked) {
+    const target = readNumber('tciTarget', 'TCI target', { min: 0 });
+    const maxRate = readNumber('tciMaxRate', 'TCI maximum rate', { strictlyPositive: true });
+    readNumber('tciStopTime', 'TCI stop time', { min: 0 });
+    if (document.getElementById('tciTargetType')?.value === 'ce' && Number(ke0num?.value) <= 0) {
+      addError('ke0', 'ke0 must be greater than 0 for an effect-site TCI target.');
+    }
+    if (target === 0 || maxRate === 0) addError(null, 'TCI target and maximum rate must be greater than 0.');
+  }
 
   if (getPkInputMode() === 'microconstants') {
     const k12 = readNumber('k12input', 'k12', { min: 0 });
@@ -2038,6 +2137,7 @@ function dfsolve() {
   const a41 = M.subset(math.index(3,0)), a42 = M.subset(math.index(3,1)), a43 = M.subset(math.index(3,2)), a44 = M.subset(math.index(3,3)), a45 = M.subset(math.index(3,4));
 
   const schedule = getScheduleFromDOM();
+  const tci = getTciConfig();
   const schedRates = buildInputRateFromSchedule(schedule, params.dt, params.tfinal);
   const uArr = schedRates.u;
   const instArr = schedRates.instant;
@@ -2049,10 +2149,20 @@ function dfsolve() {
   // Track end of LAST rate-based input (infusions + finite-duration boluses)
   const EPS_DOSE = 1e-12;
   let lastRateEndIdx = -1;   // index in [0..N] where the final rate interval ends
+  const tciRates = new Array(N).fill(0);
 
   while (counter < N) {
     let u = 0;
-    if (schedule && schedule.enabled) {
+    if (tci.enabled) {
+      const baseCpNext = (a11*xs1[counter] + a12*xs2[counter] + a13*xs3[counter]) / params.Vd1;
+      const baseCeNext = a41*xs1[counter] + a42*xs2[counter] + a43*xs3[counter] + a44*ces[counter];
+      const targetBase = tci.targetBase;
+      const gain = tci.targetType === 'ce' ? a45 : a15 / params.Vd1;
+      const baseline = tci.targetType === 'ce' ? baseCeNext : baseCpNext;
+      u = (ts[counter] < tci.stopTime && gain > 0) ? clamp((targetBase - baseline) / gain, 0, tci.maxRate) : 0;
+      tciRates[counter] = u;
+      if (Math.abs(u) > EPS_DOSE) lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
+    } else if (schedule && schedule.enabled) {
       if (instArr && instArr[counter]) xs1[counter] = xs1[counter] + instArr[counter];
       u = (uArr && uArr[counter]) ? uArr[counter] : 0;
 
@@ -2086,13 +2196,14 @@ function dfsolve() {
 
   // A bolus at exactly t_final affects the reported final plasma concentration,
   // but does not instantaneously change the effect-site concentration.
-  if (schedule?.enabled && instArr?.[N]) xs1[N] += instArr[N];
+  if (!tci.enabled && schedule?.enabled && instArr?.[N]) xs1[N] += instArr[N];
 
   const yFactor = currentUnit.factor;
   const unitLabel = currentUnit.name;
 
   const trace_cp = { x: [], y: [], name: `Cp (${unitLabel})`, line: { color: '#1f77b4', width: 2 } };
   const trace_ce = { x: [], y: [], name: `Ce (${unitLabel})`, line: { color: '#ff7f0e', width: 2, dash: 'dot' } };
+  const trace_target = tci.enabled ? { x: [], y: [], name: `${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target until ${formatInputValue(Math.min(tci.stopTime, params.tfinal))} min`, line: { color: '#198754', width: 2, dash: 'dash' } } : null;
   const trace_p1 = { x: [], y: [], name: `P1 Compartment (${unitLabel})`, line: { width: 2 } };
   const trace_p2 = { x: [], y: [], name: `P2 Compartment (${unitLabel})`, line: { width: 2 } };
 
@@ -2107,6 +2218,7 @@ function dfsolve() {
     trace_ce.x.push(t); trace_ce.y.push(ce * yFactor);
     trace_p1.x.push(t); trace_p1.y.push(p1 * yFactor);
     trace_p2.x.push(t); trace_p2.y.push(p2 * yFactor);
+    if (trace_target) { trace_target.x.push(t); trace_target.y.push(t <= tci.stopTime ? tci.target : null); }
   }
 
   let layout1 = {
@@ -2136,10 +2248,10 @@ function dfsolve() {
   const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(params.tfinal);
   layout1.shapes = [ ...(layout1.shapes || []), ...therShapes ];
 
-  const panel1Traces = [trace_cp, trace_ce, ...legendTraces];
+  const panel1Traces = [trace_cp, trace_ce, ...(trace_target ? [trace_target] : []), ...legendTraces];
   const PLOT_CONFIG = { responsive: true, displaylogo: false };
 
-  if (compareMode && strategies.some(s => s.drug === currentDrug)) {
+  if (!tci.enabled && compareMode && strategies.some(s => s.drug === currentDrug)) {
     plotComparisonFromCurrent();
   } else {
     Plotly.newPlot('myDiv1', panel1Traces, layout1, PLOT_CONFIG);
@@ -2147,6 +2259,25 @@ function dfsolve() {
 
   Plotly.newPlot('myDiv2', [trace_p1], layout2, PLOT_CONFIG);
   Plotly.newPlot('myDiv3', [trace_p2], layout3, PLOT_CONFIG);
+
+  const tciRatePanel = document.getElementById('tciRatePanel');
+  if (tciRatePanel) tciRatePanel.hidden = !tci.enabled;
+  if (tci.enabled) {
+    const rateTrace = {
+      x: ts.slice(0, N),
+      y: tciRates.map(rate => convertMgKgMinToInfusionValue(rate, currentInfusionUnit, params.weightKg)),
+      name: `Calculated rate (${currentInfusionUnit.name})`,
+      line: { color: '#198754', width: 2, shape: 'hv' },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(25, 135, 84, .12)'
+    };
+    Plotly.newPlot('tciRatePlot', [rateTrace], {
+      margin: { l: 60, r: 30, t: 12, b: 42 },
+      xaxis: { title: { text: 'Time (min)' } },
+      yaxis: { title: { text: `Rate (${currentInfusionUnit.name})` } },
+      showlegend: false
+    }, PLOT_CONFIG);
+  }
 
   // Results
   const finalCp = roundToSignificantFigures(yFactor * xs1[N] / params.Vd1, 3);
@@ -2800,6 +2931,8 @@ function applyDrugById(id) {
 function reset() {
   selectedTimelineEvent = null;
   timelineUndoSchedule = null;
+  const tciEnabled = document.getElementById('tciEnabled');
+  if (tciEnabled) tciEnabled.checked = false;
   propofol();
   if (weightnum) weightnum.value = 70;
   bnum.value = 1;
@@ -2807,6 +2940,8 @@ function reset() {
   tinfusionnum.value = 60;
   infusionnum.value = 100;
   tfinalnum.value = 255;
+  const tciStopTime = document.getElementById('tciStopTime');
+  if (tciStopTime) tciStopTime.value = tfinalnum.value;
 
   try {
     setScheduleToDOM({
@@ -2876,6 +3011,21 @@ function wireInputs() {
     dfsolve();
   });
 
+  ['tciTargetType', 'tciTarget', 'tciMaxRate', 'tciStopTime'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => dfsolve());
+  });
+  document.getElementById('tciEnabled')?.addEventListener('change', event => {
+    if (event.target.checked) {
+      const useSchedule = document.getElementById('useSchedule');
+      if (useSchedule) useSchedule.checked = false;
+      disableLegacyBolusInfusionInputs(true);
+      setSimulationStatus('Educational TCI mode is active; manual dosing inputs are not used.', 'ok');
+    } else {
+      disableLegacyBolusInfusionInputs(Boolean(document.getElementById('useSchedule')?.checked));
+    }
+    dfsolve();
+  });
+
   document.getElementById('scaleToggleBtnTop')?.addEventListener('click', () => toggleScale());
   document.getElementById('darkModeBtnTop')?.addEventListener('click', () => toggleDarkMode());
 
@@ -2899,6 +3049,9 @@ function wireInputs() {
   document.getElementById('timelineEventSaveBtn')?.addEventListener('click', saveSelectedTimelineEvent);
   document.getElementById('timelineEventDuplicateBtn')?.addEventListener('click', duplicateSelectedTimelineEvent);
   document.getElementById('timelineEventDeleteBtn')?.addEventListener('click', deleteSelectedTimelineEvent);
+  ['mainTciTargetType', 'mainTciTarget', 'mainTciMaxRate', 'mainTciStopTime'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', applyMainTciAdjustment);
+  });
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());
   document.getElementById('oneCompBtn')?.addEventListener('click', () => onecompartment());
@@ -2922,7 +3075,7 @@ function wireInputs() {
   reset();
 
   window.addEventListener('resize', () => {
-    ['myDiv1','myDiv2','myDiv3'].forEach(id => {
+    ['myDiv1','myDiv2','myDiv3','tciRatePlot'].forEach(id => {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     });
