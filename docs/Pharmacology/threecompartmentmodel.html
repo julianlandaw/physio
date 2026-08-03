@@ -11,9 +11,6 @@
   <meta name="author" content="Julian Landaw" />
   <title>Three Compartment Model</title>
 
-  <!-- Existing site styles (optional). Keep if you rely on global Bootstrap/theme styles. -->
-  <!-- <link rel="stylesheet" href="../assets/css/steller.css" /> -->
-
   <!-- New app-specific styles -->
   <link rel="stylesheet" href="../assets/css/threecompartmentmodel.css" />
 
@@ -140,6 +137,22 @@
             <label class="label" for="tciStopTime">Stop infusion at (min)</label>
             <input class="form-control" id="tciStopTime" type="number" value="255" min="0" step="0.1" inputmode="decimal" />
           </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3" id="testRegimenCard">
+        <button class="card-header" type="button" data-collapse="true" aria-controls="testRegimenCardBody" aria-expanded="false">Model-derived test regimen <span class="toggle-icon">▼</span></button>
+        <div class="card-body" id="testRegimenCardBody">
+          <p class="param-note">For simulation exploration only. This calculator estimates a central-compartment loading dose as <i>V</i><sub>1</sub> × C<sub>target</sub> and a maintenance rate as <i>Cl</i> × C<sub>target</sub>; it is not a clinical dosing recommendation.</p>
+          <div class="param-row">
+            <label class="label" for="testRegimenTarget">Predicted plasma target <span id="testRegimenTargetUnit">mg/mL</span></label>
+            <input class="form-control" id="testRegimenTarget" type="number" min="0" step="0.001" inputmode="decimal" placeholder="Enter a target" />
+          </div>
+          <div class="param-row">
+            <label class="label" for="testRegimenLoadingDuration">Loading-dose duration (min)</label>
+            <input class="form-control" id="testRegimenLoadingDuration" type="number" value="1" min="0" step="0.1" inputmode="decimal" />
+          </div>
+          <button class="btn btn-sm btn-outline-primary" type="button" id="generateTestRegimenBtn">Generate test regimen</button>
         </div>
       </div>
 
@@ -523,12 +536,6 @@
 
     <div class="copyright-badge">Copyright © <script>document.write(new Date().getFullYear())</script> Julian W. Landaw, MD, PhD.</div>
   </main>
-
-  <!-- Vendor scripts (as in your current site) -->
-  <script src="../assets/vendors/jquery/jquery-3.4.1.js"></script>
-  <script src="../assets/vendors/bootstrap/bootstrap.bundle.js"></script>
-  <script src="../assets/vendors/bootstrap/bootstrap.affix.js"></script>
-  <script src="../assets/js/steller.js"></script>
 
   <!-- App script -->
   <script src="../assets/js/threecompartmentmodel.js"></script>

@@ -119,7 +119,7 @@ function initDrawer() {
     });
   });
 
-  // Start with advanced sections collapsed (optional)
+  // Keep every parameter section collapsed until the user chooses to open it.
   const collapseById = (id, collapsed=true) => {
     const card = document.getElementById(id);
     if (!card) return;
@@ -131,10 +131,12 @@ function initDrawer() {
     if (icon) icon.textContent = collapsed ? '▲' : '▼';
     header?.setAttribute('aria-expanded', String(!collapsed));
   };
-  collapseById('parameterCard', false);
+  collapseById('parameterCard', true);
+  collapseById('tciCard', true);
+  collapseById('testRegimenCard', true);
   collapseById('scheduleCard', true);
   collapseById('compareCard', true);
-  collapseById('simulationCard', false);
+  collapseById('simulationCard', true);
   collapseById('volumeCard', true);
   collapseById('pharmCard', true);
 }
@@ -465,6 +467,8 @@ function updateTciControls() {
     const el = document.getElementById(id);
     if (el) el.textContent = targetUnit;
   });
+  const testTargetUnit = document.getElementById('testRegimenTargetUnit');
+  if (testTargetUnit) testTargetUnit.textContent = targetUnit;
   const mainControls = document.getElementById('mainTciControls');
   if (mainControls) mainControls.hidden = !config.enabled;
   const mainTargetType = document.getElementById('mainTciTargetType');
@@ -487,6 +491,44 @@ function applyMainTciAdjustment() {
   if (maxRate !== undefined) document.getElementById('tciMaxRate').value = maxRate;
   if (stopTime !== undefined) document.getElementById('tciStopTime').value = stopTime;
   dfsolve();
+}
+
+function generateModelDerivedTestRegimen() {
+  const targetInput = document.getElementById('testRegimenTarget');
+  const durationInput = document.getElementById('testRegimenLoadingDuration');
+  const target = Number(targetInput?.value);
+  const duration = Number(durationInput?.value);
+  [targetInput, durationInput].forEach(input => input?.classList.remove('is-invalid'));
+  if (!Number.isFinite(target) || target <= 0) {
+    targetInput?.classList.add('is-invalid');
+    setSimulationStatus('Enter a predicted plasma target greater than 0 to generate a test regimen.', 'error');
+    return;
+  }
+  if (!Number.isFinite(duration) || duration < 0) {
+    durationInput?.classList.add('is-invalid');
+    setSimulationStatus('Loading-dose duration must be zero or greater.', 'error');
+    return;
+  }
+
+  if (getPkInputMode() === 'microconstants') syncClearanceInputsFromMicroInputs();
+  const pk = getPkParametersFromInputs();
+  const targetBase = target / currentUnit.factor;
+  const loadingDoseMgKg = pk.V1 * targetBase;
+  const maintenanceRateMgKgMin = pk.Cl * targetBase;
+  const finalTime = Math.max(0, parseFloatSafe(tfinalnum?.value, 0));
+
+  bnum.value = formatInputValue(convertMgKgToBolusValue(loadingDoseMgKg, currentBolusUnit, getWeightKg()));
+  tbolusnum.value = formatInputValue(duration);
+  infusionnum.value = formatInputValue(convertMgKgMinToInfusionValue(maintenanceRateMgKgMin, currentInfusionUnit, getWeightKg()));
+  tinfusionnum.value = formatInputValue(Math.max(0, finalTime - duration));
+  const useSchedule = document.getElementById('useSchedule');
+  if (useSchedule) useSchedule.checked = false;
+  const tciEnabled = document.getElementById('tciEnabled');
+  if (tciEnabled) tciEnabled.checked = false;
+  selectedTimelineEvent = null;
+  disableLegacyBolusInfusionInputs(false);
+  dfsolve();
+  setSimulationStatus(`Model-derived test regimen generated: loading ${formatInputValue(loadingDoseMgKg)} mg/kg and maintenance ${formatInputValue(maintenanceRateMgKgMin)} mg/kg/min before unit conversion.`, 'ok');
 }
 
 function disableLegacyBolusInfusionInputs(disabled) {
@@ -3120,6 +3162,7 @@ function wireInputs() {
   document.getElementById('timelineEventSaveBtn')?.addEventListener('click', saveSelectedTimelineEvent);
   document.getElementById('timelineEventDuplicateBtn')?.addEventListener('click', duplicateSelectedTimelineEvent);
   document.getElementById('timelineEventDeleteBtn')?.addEventListener('click', deleteSelectedTimelineEvent);
+  document.getElementById('generateTestRegimenBtn')?.addEventListener('click', generateModelDerivedTestRegimen);
   ['mainTciTargetType', 'mainTciTarget', 'mainTciMaxRate', 'mainTciStopTime'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', applyMainTciAdjustment);
   });
