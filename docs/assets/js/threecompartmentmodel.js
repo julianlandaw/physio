@@ -2798,6 +2798,8 @@ function applyDrugById(id) {
 // Reset + init
 // ============================
 function reset() {
+  selectedTimelineEvent = null;
+  timelineUndoSchedule = null;
   propofol();
   if (weightnum) weightnum.value = 70;
   bnum.value = 1;
@@ -2820,6 +2822,7 @@ function reset() {
   updateScheduleUnitLabels();
   setCurrentDrugLabel();
   dfsolve();
+  setSimulationStatus('Simulation reset to the default propofol example.', 'ok');
 }
 
 function applyMainDoseAdjustment(type) {
@@ -2892,6 +2895,7 @@ function wireInputs() {
   document.getElementById('mainBolusAmount')?.addEventListener('change', () => applyMainDoseAdjustment('bolus'));
   document.getElementById('mainInfusionRate')?.addEventListener('change', () => applyMainDoseAdjustment('infusion'));
   document.getElementById('undoTimelineBtn')?.addEventListener('click', undoTimelineDeletion);
+  document.getElementById('mainResetBtn')?.addEventListener('click', reset);
   document.getElementById('timelineEventSaveBtn')?.addEventListener('click', saveSelectedTimelineEvent);
   document.getElementById('timelineEventDuplicateBtn')?.addEventListener('click', duplicateSelectedTimelineEvent);
   document.getElementById('timelineEventDeleteBtn')?.addEventListener('click', deleteSelectedTimelineEvent);
