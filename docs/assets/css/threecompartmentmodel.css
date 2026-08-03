@@ -9131,7 +9131,7 @@ body.dark-mode .simulation-status[data-state="error"] {
      time positions line up with the graph's x-axis. */
   margin: 0 30px;
   margin-left: 60px;
-  padding: 8px 0 4px;
+  padding: 24px 0 4px;
 }
 
 .dose-timeline__header {
@@ -9155,7 +9155,7 @@ body.dark-mode .simulation-status[data-state="error"] {
 .dose-timeline__track {
   position: relative;
   height: 11px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 999px;
   background: var(--border);
   cursor: crosshair;
@@ -9170,6 +9170,32 @@ body.dark-mode .simulation-status[data-state="error"] {
   border-radius: 999px;
   cursor: pointer;
   z-index: 1;
+}
+
+.dose-timeline__segment-label {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.dose-timeline__segment--bolus .dose-timeline__segment-label {
+  top: -19px;
+  left: -2px;
+  max-width: none;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: #ff7a57;
+  transform: none;
 }
 
 .dose-timeline__segment:focus-visible {
@@ -9192,6 +9218,42 @@ body.dark-mode .simulation-status[data-state="error"] {
 
 .dose-timeline__segment--bolus { background: #ff7a57; }
 .dose-timeline__segment--infusion { background: #1f77b4; }
+
+.timeline-event-editor {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.timeline-event-editor__heading,
+.timeline-event-editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.timeline-event-editor__heading .eyebrow { margin-bottom: 2px; }
+.timeline-event-editor__heading h3 { margin: 0; font-size: .95rem; }
+
+.timeline-event-editor__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.timeline-event-editor__fields label {
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.timeline-event-editor__fields input { margin-top: 4px; }
+
+.timeline-event-editor__actions { justify-content: flex-start; }
 
 .distribution-details,
 .model-details {

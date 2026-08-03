@@ -356,8 +356,41 @@
         <div class="card-body">
           <div id="myDiv1" class="plot plot--primary"></div>
           <div class="dose-timeline" aria-live="polite">
-            <div class="dose-timeline__header"><span>Dosing timeline <small class="dose-timeline__help">Click to add a bolus · drag to add an infusion · click a dose to remove it</small></span><span id="doseTimelineText">—</span></div>
+            <div class="dose-timeline__header"><span>Dosing timeline <small class="dose-timeline__help">Click to add a bolus · drag to add an infusion · click a dose to edit it</small></span><span id="doseTimelineText">—</span></div>
             <div class="dose-timeline__track" id="doseTimelineTrack" aria-label="Editable dosing timeline"></div>
+            <section class="timeline-event-editor" id="timelineEventEditor" aria-labelledby="timelineEventEditorHeading" hidden>
+              <div class="timeline-event-editor__heading">
+                <div>
+                  <p class="eyebrow">Selected dose</p>
+                  <h3 id="timelineEventEditorHeading">Edit timeline event</h3>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" type="button" id="timelineEventDuplicateBtn">Duplicate</button>
+              </div>
+              <div class="timeline-event-editor__fields" id="timelineEventEditorFields">
+                <label id="timelineBolusTimeField" for="timelineEventTime">Time (min)
+                  <input class="form-control form-control-sm" id="timelineEventTime" type="number" min="0" step="0.1" inputmode="decimal">
+                </label>
+                <label id="timelineInfusionStartField" for="timelineEventStart">Start (min)
+                  <input class="form-control form-control-sm" id="timelineEventStart" type="number" min="0" step="0.1" inputmode="decimal">
+                </label>
+                <label id="timelineInfusionEndField" for="timelineEventEnd">End (min)
+                  <input class="form-control form-control-sm" id="timelineEventEnd" type="number" min="0" step="0.1" inputmode="decimal">
+                </label>
+                <label id="timelineBolusDoseField" for="timelineEventDose">Dose <span id="timelineEventDoseUnit">mg/kg</span>
+                  <input class="form-control form-control-sm" id="timelineEventDose" type="number" min="0" step="0.01" inputmode="decimal">
+                </label>
+                <label id="timelineBolusDurationField" for="timelineEventDuration">Duration (min)
+                  <input class="form-control form-control-sm" id="timelineEventDuration" type="number" min="0" step="0.1" inputmode="decimal">
+                </label>
+                <label id="timelineInfusionRateField" for="timelineEventRate">Rate <span id="timelineEventRateUnit">mg/kg/min</span>
+                  <input class="form-control form-control-sm" id="timelineEventRate" type="number" min="0" step="0.01" inputmode="decimal">
+                </label>
+              </div>
+              <div class="timeline-event-editor__actions">
+                <button class="btn btn-sm btn-primary" type="button" id="timelineEventSaveBtn">Update dose</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" id="timelineEventDeleteBtn">Delete dose</button>
+              </div>
+            </section>
           </div>
           <section class="pdf-dose-details" aria-labelledby="pdfDoseDetailsHeading">
             <h3 id="pdfDoseDetailsHeading">Dosing protocol</h3>
