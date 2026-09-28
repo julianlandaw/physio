@@ -31,6 +31,53 @@ function roundToSignificantFigures(num, sigFigs) {
 }
 
 const MAX_SIMULATION_MINUTES = 1440;
+const SIMULATION_STEP_MINUTES = 0.1;
+const TIME_EPSILON = 1e-9;
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function buildSimulationTimes(finalTime, eventTimes = [], step = SIMULATION_STEP_MINUTES) {
+  const tfinal = Math.max(0, parseFloatSafe(finalTime, 0));
+  const times = [0, tfinal];
+  for (let t = step; t < tfinal - TIME_EPSILON; t += step) {
+    times.push(Math.min(t, tfinal));
+  }
+  eventTimes.forEach(value => {
+    const time = Number(value);
+    if (Number.isFinite(time) && time > TIME_EPSILON && time < tfinal - TIME_EPSILON) times.push(time);
+  });
+  times.sort((a, b) => a - b);
+  return times.filter((time, index) => index === 0 || Math.abs(time - times[index - 1]) > TIME_EPSILON);
+}
+
+function createTransition(pk, ke0, duration, cache = new Map()) {
+  const dt = Math.max(0, duration);
+  const cacheKey = dt.toFixed(12);
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+  const mat = math.matrix([
+    [ -dt*(pk.k10 + pk.k12 + pk.k13), dt*pk.k21, dt*pk.k31, 0, dt ],
+    [ dt*pk.k12, -dt*pk.k21, 0, 0, 0 ],
+    [ dt*pk.k13, 0, -dt*pk.k31, 0, 0 ],
+    [ dt*(ke0/pk.V1), 0, 0, -dt*ke0, 0 ],
+    [ 0, 0, 0, 0, 0 ]
+  ]);
+  const M = math.expm(mat);
+  const transition = {
+    a11: M.subset(math.index(0,0)), a12: M.subset(math.index(0,1)), a13: M.subset(math.index(0,2)), a15: M.subset(math.index(0,4)),
+    a21: M.subset(math.index(1,0)), a22: M.subset(math.index(1,1)), a23: M.subset(math.index(1,2)), a25: M.subset(math.index(1,4)),
+    a31: M.subset(math.index(2,0)), a32: M.subset(math.index(2,1)), a33: M.subset(math.index(2,2)), a35: M.subset(math.index(2,4)),
+    a41: M.subset(math.index(3,0)), a42: M.subset(math.index(3,1)), a43: M.subset(math.index(3,2)), a44: M.subset(math.index(3,3)), a45: M.subset(math.index(3,4))
+  };
+  cache.set(cacheKey, transition);
+  return transition;
+}
 
 // ============================
 // Drawer + collapsible cards
@@ -297,14 +344,11 @@ function formatInputValue(value) {
 
 function setDisplayUnit(unitName, preserveValue = true) {
   const nextUnit = UNITS[unitName] || UNITS['mg/mL'];
-  if (preserveValue && initialpnum && currentUnit.factor !== nextUnit.factor) {
-    const value = parseFloat(initialpnum.value);
-    if (Number.isFinite(value)) initialpnum.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
-  }
-  const tciTarget = document.getElementById('tciTarget');
-  if (preserveValue && tciTarget && currentUnit.factor !== nextUnit.factor) {
-    const value = parseFloat(tciTarget.value);
-    if (Number.isFinite(value)) tciTarget.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
+  if (preserveValue && currentUnit.factor !== nextUnit.factor) {
+    [initialpnum, document.getElementById('tciTarget'), document.getElementById('testRegimenTarget')].forEach(input => {
+      const value = parseFloat(input?.value);
+      if (input && Number.isFinite(value)) input.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
+    });
   }
   currentUnit = nextUnit;
   initialphtml.innerHTML = `[<i>P</i>]<sub>init</sub> (${currentUnit.name})`;
@@ -626,58 +670,135 @@ function setScheduleToDOM(schedule) {
   else ins.forEach(i => addInfusionRow(i));
 }
 
-function buildInputRateFromSchedule(schedule, dt, tfinal) {
-  const N = Math.ceil(tfinal / dt);
-  const u = new Array(N).fill(0);
-  const instant = new Array(N + 1).fill(0);
-  if (!schedule || !schedule.enabled) return { u, instant };
+function buildDosingPlan({ schedule, basic, bolusUnit, infusionUnit, weightKg }) {
+  const rateEvents = [];
+  const instantEvents = [];
+  const addBolus = (time, dose, duration) => {
+    const start = Math.max(0, parseFloatSafe(time, 0));
+    const amount = convertBolusValueToMgKg(dose, bolusUnit, weightKg);
+    const length = Math.max(0, parseFloatSafe(duration, 0));
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (length <= TIME_EPSILON) instantEvents.push({ time: start, amount });
+    else rateEvents.push({ start, end: start + length, rate: amount / length, kind: 'bolus' });
+  };
+  const addInfusion = (startValue, endValue, rateValue) => {
+    const start = Math.max(0, parseFloatSafe(startValue, 0));
+    const end = Math.max(0, parseFloatSafe(endValue, 0));
+    const rate = convertInfusionValueToMgKgMin(rateValue, infusionUnit, weightKg);
+    if (!Number.isFinite(rate) || rate <= 0 || end <= start + TIME_EPSILON) return;
+    rateEvents.push({ start, end, rate, kind: 'infusion' });
+  };
 
-  (schedule.boluses || []).forEach(ev => {
-    const t = Math.max(0, parseFloatSafe(ev.time, 0));
-    const doseMgKg = convertBolusToMgKg(ev.dose, currentBolusUnit);
-    const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
-    if (!Number.isFinite(doseMgKg) || doseMgKg === 0) return;
-    const idx0 = clamp(Math.round(t / dt), 0, N);
-    if (dur <= 0) {
-      instant[idx0] += doseMgKg;
-      return;
+  if (schedule?.enabled) {
+    (schedule.boluses || []).forEach(event => addBolus(event.time, event.dose, event.duration));
+    (schedule.infusions || []).forEach(event => addInfusion(event.start, event.end, event.rate));
+  } else {
+    const loadingDuration = Math.max(0, parseFloatSafe(basic?.tbolus, 0));
+    addBolus(0, basic?.bolus, loadingDuration);
+    addInfusion(loadingDuration, loadingDuration + Math.max(0, parseFloatSafe(basic?.tinfusion, 0)), basic?.infusion);
+  }
+  return { rateEvents, instantEvents };
+}
+
+function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan, tci }) {
+  const tfinal = Math.max(0, finalTime);
+  const hasEffectSite = Number.isFinite(ke0) && ke0 > 0;
+  const eventTimes = tci?.enabled
+    ? [tci.stopTime]
+    : [
+        ...(dosingPlan?.rateEvents || []).flatMap(event => [event.start, event.end]),
+        ...(dosingPlan?.instantEvents || []).map(event => event.time)
+      ];
+  const ts = buildSimulationTimes(tfinal, eventTimes);
+  const N = ts.length - 1;
+  const xs1 = new Array(N + 1).fill(0);
+  const xs2 = new Array(N + 1).fill(0);
+  const xs3 = new Array(N + 1).fill(0);
+  const ces = new Array(N + 1).fill(0);
+  const intervalRates = new Array(N).fill(0);
+  const transitionCache = new Map();
+
+  xs1[0] = initialConcentration * pk.V1;
+  ces[0] = initialConcentration;
+  let totalDoseMgKg = 0;
+  let lastRateEndIndex = null;
+
+  const instantAt = time => (dosingPlan?.instantEvents || []).reduce((sum, event) =>
+    Math.abs(event.time - time) <= TIME_EPSILON ? sum + event.amount : sum, 0);
+  const rateOverInterval = (start, end) => {
+    const duration = end - start;
+    if (duration <= 0) return 0;
+    return (dosingPlan?.rateEvents || []).reduce((sum, event) => {
+      const overlap = Math.max(0, Math.min(end, event.end) - Math.max(start, event.start));
+      return sum + event.rate * overlap / duration;
+    }, 0);
+  };
+
+  for (let i = 0; i < N; i++) {
+    const instant = tci?.enabled ? 0 : instantAt(ts[i]);
+    if (instant > 0) {
+      xs1[i] += instant;
+      totalDoseMgKg += instant;
     }
-    const idx1 = clamp(Math.round((t + dur) / dt), 0, N);
-    const end = Math.max(idx0 + 1, idx1);
-    const rate = doseMgKg / dur;
-    for (let i = idx0; i < Math.min(end, N); i++) u[i] += rate;
-  });
+    const duration = ts[i + 1] - ts[i];
+    const transition = createTransition(pk, hasEffectSite ? ke0 : 0, duration, transitionCache);
+    let rate = 0;
+    if (tci?.enabled) {
+      const baseCpNext = (transition.a11*xs1[i] + transition.a12*xs2[i] + transition.a13*xs3[i]) / pk.V1;
+      const baseCeNext = transition.a41*xs1[i] + transition.a42*xs2[i] + transition.a43*xs3[i] + transition.a44*ces[i];
+      const gain = tci.targetType === 'ce' ? transition.a45 : transition.a15 / pk.V1;
+      const baseline = tci.targetType === 'ce' ? baseCeNext : baseCpNext;
+      rate = ts[i] < tci.stopTime - TIME_EPSILON && gain > 0
+        ? clamp((tci.targetBase - baseline) / gain, 0, tci.maxRate)
+        : 0;
+    } else {
+      rate = rateOverInterval(ts[i], ts[i + 1]);
+    }
+    intervalRates[i] = rate;
+    totalDoseMgKg += rate * duration;
+    if (Math.abs(rate) > 1e-12) lastRateEndIndex = i + 1;
 
-  (schedule.infusions || []).forEach(ev => {
-    let s = Math.max(0, parseFloatSafe(ev.start, 0));
-    let e = Math.max(0, parseFloatSafe(ev.end, 0));
-    if (e < s) { const tmp = e; e = s; s = tmp; }
-    const rateMgKgMin = convertInfusionToMgKgMin(ev.rate, currentInfusionUnit);
-    if (!Number.isFinite(rateMgKgMin) || rateMgKgMin === 0) return;
-    const idx0 = clamp(Math.round(s / dt), 0, N);
-    const idx1 = clamp(Math.round(e / dt), 0, N);
-    if (idx1 <= idx0) return;
-    for (let i = idx0; i < Math.min(idx1, N); i++) u[i] += rateMgKgMin;
-  });
+    const x1 = xs1[i], x2 = xs2[i], x3 = xs3[i], ce = ces[i];
+    xs1[i+1] = transition.a11*x1 + transition.a12*x2 + transition.a13*x3 + rate*transition.a15;
+    xs2[i+1] = transition.a21*x1 + transition.a22*x2 + transition.a23*x3 + rate*transition.a25;
+    xs3[i+1] = transition.a31*x1 + transition.a32*x2 + transition.a33*x3 + rate*transition.a35;
+    ces[i+1] = transition.a41*x1 + transition.a42*x2 + transition.a43*x3 + transition.a44*ce + rate*transition.a45;
+  }
 
-  return { u, instant };
+  const finalInstant = tci?.enabled ? 0 : instantAt(ts[N]);
+  if (finalInstant > 0) {
+    xs1[N] += finalInstant;
+    totalDoseMgKg += finalInstant;
+  }
+
+  return {
+    ts, xs1, xs2, xs3, ces, intervalRates, totalDoseMgKg, lastRateEndIndex, hasEffectSite,
+    finalActiveRate: N > 0 ? intervalRates[N - 1] : 0,
+    cp: xs1.map(value => value / pk.V1),
+    ce: ces.slice()
+  };
 }
 
 function updateRegimenOverview(params, schedule) {
   const drug = DRUGS.find(d => d.id === currentDrug);
-  const drugLabel = drug?.label || 'Custom model';
+  const drugLabel = drug ? `${drug.label}${presetIsModified ? ' — modified' : ''}` : 'Custom model';
   const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
   setText('summaryDrug', drugLabel);
   setText('summaryWeight', `${formatInputValue(params.weightKg)} kg`);
   setText('summaryModel', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes');
-  setText('summarySource', drug?.note || 'Custom parameters — review volumes, clearances, effect-site rate, units, and source assumptions before interpreting this simulation.');
+  const sourceText = drug?.note || 'Custom parameters — review volumes, clearances, effect-site rate, units, and source assumptions before interpreting this simulation.';
+  setText('summarySource', presetIsModified
+    ? `${sourceText} PK/effect-site parameters have been modified; preset therapeutic ranges are hidden.`
+    : sourceText);
 
   let segments = [];
   let description = '';
   const tci = getTciConfig();
   const plotCaption = document.getElementById('primaryPlotCaption');
   if (plotCaption) {
-    plotCaption.textContent = tci.enabled
+    plotCaption.textContent = params.ke0 <= 0
+      ? 'Cp = central plasma concentration. Effect-site concentration is unavailable because no effect-site model is defined.'
+      : tci.enabled
       ? 'Cp = central plasma; Ce = effect site. The dashed green line is the educational TCI target; the rate chart shows calculated delivery.'
       : 'Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.';
   }
@@ -1160,7 +1281,7 @@ function updatePdfReportSummary(params, schedule) {
   const drug = DRUGS.find(item => item.id === currentDrug);
   const tci = getTciConfig();
   const items = [
-    ['Drug', drug?.label || 'Custom model'],
+    ['Drug/model', drug ? `${drug.label}${presetIsModified ? ' — modified parameters' : ''}` : 'Custom model'],
     ['Patient weight', `${formatInputValue(params.weightKg)} kg`],
     ['Simulation duration', `${formatInputValue(params.tfinal)} min`],
     ['PK inputs', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes'],
@@ -1277,7 +1398,14 @@ function ensureScheduleUI() {
 // Therapeutic ranges + toggle (kept)
 // ============================
 let currentDrug = null;
+let presetIsModified = false;
 let showTherapeutic = true;
+
+function markPresetModified() {
+  if (!currentDrug || presetIsModified) return;
+  presetIsModified = true;
+  setCurrentDrugLabel();
+}
 
 const EFFECT_SITE_RANGES = {
   "propofol": [
@@ -1339,7 +1467,7 @@ function valToDisplayY(value, unitName) {
 function buildTherapeuticShapes(finalTime) {
   const shapes = [];
   const legendTraces = [];
-  if (!showTherapeutic || !currentDrug) return { shapes, legendTraces };
+  if (!showTherapeutic || !currentDrug || presetIsModified) return { shapes, legendTraces };
   const ranges = EFFECT_SITE_RANGES[currentDrug] || [];
   if (!Array.isArray(ranges) || ranges.length === 0) return { shapes, legendTraces };
   const x0 = 0, x1 = finalTime;
@@ -1455,6 +1583,7 @@ function getCurrentState(name = 'Current') {
     id: 'live',
     name,
     drug: currentDrug,
+    presetModified: presetIsModified,
     patient: {
       weightKg: getWeightKg()
     },
@@ -1472,6 +1601,13 @@ function getCurrentState(name = 'Current') {
       initialp: parseFloat(initialpnum.value)
     },
     schedule: getScheduleFromDOM(),
+    tci: {
+      enabled: Boolean(document.getElementById('tciEnabled')?.checked),
+      targetType: document.getElementById('tciTargetType')?.value === 'ce' ? 'ce' : 'cp',
+      target: parseFloatSafe(document.getElementById('tciTarget')?.value, 0),
+      maxRate: parseFloatSafe(document.getElementById('tciMaxRate')?.value, 0),
+      stopTime: parseFloatSafe(document.getElementById('tciStopTime')?.value, 0)
+    },
     pk: {
       inputMode: getPkInputMode(),
       Vd1: parseFloatSafe(Vd1num.value, 0),
@@ -1506,12 +1642,12 @@ function renderStrategyList() {
       <div class="list-group-item ${activeClass}" data-id="${s.id}">
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div class="flex-grow-1">
-            <input class="form-control form-control-sm strategy-name" data-id="${s.id}" value="${s.name}" />
+            <input class="form-control form-control-sm strategy-name" data-id="${escapeHtml(s.id)}" value="${escapeHtml(s.name)}" />
             <div class="small text-muted mt-1">${subtitle}</div>
           </div>
           <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" type="button" data-action="load" data-id="${s.id}">Load</button>
-            <button class="btn btn-outline-danger" type="button" data-action="delete" data-id="${s.id}">✕</button>
+            <button class="btn btn-outline-primary" type="button" data-action="load" data-id="${escapeHtml(s.id)}">Load</button>
+            <button class="btn btn-outline-danger" type="button" data-action="delete" data-id="${escapeHtml(s.id)}">✕</button>
           </div>
         </div>
       </div>`;
@@ -1548,6 +1684,12 @@ function loadStrategyToInputs(id) {
     console.warn('Could not switch drug preset:', e);
   }
 
+  currentDrug = s.drug || null;
+  presetIsModified = Boolean(s.presetModified);
+  if (typeof s.units?.conc === 'string') setDisplayUnit(s.units.conc, false);
+  if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus, false);
+  if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion, false);
+
   bnum.value = s.inputs.b;
   tbolusnum.value = s.inputs.tbolus;
   infusionnum.value = s.inputs.infusion;
@@ -1574,9 +1716,20 @@ function loadStrategyToInputs(id) {
   else syncMicroInputsFromClearanceInputs();
   updatePkInputVisibility();
 
-  if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus, false);
-  if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion, false);
   if (s.schedule) setScheduleToDOM(s.schedule);
+  const tciEnabled = document.getElementById('tciEnabled');
+  if (tciEnabled) {
+    tciEnabled.disabled = false;
+    tciEnabled.checked = Boolean(s.tci?.enabled);
+  }
+  if (s.tci) {
+    document.getElementById('tciTargetType').value = s.tci.targetType === 'ce' ? 'ce' : 'cp';
+    document.getElementById('tciTarget').value = s.tci.target;
+    document.getElementById('tciMaxRate').value = s.tci.maxRate;
+    document.getElementById('tciStopTime').value = s.tci.stopTime;
+  }
+  disableLegacyBolusInfusionInputs(Boolean(s.tci?.enabled || s.schedule?.enabled));
+  setCurrentDrugLabel();
   activeStrategyId = s.id;
   renderStrategyList();
   dfsolve();
@@ -1625,8 +1778,6 @@ function ensureCompareUI() {
 function simulateStrategy(state) {
   const p = { ...(state.pk || {}) };
   const inp = state.inputs;
-  const dt = 0.1;
-  const N = Math.ceil(inp.tfinal / dt);
 
   if ((p.inputMode || "clearance") === "microconstants") {
     p.Vd2 = p.k21 > 0 ? (p.k12 * p.Vd1) / p.k21 : 0;
@@ -1657,92 +1808,29 @@ function simulateStrategy(state) {
   const bUnit = BOLUSUNITS[state.units.bolus] || BOLUSUNITS['mg/kg'];
   const iUnit = INFUSIONUNITS[state.units.infusion] || INFUSIONUNITS['mg/kg/min'];
   const weightKg = (state.patient?.weightKg && state.patient.weightKg > 0) ? state.patient.weightKg : 70;
-
-  const tbol = Math.max(0, inp.tbolus);
-  const tinf = Math.max(0, inp.tinfusion);
-  const bolusDoseMgKg = convertBolusValueToMgKg(inp.b, bUnit, weightKg);
-  const bolusRate = (tbol > 0 ? (bolusDoseMgKg / tbol) : 0);
-  const infusionRate = convertInfusionValueToMgKgMin(inp.infusion, iUnit, weightKg);
-  const Nhalf1 = Math.ceil(tbol / dt);
-  const Nhalf2 = Nhalf1 + Math.ceil(tinf / dt);
-
-  const schedule = (state && state.schedule && state.schedule.enabled) ? state.schedule : { enabled: false };
-
-  function buildRatesFromStateSchedule() {
-    const u = new Array(N).fill(0);
-    const instant = new Array(N + 1).fill(0);
-    if (!schedule || !schedule.enabled) return { u, instant };
-
-    (schedule.boluses || []).forEach(ev => {
-      const t = Math.max(0, parseFloatSafe(ev.time, 0));
-      const doseMgKg = convertBolusValueToMgKg(ev.dose, bUnit, weightKg);
-      const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
-      if (!Number.isFinite(doseMgKg) || doseMgKg === 0) return;
-      const idx0 = clamp(Math.round(t / dt), 0, N);
-      if (dur <= 0) { instant[idx0] += doseMgKg; return; }
-      const idx1 = clamp(Math.round((t + dur) / dt), 0, N);
-      const end = Math.max(idx0 + 1, idx1);
-      const rate = doseMgKg / dur;
-      for (let i = idx0; i < Math.min(end, N); i++) u[i] += rate;
-    });
-
-    (schedule.infusions || []).forEach(ev => {
-      let s = Math.max(0, parseFloatSafe(ev.start, 0));
-      let e = Math.max(0, parseFloatSafe(ev.end, 0));
-      if (e < s) { const tmp = e; e = s; s = tmp; }
-      const rateMgKgMin = convertInfusionValueToMgKgMin(ev.rate, iUnit, weightKg);
-      if (!Number.isFinite(rateMgKgMin) || rateMgKgMin === 0) return;
-      const idx0 = clamp(Math.round(s / dt), 0, N);
-      const idx1 = clamp(Math.round(e / dt), 0, N);
-      if (idx1 <= idx0) return;
-      for (let i = idx0; i < Math.min(idx1, N); i++) u[i] += rateMgKgMin;
-    });
-    return { u, instant };
-  }
-
-  const sched = buildRatesFromStateSchedule();
-  const ts = new Array(N + 1);
-  for (let i = 0; i <= N; i++) ts[i] = i * dt;
-  const xs1 = new Array(N + 1);
-  const xs2 = new Array(N + 1);
-  const xs3 = new Array(N + 1);
-  const ces = new Array(N + 1);
-  xs1[0] = initialp_mgml * p.Vd1;
-  xs2[0] = 0;
-  xs3[0] = 0;
-  ces[0] = initialp_mgml;
-  const mat = math.matrix([
-    [ -dt*(k10 + k12 + k13), dt*k21, dt*k31, 0, dt ],
-    [ dt*k12, -dt*k21, 0, 0, 0 ],
-    [ dt*k13, 0, -dt*k31, 0, 0 ],
-    [ dt*(p.ke0/p.Vd1), 0, 0, -dt*(p.ke0), 0 ],
-    [ 0, 0, 0, 0, 0 ]
-  ]);
-  const M = math.expm(mat);
-  const a11 = M.subset(math.index(0,0)), a12 = M.subset(math.index(0,1)), a13 = M.subset(math.index(0,2)), a15 = M.subset(math.index(0,4));
-  const a21 = M.subset(math.index(1,0)), a22 = M.subset(math.index(1,1)), a23 = M.subset(math.index(1,2)), a25 = M.subset(math.index(1,4));
-  const a31 = M.subset(math.index(2,0)), a32 = M.subset(math.index(2,1)), a33 = M.subset(math.index(2,2)), a35 = M.subset(math.index(2,4));
-  const a41 = M.subset(math.index(3,0)), a42 = M.subset(math.index(3,1)), a43 = M.subset(math.index(3,2)), a44 = M.subset(math.index(3,3)), a45 = M.subset(math.index(3,4));
-  for (let i = 0; i < N; i++) {
-    let u = 0;
-    if (schedule && schedule.enabled) {
-      if (sched.instant && sched.instant[i]) xs1[i] = xs1[i] + sched.instant[i];
-      u = (sched.u && sched.u[i]) ? sched.u[i] : 0;
-    } else {
-      if (i < Nhalf1) u = bolusRate;
-      else if (i < Nhalf2) u = infusionRate;
-      else u = 0;
-    }
-    const x1 = xs1[i], x2 = xs2[i], x3 = xs3[i], ce = ces[i];
-    xs1[i+1] = a11*x1 + a12*x2 + a13*x3 + u*a15;
-    xs2[i+1] = a21*x1 + a22*x2 + a23*x3 + u*a25;
-    xs3[i+1] = a31*x1 + a32*x2 + a33*x3 + u*a35;
-    ces[i+1] = a41*x1 + a42*x2 + a43*x3 + a44*ce + u*a45;
-  }
-  if (schedule?.enabled && sched.instant?.[N]) xs1[N] += sched.instant[N];
-  const cp = xs1.map(x => x / p.Vd1);
-  const ce = ces.slice();
-  return { ts, cp, ce };
+  const dosingPlan = buildDosingPlan({
+    schedule: state.schedule,
+    basic: { bolus: inp.b, tbolus: inp.tbolus, infusion: inp.infusion, tinfusion: inp.tinfusion },
+    bolusUnit: bUnit,
+    infusionUnit: iUnit,
+    weightKg
+  });
+  const savedTci = state.tci || { enabled: false };
+  const tci = {
+    enabled: Boolean(savedTci.enabled),
+    targetType: savedTci.targetType === 'ce' ? 'ce' : 'cp',
+    targetBase: parseFloatSafe(savedTci.target, 0) / initUnit.factor,
+    maxRate: convertInfusionValueToMgKgMin(savedTci.maxRate, iUnit, weightKg),
+    stopTime: Math.max(0, parseFloatSafe(savedTci.stopTime, 0))
+  };
+  return simulatePkModel({
+    pk: { V1: p.Vd1, V2: p.Vd2, V3: p.Vd3, k10, k12, k21, k13, k31 },
+    ke0: parseFloatSafe(p.ke0, 0),
+    initialConcentration: initialp_mgml,
+    finalTime: Math.max(0, parseFloatSafe(inp.tfinal, 0)),
+    dosingPlan,
+    tci
+  });
 }
 
 function trapz(y, x) {
@@ -1758,54 +1846,14 @@ function trapz(y, x) {
 function computeMetrics(state, sim) {
   const { ts, cp, ce } = sim;
   const idxCp = cp.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
-  const idxCe = ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
-
-  const bUnit = BOLUSUNITS[state.units.bolus] || BOLUSUNITS['mg/kg'];
-  const iUnit = INFUSIONUNITS[state.units.infusion] || INFUSIONUNITS['mg/kg/min'];
-  const tfinal = Math.max(0, parseFloatSafe(state.inputs?.tfinal, 0));
-  const weightKg = (state.patient?.weightKg && state.patient.weightKg > 0) ? state.patient.weightKg : 70;
-
-  let totalDose_mgkg = 0;
-  const schedule = (state && state.schedule && state.schedule.enabled) ? state.schedule : null;
-
-  if (schedule) {
-    (schedule.boluses || []).forEach(ev => {
-      const t = Math.max(0, parseFloatSafe(ev.time, 0));
-      const dose_mgkg = convertBolusValueToMgKg(ev.dose, bUnit, weightKg);
-      const dur = Math.max(0, parseFloatSafe(ev.duration, 0));
-      if (!Number.isFinite(dose_mgkg) || dose_mgkg === 0) return;
-      if (t > tfinal) return;
-      if (dur <= 0) {
-        totalDose_mgkg += dose_mgkg;
-      } else {
-        const delivered = Math.max(0, Math.min(t + dur, tfinal) - t);
-        totalDose_mgkg += dose_mgkg * (delivered / dur);
-      }
-    });
-
-    (schedule.infusions || []).forEach(ev => {
-      let s = Math.max(0, parseFloatSafe(ev.start, 0));
-      let e = Math.max(0, parseFloatSafe(ev.end, 0));
-      if (e < s) { const tmp = e; e = s; s = tmp; }
-      if (s > tfinal) return;
-      const rate_mgkgmin = convertInfusionValueToMgKgMin(ev.rate, iUnit, weightKg);
-      if (!Number.isFinite(rate_mgkgmin) || rate_mgkgmin === 0) return;
-      const delivered = Math.max(0, Math.min(e, tfinal) - s);
-      totalDose_mgkg += rate_mgkgmin * delivered;
-    });
-  } else {
-    const bolusDose_mgkg = convertBolusValueToMgKg(parseFloatSafe(state.inputs?.b, 0), bUnit, weightKg);
-    const infusionRate_mgkgmin = convertInfusionValueToMgKgMin(parseFloatSafe(state.inputs?.infusion, 0), iUnit, weightKg);
-    const tinf = Math.max(0, parseFloatSafe(state.inputs?.tinfusion, 0));
-    totalDose_mgkg = bolusDose_mgkg + infusionRate_mgkgmin * tinf;
-  }
+  const idxCe = sim.hasEffectSite ? ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0) : null;
 
   return {
-    totalDose_mgkg,
+    totalDose_mgkg: sim.totalDoseMgKg,
     cmaxCp: cp[idxCp], tmaxCp: ts[idxCp],
-    cmaxCe: ce[idxCe], tmaxCe: ts[idxCe],
-    aucCp: trapz(cp, ts), aucCe: trapz(ce, ts),
-    finalCp: cp[cp.length - 1], finalCe: ce[ce.length - 1]
+    cmaxCe: idxCe == null ? null : ce[idxCe], tmaxCe: idxCe == null ? null : ts[idxCe],
+    aucCp: trapz(cp, ts), aucCe: sim.hasEffectSite ? trapz(ce, ts) : null,
+    finalCp: cp[cp.length - 1], finalCe: sim.hasEffectSite ? ce[ce.length - 1] : null
   };
 }
 
@@ -1814,7 +1862,7 @@ function renderCompareResults(rows, unitLabel) {
   if (!container) return;
   if (!rows || !rows.length) { container.innerHTML = ''; return; }
 
-  const fmt = (x, sig=3) => roundToSignificantFigures(x, sig);
+  const fmt = (x, sig=3) => Number.isFinite(x) ? roundToSignificantFigures(x, sig) : 'N/A';
 
   const header = `
     <table class="table table-bordered table-sm align-middle text-center">
@@ -1836,14 +1884,14 @@ function renderCompareResults(rows, unitLabel) {
     const m = r.metrics;
     return `
       <tr>
-        <td class="text-start">${r.state.name}</td>
+        <td class="text-start">${escapeHtml(r.state.name)}</td>
         <td>${fmt(m.totalDose_mgkg, 4)}</td>
         <td>${fmt(m.cmaxCp * currentUnit.factor, 4)}</td>
         <td>${fmt(m.tmaxCp, 3)}</td>
-        <td>${fmt(m.cmaxCe * currentUnit.factor, 4)}</td>
+        <td>${fmt(m.cmaxCe == null ? null : m.cmaxCe * currentUnit.factor, 4)}</td>
         <td>${fmt(m.tmaxCe, 3)}</td>
         <td>${fmt(m.aucCp * currentUnit.factor, 4)}</td>
-        <td>${fmt(m.aucCe * currentUnit.factor, 4)}</td>
+        <td>${fmt(m.aucCe == null ? null : m.aucCe * currentUnit.factor, 4)}</td>
       </tr>`;
   }).join('');
 
@@ -1867,7 +1915,9 @@ function plotComparisonFromCurrent() {
     const sim = simulateStrategy(s);
     const color = palette[i % palette.length];
     traces.push({ x: sim.ts, y: sim.cp.map(v => v * yFactor), name: `${s.name} Cp (${unitLabel})`, legendgroup: s.id, line: { color, width: 2 } });
-    traces.push({ x: sim.ts, y: sim.ce.map(v => v * yFactor), name: `${s.name} Ce (${unitLabel})`, legendgroup: s.id, line: { color, width: 2, dash: 'dot' } });
+    if (sim.hasEffectSite) {
+      traces.push({ x: sim.ts, y: sim.ce.map(v => v * yFactor), name: `${s.name} Ce (${unitLabel})`, legendgroup: s.id, line: { color, width: 2, dash: 'dot' } });
+    }
     metricsRows.push({ state: s, sim, metrics: computeMetrics(s, sim) });
   });
 
@@ -2061,12 +2111,16 @@ function validateSimulationInputs() {
   }
   readNumber('initialp', 'Initial concentration', { min: 0 });
   readNumber('Vd1', 'V1', { strictlyPositive: true });
-  readNumber('b', 'Bolus dose', { min: 0 });
-  readNumber('tbolus', 'Bolus time', { min: 0 });
-  readNumber('infusion', 'Infusion rate', { min: 0 });
-  readNumber('tinfusion', 'Infusion time', { min: 0 });
   readNumber('ke0', 'ke0', { min: 0, optional: true });
-  if (document.getElementById('tciEnabled')?.checked) {
+  const tciActive = Boolean(document.getElementById('tciEnabled')?.checked);
+  const scheduleActive = !tciActive && Boolean(document.getElementById('useSchedule')?.checked);
+  if (!tciActive && !scheduleActive) {
+    readNumber('b', 'Bolus dose', { min: 0 });
+    readNumber('tbolus', 'Loading-dose duration', { min: 0 });
+    readNumber('infusion', 'Infusion rate', { min: 0 });
+    readNumber('tinfusion', 'Infusion duration', { min: 0 });
+  }
+  if (tciActive) {
     const target = readNumber('tciTarget', 'TCI target', { min: 0 });
     const maxRate = readNumber('tciMaxRate', 'TCI maximum rate', { strictlyPositive: true });
     readNumber('tciStopTime', 'TCI stop time', { min: 0 });
@@ -2095,7 +2149,7 @@ function validateSimulationInputs() {
   }
 
   const schedule = getScheduleFromDOM();
-  if (schedule.enabled) {
+  if (scheduleActive && schedule.enabled) {
     $$('#bolusEventsTable tbody tr').forEach((row, index) => {
       const time = Number(row.querySelector('[data-field="time"]')?.value);
       const dose = Number(row.querySelector('[data-field="dose"]')?.value);
@@ -2175,116 +2229,46 @@ function dfsolve() {
   params.tbolus = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
   params.tinfusion = Math.max(0, parseFloatSafe(tinfusionnum.value, 0));
   params.weightKg = getWeightKg();
-
-  // Legacy b/tbolus is still read (but disabled when schedule is enabled)
-  const legacyBolusDoseMgKg = convertBolusValueToMgKg(bnum.value, currentBolusUnit, params.weightKg);
-  params.b = params.tbolus > 0 ? legacyBolusDoseMgKg / params.tbolus : 0; // wt/wt/time
   params.initialp = parseFloatSafe(initialpnum.value, 0);
   params.tfinal = parseFloatSafe(tfinalnum.value, 240);
-  params.dt = 0.1;
+  params.dt = SIMULATION_STEP_MINUTES;
   params.ke0 = Number.isFinite(parseFloat(ke0num.value)) ? parseFloat(ke0num.value) : 0;
-
-
-  const N = Math.ceil(params.tfinal / params.dt);
-  const Nhalf1 = Math.ceil(params.tbolus / params.dt);
-  const Nhalf2 = Nhalf1 + Math.ceil(params.tinfusion / params.dt);
-
-  const ts = new Array(N + 1);
-  const xs1 = new Array(N + 1);
-  const xs2 = new Array(N + 1);
-  const xs3 = new Array(N + 1);
-  const ces = new Array(N + 1);
-  for (let i = 0; i < N + 1; i++) ts[i] = i * params.dt;
-
-  let x01 = params.initialp * params.Vd1 / currentUnit.factor;
-  xs1[0] = x01; xs2[0] = 0; xs3[0] = 0;
-  ces[0] = params.initialp / currentUnit.factor;
-
-  const dt = params.dt;
-  const mat = math.matrix([
-    [ -dt*(k10 + k12 + k13), dt*k21, dt*k31, 0, dt ],
-    [ dt*k12, -dt*(k21), 0, 0, 0 ],
-    [ dt*k13, 0, -dt*(k31), 0, 0 ],
-    [ dt*(params.ke0/params.Vd1), 0, 0, -dt*(params.ke0), 0 ],
-    [ 0, 0, 0, 0, 0 ]
-  ]);
-  const M = math.expm(mat);
-
-  const a11 = M.subset(math.index(0,0)), a12 = M.subset(math.index(0,1)), a13 = M.subset(math.index(0,2)), a15 = M.subset(math.index(0,4));
-  const a21 = M.subset(math.index(1,0)), a22 = M.subset(math.index(1,1)), a23 = M.subset(math.index(1,2)), a25 = M.subset(math.index(1,4));
-  const a31 = M.subset(math.index(2,0)), a32 = M.subset(math.index(2,1)), a33 = M.subset(math.index(2,2)), a35 = M.subset(math.index(2,4));
-  const a41 = M.subset(math.index(3,0)), a42 = M.subset(math.index(3,1)), a43 = M.subset(math.index(3,2)), a44 = M.subset(math.index(3,3)), a45 = M.subset(math.index(3,4));
 
   const schedule = getScheduleFromDOM();
   const tci = getTciConfig();
-  const schedRates = buildInputRateFromSchedule(schedule, params.dt, params.tfinal);
-  const uArr = schedRates.u;
-  const instArr = schedRates.instant;
+  const dosingPlan = buildDosingPlan({
+    schedule,
+    basic: {
+      bolus: parseFloatSafe(bnum.value, 0),
+      tbolus: params.tbolus,
+      infusion: parseFloatSafe(infusionnum.value, 0),
+      tinfusion: params.tinfusion
+    },
+    bolusUnit: currentBolusUnit,
+    infusionUnit: currentInfusionUnit,
+    weightKg: params.weightKg
+  });
+  const simulation = simulatePkModel({
+    pk: { V1: params.Vd1, V2: params.Vd2, V3: params.Vd3, k10, k12, k21, k13, k31 },
+    ke0: params.ke0,
+    initialConcentration: params.initialp / currentUnit.factor,
+    finalTime: params.tfinal,
+    dosingPlan,
+    tci
+  });
+  const { ts, xs1, xs2, xs3, ces } = simulation;
+  const N = ts.length - 1;
   updateRegimenOverview(params, schedule);
-
-  
-  let counter = 0;
-
-  // Track end of LAST rate-based input (infusions + finite-duration boluses)
-  const EPS_DOSE = 1e-12;
-  let lastRateEndIdx = -1;   // index in [0..N] where the final rate interval ends
-  const tciRates = new Array(N).fill(0);
-
-  while (counter < N) {
-    let u = 0;
-    if (tci.enabled) {
-      const baseCpNext = (a11*xs1[counter] + a12*xs2[counter] + a13*xs3[counter]) / params.Vd1;
-      const baseCeNext = a41*xs1[counter] + a42*xs2[counter] + a43*xs3[counter] + a44*ces[counter];
-      const targetBase = tci.targetBase;
-      const gain = tci.targetType === 'ce' ? a45 : a15 / params.Vd1;
-      const baseline = tci.targetType === 'ce' ? baseCeNext : baseCpNext;
-      u = (ts[counter] < tci.stopTime && gain > 0) ? clamp((targetBase - baseline) / gain, 0, tci.maxRate) : 0;
-      tciRates[counter] = u;
-      if (Math.abs(u) > EPS_DOSE) lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
-    } else if (schedule && schedule.enabled) {
-      if (instArr && instArr[counter]) xs1[counter] = xs1[counter] + instArr[counter];
-      u = (uArr && uArr[counter]) ? uArr[counter] : 0;
-
-      // If u is nonzero, that rate runs on [counter, counter+1), so dosing ends at counter+1
-      if (Math.abs(u) > EPS_DOSE) {
-        lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
-      }
-    } else {
-      if (counter < Nhalf1) u = params.b;
-      else if (counter < Nhalf2) u = convertInfusionValueToMgKgMin(infusionnum.value, currentInfusionUnit, params.weightKg);
-      else u = 0;
-
-      if (Math.abs(u) > EPS_DOSE) {
-        lastRateEndIdx = Math.max(lastRateEndIdx, counter + 1);
-      }
-    }
-
-    params.b = u;
-
-    const x1n = a11*xs1[counter] + a12*xs2[counter] + a13*xs3[counter] + params.b*a15;
-    const x2n = a21*xs1[counter] + a22*xs2[counter] + a23*xs3[counter] + params.b*a25;
-    const x3n = a31*xs1[counter] + a32*xs2[counter] + a33*xs3[counter] + params.b*a35;
-    const cen = a41*xs1[counter] + a42*xs2[counter] + a43*xs3[counter] + a44*ces[counter] + params.b*a45;
-
-    xs1[counter+1] = x1n;
-    xs2[counter+1] = x2n;
-    xs3[counter+1] = x3n;
-    ces[counter+1] = cen;
-    counter++;
-  }
-
-  // A bolus at exactly t_final affects the reported final plasma concentration,
-  // but does not instantaneously change the effect-site concentration.
-  if (!tci.enabled && schedule?.enabled && instArr?.[N]) xs1[N] += instArr[N];
 
   const yFactor = currentUnit.factor;
   const unitLabel = currentUnit.name;
+  const hasEffectSite = simulation.hasEffectSite;
 
   const trace_cp = { x: [], y: [], name: `Cp (${unitLabel})`, line: { color: '#1f77b4', width: 2 } };
-  const trace_ce = { x: [], y: [], name: `Ce (${unitLabel})`, line: { color: '#ff7f0e', width: 2, dash: 'dot' } };
+  const trace_ce = hasEffectSite ? { x: [], y: [], name: `Ce (${unitLabel})`, line: { color: '#ff7f0e', width: 2, dash: 'dot' } } : null;
   const trace_target = tci.enabled ? { x: [], y: [], name: `${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target until ${formatInputValue(Math.min(tci.stopTime, params.tfinal))} min`, line: { color: '#198754', width: 2, dash: 'dash' } } : null;
-  const trace_p1 = { x: [], y: [], name: `P1 Compartment (${unitLabel})`, line: { width: 2 } };
-  const trace_p2 = { x: [], y: [], name: `P2 Compartment (${unitLabel})`, line: { width: 2 } };
+  const trace_p1 = { x: [], y: [], name: `Rapid peripheral compartment (${unitLabel})`, line: { width: 2 } };
+  const trace_p2 = { x: [], y: [], name: `Slow peripheral compartment (${unitLabel})`, line: { width: 2 } };
 
   for (let i = 0; i < N + 1; i++) {
     const t = ts[i];
@@ -2294,25 +2278,25 @@ function dfsolve() {
     const ce = (ces[i]);
 
     trace_cp.x.push(t); trace_cp.y.push(cp * yFactor);
-    trace_ce.x.push(t); trace_ce.y.push(ce * yFactor);
+    if (trace_ce) { trace_ce.x.push(t); trace_ce.y.push(ce * yFactor); }
     trace_p1.x.push(t); trace_p1.y.push(p1 * yFactor);
     trace_p2.x.push(t); trace_p2.y.push(p2 * yFactor);
     if (trace_target) { trace_target.x.push(t); trace_target.y.push(t <= tci.stopTime ? tci.target : null); }
   }
 
   let layout1 = {
-    title: { text: 'Central vs Effect-site' },
+    title: { text: hasEffectSite ? 'Central vs Effect-site' : 'Central concentration (effect site not modeled)' },
     xaxis: { title: { text: 'Time (min)' } },
     yaxis: { title: { text: `Concentration (${unitLabel})` } }
   };
   let layout2 = {
-    title: { text: 'P1 Compartment' },
+    title: { text: 'Rapid peripheral compartment' },
     xaxis: { title: { text: 'Time (min)' } },
     yaxis: { title: { text: `Concentration (${unitLabel})` } },
     showlegend: false
   };
   let layout3 = {
-    title: { text: 'P2 Compartment' },
+    title: { text: 'Slow peripheral compartment' },
     xaxis: { title: { text: 'Time (min)' } },
     yaxis: { title: { text: `Concentration (${unitLabel})` } },
     showlegend: false
@@ -2327,10 +2311,10 @@ function dfsolve() {
   const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(params.tfinal);
   layout1.shapes = [ ...(layout1.shapes || []), ...therShapes ];
 
-  const panel1Traces = [trace_cp, trace_ce, ...(trace_target ? [trace_target] : []), ...legendTraces];
+  const panel1Traces = [trace_cp, ...(trace_ce ? [trace_ce] : []), ...(trace_target ? [trace_target] : []), ...legendTraces];
   const PLOT_CONFIG = { responsive: true, displaylogo: false };
 
-  if (!tci.enabled && compareMode && strategies.some(s => s.drug === currentDrug)) {
+  if (compareMode && strategies.some(s => s.drug === currentDrug)) {
     plotComparisonFromCurrent();
   } else {
     Plotly.newPlot('myDiv1', panel1Traces, layout1, PLOT_CONFIG);
@@ -2344,7 +2328,7 @@ function dfsolve() {
   if (tci.enabled) {
     const rateTrace = {
       x: ts.slice(0, N),
-      y: tciRates.map(rate => convertMgKgMinToInfusionValue(rate, currentInfusionUnit, params.weightKg)),
+      y: simulation.intervalRates.map(rate => convertMgKgMinToInfusionValue(rate, currentInfusionUnit, params.weightKg)),
       name: `Calculated rate (${currentInfusionUnit.name})`,
       line: { color: '#198754', width: 2, shape: 'hv' },
       fill: 'tozeroy',
@@ -2360,22 +2344,21 @@ function dfsolve() {
 
   // Results
   const finalCp = roundToSignificantFigures(yFactor * xs1[N] / params.Vd1, 3);
-  const finalCe = roundToSignificantFigures(yFactor * ces[N], 3);
+  const finalCe = hasEffectSite ? roundToSignificantFigures(yFactor * ces[N], 3) : null;
   pfinalhtml.innerHTML = finalCp;
   document.getElementById('keyFinalCp').textContent = finalCp;
-  document.getElementById('keyFinalCe').textContent = finalCe;
+  document.getElementById('keyFinalCe').textContent = hasEffectSite ? finalCe : 'Not modeled';
   document.getElementById('keyFinalCpUnit').textContent = unitLabel;
-  document.getElementById('keyFinalCeUnit').textContent = unitLabel;
+  document.getElementById('keyFinalCeUnit').textContent = hasEffectSite ? unitLabel : '';
   const peakCpIndex = trace_cp.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0);
-  const peakCeIndex = trace_ce.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0);
+  const peakCeIndex = trace_ce ? trace_ce.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0) : null;
   document.getElementById('keyPeakCp').textContent = roundToSignificantFigures(trace_cp.y[peakCpIndex], 3);
-  document.getElementById('keyPeakCe').textContent = roundToSignificantFigures(trace_ce.y[peakCeIndex], 3);
+  document.getElementById('keyPeakCe').textContent = trace_ce ? roundToSignificantFigures(trace_ce.y[peakCeIndex], 3) : 'Not modeled';
   document.getElementById('keyPeakCpUnit').textContent = unitLabel;
-  document.getElementById('keyPeakCeUnit').textContent = unitLabel;
-  document.getElementById('keyTmaxCe').textContent = roundToSignificantFigures(ts[peakCeIndex], 3);
-  const uLast = (Number.isFinite(params.b) ? params.b : 0);
-  const pss = params.Cl > 0 ? uLast / params.Cl : 0;
-  psshtml.innerHTML = roundToSignificantFigures(yFactor * pss, 3);
+  document.getElementById('keyPeakCeUnit').textContent = hasEffectSite ? unitLabel : '';
+  document.getElementById('keyTmaxCe').textContent = trace_ce ? roundToSignificantFigures(ts[peakCeIndex], 3) : 'N/A';
+  const pss = params.Cl > 0 && simulation.finalActiveRate > 1e-12 ? simulation.finalActiveRate / params.Cl : null;
+  psshtml.textContent = pss == null ? 'N/A' : roundToSignificantFigures(yFactor * pss, 3);
 
   // Eigenvalues
   const Axyz = math.matrix([
@@ -2421,32 +2404,36 @@ function dfsolve() {
   Q3numhtml.innerHTML = roundToSignificantFigures(params.Vd1*k13, 3);
   Clnumhtml.innerHTML = roundToSignificantFigures(params.Vd1*k10, 3);
 
-  // Context-sensitive half-life (CSHL)
-  // Start at end of last rate-based input (infusions + finite-duration boluses),
-  // OR at end of simulation if rate continues through tfinal.
-  let startIdx = (lastRateEndIdx >= 0) ? clamp(lastRateEndIdx, 0, N) : N;
-
-  let cshl = 0;
-  let x1 = xs1[startIdx], x2 = xs2[startIdx], x3 = xs3[startIdx];
-
-  if (Number.isFinite(x1) && x1 > 0) {
-    const target = x1 / 2;
-    while (x1 > target) {
-      cshl += params.dt;
-      const x1t = x1, x2t = x2, x3t = x3;
-
-      // Post-infusion washout: u = 0
-      x1 = a11*x1t + a12*x2t + a13*x3t;
-      x2 = a21*x1t + a22*x2t + a23*x3t;
-      x3 = a31*x1t + a32*x2t + a33*x3t;
-
-      if (cshl > 1e6) break; // safety guard
+  // Context-sensitive half-time is defined here only after a nonzero rate-based
+  // input. An isolated instantaneous bolus does not have an infusion context.
+  let cshl = null;
+  if (simulation.lastRateEndIndex != null) {
+    const startIdx = clamp(simulation.lastRateEndIndex, 0, N);
+    let x1 = xs1[startIdx], x2 = xs2[startIdx], x3 = xs3[startIdx];
+    if (Number.isFinite(x1) && x1 > 0) {
+      const target = x1 / 2;
+      const washout = createTransition(
+        { V1: params.Vd1, k10, k12, k21, k13, k31 },
+        0,
+        params.dt
+      );
+      cshl = 0;
+      while (x1 > target && cshl <= 1e6) {
+        const previousX1 = x1;
+        const x1t = x1, x2t = x2, x3t = x3;
+        x1 = washout.a11*x1t + washout.a12*x2t + washout.a13*x3t;
+        x2 = washout.a21*x1t + washout.a22*x2t + washout.a23*x3t;
+        x3 = washout.a31*x1t + washout.a32*x2t + washout.a33*x3t;
+        if (x1 <= target && previousX1 > x1) {
+          cshl += params.dt * ((previousX1 - target) / (previousX1 - x1));
+          break;
+        }
+        cshl += params.dt;
+      }
     }
-  } else {
-    cshl = 0;
   }
 
-  contextsensitivehalflifehtml.innerHTML = roundToSignificantFigures(cshl, 3);
+  contextsensitivehalflifehtml.textContent = cshl == null ? 'N/A' : roundToSignificantFigures(cshl, 3);
   document.getElementById('keyContextHalfLife').textContent = contextsensitivehalflifehtml.textContent;
 
 }
@@ -2454,6 +2441,7 @@ function dfsolve() {
 window.dfsolve = dfsolve;
 
 function onecompartment() {
+  markPresetModified();
   Q2num.value = 0;
   Q3num.value = 0;
   if (k12inputnum) k12inputnum.value = 0;
@@ -2483,12 +2471,20 @@ function applyTciPreset(id) {
   const stopTime = document.getElementById('tciStopTime');
   const note = document.getElementById('tciPresetNote');
   if (!profile) {
-    if (enabled) enabled.disabled = false;
-    if (note) note.textContent = 'No curated educational TCI starting profile is available for this preset. TCI remains available; review and set the target and maximum rate for your simulation.';
+    if (enabled) {
+      enabled.checked = false;
+      enabled.disabled = true;
+    }
+    if (target) target.value = '';
+    if (maxRate) maxRate.value = '';
+    if (note) note.textContent = 'Educational TCI is unavailable for this preset because no curated starting profile is defined.';
     updateTciControls();
     return;
   }
-  if (enabled) enabled.disabled = false;
+  if (enabled) {
+    enabled.checked = false;
+    enabled.disabled = false;
+  }
   if (targetType) targetType.value = profile.targetType;
   if (target) target.value = profile.target;
   if (maxRate) maxRate.value = profile.maxRate;
@@ -3017,19 +3013,35 @@ function setCurrentDrugLabel() {
     pickers.forEach(picker => { picker.value = ''; });
     return;
   }
-  label.textContent = `${d.label} — units: ${currentUnit.name}`;
+  label.textContent = `${d.label}${presetIsModified ? ' — modified' : ''} — units: ${currentUnit.name}`;
   pickers.forEach(picker => { picker.value = d.id; });
 }
 
-function applyDrugById(id) {
+function clearDosingForDrugSwitch() {
+  const tciEnabled = document.getElementById('tciEnabled');
+  if (tciEnabled) tciEnabled.checked = false;
+  bnum.value = 0;
+  tbolusnum.value = 0;
+  infusionnum.value = 0;
+  tinfusionnum.value = 0;
+  selectedTimelineEvent = null;
+  timelineUndoSchedule = null;
+  setScheduleToDOM({ enabled: false, boluses: [], infusions: [] });
+  disableLegacyBolusInfusionInputs(false);
+}
+
+function applyDrugById(id, { clearDosing = true } = {}) {
   if (!id) return;
   const fn = window[id];
   if (typeof fn !== 'function') return;
 
+  if (clearDosing) clearDosingForDrugSwitch();
+  presetIsModified = false;
   fn();                 // runs the preset (sets units + PK + dfsolve())
   applyTciPreset(id);
   setCurrentDrugLabel();
   dfsolve();
+  if (clearDosing) setSimulationStatus('Drug preset loaded. Dosing and TCI were cleared so a new regimen can be entered safely.', 'ok');
 
   [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')]
     .filter(Boolean)
@@ -3046,6 +3058,7 @@ function reset() {
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
   propofol();
+  presetIsModified = false;
   applyTciPreset('propofol');
   if (weightnum) weightnum.value = 70;
   bnum.value = 1;
@@ -3103,9 +3116,15 @@ function wireInputs() {
   [
     Vd1num, Vd2num, Vd3num,
     Clnum, Q2num, Q3num,
-    k10inputnum, k12inputnum, k21inputnum, k13inputnum, k31inputnum,
+    k10inputnum, k12inputnum, k21inputnum, k13inputnum, k31inputnum, ke0num
+  ].forEach(el => el?.addEventListener('change', () => {
+    markPresetModified();
+    dfsolve();
+  }));
+
+  [
     bnum, tbolusnum, tinfusionnum, infusionnum,
-    initialpnum, tfinalnum, ke0num, weightnum
+    initialpnum, tfinalnum, weightnum
   ].forEach(el => el?.addEventListener('change', () => dfsolve()));
 
   pkInputModeSelect?.addEventListener("change", () => {
@@ -3150,6 +3169,7 @@ function wireInputs() {
         return;
       }
       currentDrug = null;
+      presetIsModified = false;
       setCurrentDrugLabel();
       dfsolve();
     });
