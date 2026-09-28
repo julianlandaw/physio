@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Three-compartment model browser checks</title>
+</head>
+<body data-result="running">
+  <h1>Three-compartment model browser checks</h1>
+  <pre id="results">Running…</pre>
+  <iframe id="app" title="Simulation under test" src="../docs/Pharmacology/threecompartmentmodel.html" hidden></iframe>
+  <script>
+    const results = document.getElementById('results');
+    const checks = [];
+    const approx = (actual, expected, tolerance = 1e-7) =>
+      Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance;
+    function check(name, condition) {
+      checks.push({ name, passed: Boolean(condition) });
+      if (!condition) throw new Error(name);
+    }
+
+    document.getElementById('app').addEventListener('load', () => {
+      const app = document.getElementById('app').contentWindow;
+      const input = id => app.document.getElementById(id);
+      const unit = { factor: 1, perKg: true };
+      const pk = { V1: 1, V2: 0, V3: 0, k10: 1, k12: 0, k21: 0, k13: 0, k31: 0 };
+      const run = (plan, finalTime = 0.15) => app.simulatePkModel({
+        pk, ke0: 0, initialConcentration: 0, finalTime,
+        dosingPlan: plan, tci: { enabled: false }
+      });
+      const plan = basic => app.buildDosingPlan({ schedule: null, basic, bolusUnit: unit, infusionUnit: unit, weightKg: 70 });
+
+      try {
+        const instant = run(plan({ bolus: 1, tbolus: 0, infusion: 0, tinfusion: 0 }));
+        check('instant bolus delivers full dose', approx(instant.totalDoseMgKg, 1));
+        check('instant bolus changes Cp at time zero', approx(instant.cp[0], 1));
+        check('final step ends at requested time', approx(instant.ts.at(-1), 0.15));
+        check('one-compartment analytical decay', approx(instant.cp.at(-1), Math.exp(-0.15)));
+
+        const short = run(plan({ bolus: 1, tbolus: 0.05, infusion: 0, tinfusion: 0 }));
+        check('short loading dose delivers exactly one dose', approx(short.totalDoseMgKg, 1));
+        check('short loading dose follows analytical solution',
+          approx(short.cp.at(-1), 20 * (1 - Math.exp(-0.05)) * Math.exp(-0.1)));
+
+        const scheduled = app.buildDosingPlan({
+          schedule: { enabled: true, boluses: [{ time: 0, dose: 1, duration: 0.05 }], infusions: [] },
+          basic: {}, bolusUnit: unit, infusionUnit: unit, weightKg: 70
+        });
+        check('basic and scheduled dosing agree', approx(run(scheduled).cp.at(-1), short.cp.at(-1)));
+        check('delivery is clipped at the final time',
+          approx(run(plan({ bolus: 1, tbolus: 1, infusion: 0, tinfusion: 0 }), 0.05).totalDoseMgKg, 0.05));
+        const absolute = app.buildDosingPlan({
+          schedule: null,
+          basic: { bolus: 70, tbolus: 0, infusion: 0, tinfusion: 0 },
+          bolusUnit: { factor: 1, perKg: false }, infusionUnit: unit, weightKg: 70
+        });
+        check('absolute bolus uses patient weight', approx(run(absolute).totalDoseMgKg, 1));
+
+        input('b').value = 5;
+        input('initialp').value = 2;
+        input('tciEnabled').checked = true;
+        app.applyDrugById('fentanyl');
+        check('drug switch clears bolus and initial concentration', input('b').value === '0' && input('initialp').value === '0');
+        check('drug switch turns off TCI without a curated profile', !input('tciEnabled').checked && input('tciEnabled').disabled);
+
+        app.applyDrugById('propofol');
+        input('Vd1').value = 229;
+        input('Vd1').dispatchEvent(new Event('change', { bubbles: true }));
+        check('edited PK is marked modified', input('summaryDrug').textContent.includes('modified'));
+        check('modified preset hides therapeutic bands', app.buildTherapeuticShapes(10).shapes.length === 0);
+
+        app.applyDrugById('lidocaine');
+        check('absent effect-site model is labeled unavailable', input('keyFinalCe').textContent === 'Not modeled');
+        input('b').value = 1;
+        input('tbolus').value = 0;
+        input('infusion').value = 0;
+        input('tinfusion').value = 0;
+        app.dfsolve();
+        check('isolated bolus has no context-sensitive half-time', input('keyContextHalfLife').textContent === 'N/A');
+
+        app.applyDrugById('propofol');
+        input('tciEnabled').checked = true;
+        input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
+        const tciState = app.getCurrentState();
+        const tciSimulation = app.simulateStrategy(tciState);
+        check('saved-state TCI simulation includes delivered dose', tciSimulation.totalDoseMgKg > 0);
+        check('saved state includes TCI and concentration unit', tciState.tci.enabled && tciState.units.conc === 'µg/mL');
+        input('b').value = '';
+        input('infusion').value = '';
+        check('inactive basic dosing fields do not block TCI', app.validateSimulationInputs());
+        app.captureCurrentStrategy();
+        const savedId = app.eval('strategies.at(-1).id');
+        app.applyDrugById('fentanyl');
+        app.loadStrategyToInputs(savedId);
+        check('loading strategy restores TCI and display units', input('tciEnabled').checked && input('currentDrugLabel').textContent.includes('µg/mL'));
+        check('blank inactive dose inputs restore as zero', input('b').value === '0' && input('infusion').value === '0');
+        input('useSchedule').checked = true;
+        input('useSchedule').dispatchEvent(new Event('change', { bubbles: true }));
+        check('enabling schedule turns off TCI', !input('tciEnabled').checked);
+
+        app.applyDrugById('propofol');
+        app.onecompartment();
+        input('Vd1').value = 1;
+        input('Cl').value = 1;
+        input('b').value = 0;
+        input('tbolus').value = 0;
+        input('infusion').value = 1000;
+        input('tinfusion').value = 1;
+        input('tfinal').value = 2;
+        app.dfsolve();
+        check('one-compartment post-infusion half-time is ln(2)',
+          approx(Number(input('keyContextHalfLife').textContent), Math.log(2), 0.001));
+        check('steady-state display is unavailable after infusion stops', input('psshtml').textContent === 'N/A');
+        input('tfinal').value = 0.5;
+        app.dfsolve();
+        check('steady-state display uses the active final rate', approx(Number(input('psshtml').textContent), 1000));
+
+        app.setScheduleToDOM({
+          enabled: true,
+          boluses: [{ time: 0.025, dose: 1, duration: 0 }],
+          infusions: [{ start: 0.05, end: 0.15, rate: 1000 }]
+        });
+        app.disableLegacyBolusInfusionInputs(true);
+        app.dfsolve();
+        app.captureCurrentStrategy();
+        const scheduleId = app.eval('strategies.at(-1).id');
+        app.applyDrugById('fentanyl');
+        app.loadStrategyToInputs(scheduleId);
+        check('loading schedule disables ignored basic fields', input('useSchedule').checked && input('b').disabled);
+        check('loading schedule preserves fractional event time',
+          approx(app.getScheduleFromDOM().boluses[0].time, 0.025));
+
+        app.eval('strategies.at(-1).name = "<img src=x onerror=alert(1)>"');
+        app.renderStrategyList();
+        check('strategy name is rendered as text', !input('strategyList').querySelector('img'));
+
+        document.body.dataset.result = 'passed';
+      } catch (error) {
+        checks.push({ name: error.message, passed: false });
+        document.body.dataset.result = 'failed';
+      }
+      results.textContent = checks.map(item => `${item.passed ? 'PASS' : 'FAIL'} ${item.name}`).join('\n');
+    });
+  </script>
+</body>
+</html>

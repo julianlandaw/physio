@@ -1061,6 +1061,7 @@ function timelineDefaultInfusionRate(schedule) {
 }
 
 function commitTimelineSchedule(schedule, message, { undoSchedule = null } = {}) {
+  document.getElementById('tciEnabled').checked = false;
   setScheduleToDOM(schedule);
   disableLegacyBolusInfusionInputs(true);
   expandDrawerCard('scheduleCard');
@@ -1356,12 +1357,17 @@ function ensureScheduleUI() {
   if (bolusTbl.tBodies[0].rows.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 });
   if (infTbl.tBodies[0].rows.length === 0) addInfusionRow({ start: 0, end: 0, rate: 0 });
 
-  useCb.addEventListener('change', () => { disableLegacyBolusInfusionInputs(useCb.checked); dfsolve(); });
+  useCb.addEventListener('change', () => {
+    if (useCb.checked) document.getElementById('tciEnabled').checked = false;
+    disableLegacyBolusInfusionInputs(useCb.checked);
+    dfsolve();
+  });
   addB.addEventListener('click', () => { addBolusRow(); dfsolve(); });
   addI.addEventListener('click', () => { addInfusionRow(); dfsolve(); });
   clrB.addEventListener('click', () => { clearTable(bolusTbl); addBolusRow({ time: 0, dose: 0, duration: 0 }); dfsolve(); });
   clrI.addEventListener('click', () => { clearTable(infTbl); addInfusionRow({ start: 0, end: 0, rate: 0 }); dfsolve(); });
   convertBasicBtn?.addEventListener('click', () => {
+    document.getElementById('tciEnabled').checked = false;
     const duration = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
     setScheduleToDOM({
       enabled: true,
@@ -1593,12 +1599,12 @@ function getCurrentState(name = 'Current') {
       infusion: currentInfusionUnit?.name || 'mg/kg/min'
     },
     inputs: {
-      b: parseFloat(bnum.value),
-      tbolus: parseFloat(tbolusnum.value),
-      infusion: parseFloat(infusionnum.value),
-      tinfusion: parseFloat(tinfusionnum.value),
-      tfinal: parseFloat(tfinalnum.value),
-      initialp: parseFloat(initialpnum.value)
+      b: parseFloatSafe(bnum.value),
+      tbolus: parseFloatSafe(tbolusnum.value),
+      infusion: parseFloatSafe(infusionnum.value),
+      tinfusion: parseFloatSafe(tinfusionnum.value),
+      tfinal: parseFloatSafe(tfinalnum.value),
+      initialp: parseFloatSafe(initialpnum.value)
     },
     schedule: getScheduleFromDOM(),
     tci: {
@@ -1639,7 +1645,7 @@ function renderStrategyList() {
     const c = scheduleCounts(s.schedule);
     const subtitle = `${c.boluses} ${plural(c.boluses,'bolus','boluses')}; ${c.infusions} ${plural(c.infusions,'infusion','infusions')}; tfinal ${s.inputs.tfinal} min`;
     return `
-      <div class="list-group-item ${activeClass}" data-id="${s.id}">
+      <div class="list-group-item ${activeClass}" data-id="${escapeHtml(s.id)}">
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div class="flex-grow-1">
             <input class="form-control form-control-sm strategy-name" data-id="${escapeHtml(s.id)}" value="${escapeHtml(s.name)}" />
@@ -1678,6 +1684,8 @@ function clearStrategies() {
 function loadStrategyToInputs(id) {
   const s = strategies.find(x => x.id === id);
   if (!s) return;
+  const tciEnabled = document.getElementById('tciEnabled');
+  if (tciEnabled) tciEnabled.checked = false;
   try {
     if (s.drug && typeof window[s.drug] === 'function') window[s.drug]();
   } catch (e) {
@@ -1686,6 +1694,7 @@ function loadStrategyToInputs(id) {
 
   currentDrug = s.drug || null;
   presetIsModified = Boolean(s.presetModified);
+  applyTciPreset(s.drug);
   if (typeof s.units?.conc === 'string') setDisplayUnit(s.units.conc, false);
   if (typeof s.units?.bolus === 'string') setBolusUnit(s.units.bolus, false);
   if (typeof s.units?.infusion === 'string') setInfusionUnit(s.units.infusion, false);
@@ -1717,10 +1726,8 @@ function loadStrategyToInputs(id) {
   updatePkInputVisibility();
 
   if (s.schedule) setScheduleToDOM(s.schedule);
-  const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) {
-    tciEnabled.disabled = false;
-    tciEnabled.checked = Boolean(s.tci?.enabled);
+    tciEnabled.checked = Boolean(s.tci?.enabled) && !tciEnabled.disabled;
   }
   if (s.tci) {
     document.getElementById('tciTargetType').value = s.tci.targetType === 'ce' ? 'ce' : 'cp';
@@ -1728,7 +1735,7 @@ function loadStrategyToInputs(id) {
     document.getElementById('tciMaxRate').value = s.tci.maxRate;
     document.getElementById('tciStopTime').value = s.tci.stopTime;
   }
-  disableLegacyBolusInfusionInputs(Boolean(s.tci?.enabled || s.schedule?.enabled));
+  disableLegacyBolusInfusionInputs(Boolean(tciEnabled?.checked || s.schedule?.enabled));
   setCurrentDrugLabel();
   activeStrategyId = s.id;
   renderStrategyList();
@@ -1959,11 +1966,11 @@ function syncMicroInputsFromClearanceInputs() {
   const Q2 = parseFloatSafe(Q2num?.value, 0);
   const Q3 = parseFloatSafe(Q3num?.value, 0);
 
-  if (k10inputnum) k10inputnum.value = roundToSignificantFigures(V1 > 0 ? Cl / V1 : 0, 5);
-  if (k12inputnum) k12inputnum.value = roundToSignificantFigures(V1 > 0 ? Q2 / V1 : 0, 5);
-  if (k21inputnum) k21inputnum.value = roundToSignificantFigures(V2 > 0 ? Q2 / V2 : 0, 5);
-  if (k13inputnum) k13inputnum.value = roundToSignificantFigures(V1 > 0 ? Q3 / V1 : 0, 5);
-  if (k31inputnum) k31inputnum.value = roundToSignificantFigures(V3 > 0 ? Q3 / V3 : 0, 5);
+  if (k10inputnum) k10inputnum.value = V1 > 0 ? Cl / V1 : 0;
+  if (k12inputnum) k12inputnum.value = V1 > 0 ? Q2 / V1 : 0;
+  if (k21inputnum) k21inputnum.value = V2 > 0 ? Q2 / V2 : 0;
+  if (k13inputnum) k13inputnum.value = V1 > 0 ? Q3 / V1 : 0;
+  if (k31inputnum) k31inputnum.value = V3 > 0 ? Q3 / V3 : 0;
 }
 
 function syncClearanceInputsFromMicroInputs() {
@@ -1980,11 +1987,11 @@ function syncClearanceInputsFromMicroInputs() {
   const V3 = k31 > 0 ? (k13 * V1) / k31 : 0;
   const Q3 = k13 * V1;
 
-  if (Clnum) Clnum.value = roundToSignificantFigures(Cl, 5);
-  if (Q2num) Q2num.value = roundToSignificantFigures(Q2, 5);
-  if (Q3num) Q3num.value = roundToSignificantFigures(Q3, 5);
-  if (Vd2num) Vd2num.value = roundToSignificantFigures(V2, 5);
-  if (Vd3num) Vd3num.value = roundToSignificantFigures(V3, 5);
+  if (Clnum) Clnum.value = Cl;
+  if (Q2num) Q2num.value = Q2;
+  if (Q3num) Q3num.value = Q3;
+  if (Vd2num) Vd2num.value = V2;
+  if (Vd3num) Vd3num.value = V3;
 }
 
 function getPkParametersFromInputs() {
@@ -2096,7 +2103,7 @@ function validateSimulationInputs() {
     const raw = el?.value?.trim();
     if (optional && raw === '') return 0;
     const value = Number(raw);
-    if (!Number.isFinite(value) || (strictlyPositive ? value <= 0 : value < min)) {
+    if (raw === '' || !Number.isFinite(value) || (strictlyPositive ? value <= 0 : value < min)) {
       addError(id, `${label} must be ${strictlyPositive ? 'greater than 0' : `at least ${min}`}.`);
       return null;
     }
@@ -2151,19 +2158,17 @@ function validateSimulationInputs() {
   const schedule = getScheduleFromDOM();
   if (scheduleActive && schedule.enabled) {
     $$('#bolusEventsTable tbody tr').forEach((row, index) => {
-      const time = Number(row.querySelector('[data-field="time"]')?.value);
-      const dose = Number(row.querySelector('[data-field="dose"]')?.value);
-      const duration = Number(row.querySelector('[data-field="duration"]')?.value);
-      if (!Number.isFinite(time) || time < 0 || !Number.isFinite(dose) || dose < 0 || !Number.isFinite(duration) || duration < 0) {
+      const fields = ['time', 'dose', 'duration'].map(field => row.querySelector(`[data-field="${field}"]`)?.value?.trim());
+      const [time, dose, duration] = fields.map(Number);
+      if (fields.some(value => value === '') || !Number.isFinite(time) || time < 0 || !Number.isFinite(dose) || dose < 0 || !Number.isFinite(duration) || duration < 0) {
         addError(null, `Bolus ${index + 1} must have non-negative time, dose, and duration.`);
         $$('input', row).forEach(el => el.classList.add('is-invalid'));
       }
     });
     $$('#infusionEventsTable tbody tr').forEach((row, index) => {
-      const start = Number(row.querySelector('[data-field="start"]')?.value);
-      const end = Number(row.querySelector('[data-field="end"]')?.value);
-      const rate = Number(row.querySelector('[data-field="rate"]')?.value);
-      if (!Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end < start || !Number.isFinite(rate) || rate < 0) {
+      const fields = ['start', 'end', 'rate'].map(field => row.querySelector(`[data-field="${field}"]`)?.value?.trim());
+      const [start, end, rate] = fields.map(Number);
+      if (fields.some(value => value === '') || !Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end < start || !Number.isFinite(rate) || rate < 0) {
         addError(null, `Infusion ${index + 1} must have non-negative start/end/rate values, with end at or after start.`);
         $$('input', row).forEach(el => el.classList.add('is-invalid'));
       }
@@ -2318,6 +2323,8 @@ function dfsolve() {
     plotComparisonFromCurrent();
   } else {
     Plotly.newPlot('myDiv1', panel1Traces, layout1, PLOT_CONFIG);
+    const compareResults = document.getElementById('compareResults');
+    if (compareResults) compareResults.textContent = '';
   }
 
   Plotly.newPlot('myDiv2', [trace_p1], layout2, PLOT_CONFIG);
@@ -2409,26 +2416,26 @@ function dfsolve() {
   let cshl = null;
   if (simulation.lastRateEndIndex != null) {
     const startIdx = clamp(simulation.lastRateEndIndex, 0, N);
-    let x1 = xs1[startIdx], x2 = xs2[startIdx], x3 = xs3[startIdx];
+    const x1 = xs1[startIdx], x2 = xs2[startIdx], x3 = xs3[startIdx];
     if (Number.isFinite(x1) && x1 > 0) {
       const target = x1 / 2;
-      const washout = createTransition(
-        { V1: params.Vd1, k10, k12, k21, k13, k31 },
-        0,
-        params.dt
-      );
-      cshl = 0;
-      while (x1 > target && cshl <= 1e6) {
-        const previousX1 = x1;
-        const x1t = x1, x2t = x2, x3t = x3;
-        x1 = washout.a11*x1t + washout.a12*x2t + washout.a13*x3t;
-        x2 = washout.a21*x1t + washout.a22*x2t + washout.a23*x3t;
-        x3 = washout.a31*x1t + washout.a32*x2t + washout.a33*x3t;
-        if (x1 <= target && previousX1 > x1) {
-          cshl += params.dt * ((previousX1 - target) / (previousX1 - x1));
-          break;
+      const washoutCpAt = duration => {
+        const transition = createTransition({ V1: params.Vd1, k10, k12, k21, k13, k31 }, 0, duration);
+        return transition.a11*x1 + transition.a12*x2 + transition.a13*x3;
+      };
+      let lower = 0;
+      let upper = params.dt;
+      while (upper < 1e6 && washoutCpAt(upper) > target) {
+        lower = upper;
+        upper *= 2;
+      }
+      if (washoutCpAt(upper) <= target) {
+        for (let iteration = 0; iteration < 28; iteration++) {
+          const middle = (lower + upper) / 2;
+          if (washoutCpAt(middle) > target) lower = middle;
+          else upper = middle;
         }
-        cshl += params.dt;
+        cshl = (lower + upper) / 2;
       }
     }
   }
@@ -2470,6 +2477,12 @@ function applyTciPreset(id) {
   const maxRate = document.getElementById('tciMaxRate');
   const stopTime = document.getElementById('tciStopTime');
   const note = document.getElementById('tciPresetNote');
+  if (!id) {
+    if (enabled) enabled.disabled = false;
+    if (note) note.textContent = 'Custom model: enter an educational target and maximum rate based on your own model assumptions.';
+    updateTciControls();
+    return;
+  }
   if (!profile) {
     if (enabled) {
       enabled.checked = false;
@@ -3020,10 +3033,13 @@ function setCurrentDrugLabel() {
 function clearDosingForDrugSwitch() {
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
+  initialpnum.value = 0;
   bnum.value = 0;
   tbolusnum.value = 0;
   infusionnum.value = 0;
   tinfusionnum.value = 0;
+  const testTarget = document.getElementById('testRegimenTarget');
+  if (testTarget) testTarget.value = '';
   selectedTimelineEvent = null;
   timelineUndoSchedule = null;
   setScheduleToDOM({ enabled: false, boluses: [], infusions: [] });
@@ -3041,7 +3057,7 @@ function applyDrugById(id, { clearDosing = true } = {}) {
   applyTciPreset(id);
   setCurrentDrugLabel();
   dfsolve();
-  if (clearDosing) setSimulationStatus('Drug preset loaded. Dosing and TCI were cleared so a new regimen can be entered safely.', 'ok');
+  if (clearDosing) setSimulationStatus('Drug preset loaded. Previous doses and initial concentration were cleared; TCI is off.', 'ok');
 
   [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')]
     .filter(Boolean)
@@ -3055,17 +3071,20 @@ function applyDrugById(id, { clearDosing = true } = {}) {
 function reset() {
   selectedTimelineEvent = null;
   timelineUndoSchedule = null;
-  const tciEnabled = document.getElementById('tciEnabled');
-  if (tciEnabled) tciEnabled.checked = false;
-  propofol();
-  presetIsModified = false;
-  applyTciPreset('propofol');
+  clearDosingForDrugSwitch();
   if (weightnum) weightnum.value = 70;
+  if (pkInputModeSelect) pkInputModeSelect.value = 'clearance';
+  updatePkInputVisibility();
+  presetIsModified = false;
+  propofol();
+  applyTciPreset('propofol');
   bnum.value = 1;
   tbolusnum.value = 1;
   tinfusionnum.value = 60;
   infusionnum.value = 100;
   tfinalnum.value = 255;
+  const testTarget = document.getElementById('testRegimenTarget');
+  if (testTarget) testTarget.value = '';
   const tciStopTime = document.getElementById('tciStopTime');
   if (tciStopTime) tciStopTime.value = tfinalnum.value;
 
@@ -3170,6 +3189,7 @@ function wireInputs() {
       }
       currentDrug = null;
       presetIsModified = false;
+      applyTciPreset(null);
       setCurrentDrugLabel();
       dfsolve();
     });
