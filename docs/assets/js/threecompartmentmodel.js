@@ -520,7 +520,7 @@ function updateTciControls() {
   const mainMaxRate = document.getElementById('mainTciMaxRate');
   const mainStopTime = document.getElementById('mainTciStopTime');
   if (mainTargetType) mainTargetType.value = config.targetType;
-  if (mainTarget) mainTarget.value = formatInputValue(config.target);
+  if (mainTarget) mainTarget.value = document.getElementById('tciTarget')?.value || '';
   if (mainMaxRate) mainMaxRate.value = document.getElementById('tciMaxRate')?.value || '';
   if (mainStopTime) mainStopTime.value = document.getElementById('tciStopTime')?.value || '';
 }
@@ -2128,13 +2128,12 @@ function validateSimulationInputs() {
     readNumber('tinfusion', 'Infusion duration', { min: 0 });
   }
   if (tciActive) {
-    const target = readNumber('tciTarget', 'TCI target', { min: 0 });
-    const maxRate = readNumber('tciMaxRate', 'TCI maximum rate', { strictlyPositive: true });
+    readNumber('tciTarget', 'TCI target', { strictlyPositive: true });
+    readNumber('tciMaxRate', 'TCI maximum rate', { strictlyPositive: true });
     readNumber('tciStopTime', 'TCI stop time', { min: 0 });
     if (document.getElementById('tciTargetType')?.value === 'ce' && Number(ke0num?.value) <= 0) {
       addError('ke0', 'ke0 must be greater than 0 for an effect-site TCI target.');
     }
-    if (target === 0 || maxRate === 0) addError(null, 'TCI target and maximum rate must be greater than 0.');
   }
 
   if (getPkInputMode() === 'microconstants') {
@@ -2461,8 +2460,8 @@ function onecompartment() {
 // ============================
 // Drug presets (kept from your file; unchanged values)
 // ============================
-// These are educational starting points only. They are limited to presets with
-// a recognizable TCI use case and should never be used to control a real pump.
+// Optional educational starting points. Other models permit TCI only after
+// the user supplies a target and maximum rate; never use this to control a pump.
 const TCI_PRESETS = Object.freeze({
   propofol: { targetType: 'cp', target: 2, maxRate: 200, note: 'Educational Propofol/Marsh starting point: Cp 2 µg/mL; maximum 200 µg/kg/min. Adjust only for simulation exploration.' },
   dexmedetomidine: { targetType: 'cp', target: 0.6, maxRate: 6, note: 'Educational dexmedetomidine starting point: Cp 0.6 ng/mL; maximum 6 µg/kg/hr. This is not a clinical prescription.' },
@@ -2486,11 +2485,17 @@ function applyTciPreset(id) {
   if (!profile) {
     if (enabled) {
       enabled.checked = false;
-      enabled.disabled = true;
+      enabled.disabled = false;
     }
+    if (targetType) targetType.value = 'cp';
     if (target) target.value = '';
     if (maxRate) maxRate.value = '';
-    if (note) note.textContent = 'Educational TCI is unavailable for this preset because no curated starting profile is defined.';
+    if (stopTime) stopTime.value = formatInputValue(parseFloatSafe(tfinalnum?.value, 120));
+    if (note) note.textContent = id === 'bupivacaine'
+      ? 'No TCI starting profile. Enter your own target and maximum rate. Bupivacaine has no routine IV dosing example; this is a theoretical systemic PK simulation, not an IV regimen or pump program.'
+      : id === 'vasopressin'
+        ? 'No TCI starting profile. Enter your own target and maximum rate. Vasopressin is clinically dosed in units/min, which these mass-based inputs do not convert; this is not a dosing or pump recommendation.'
+        : 'No TCI starting profile for this drug. Enter your own positive concentration target and maximum infusion rate in the displayed units. Ce targeting also requires a valid ke0. Educational simulation only—not a dosing recommendation or pump program.';
     updateTciControls();
     return;
   }

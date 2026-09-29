@@ -60,7 +60,19 @@
         input('tciEnabled').checked = true;
         app.applyDrugById('fentanyl');
         check('drug switch replaces prior dose with fentanyl example', input('b').value === '1' && input('infusion').value === '1' && input('initialp').value === '0');
-        check('drug switch turns off TCI without a curated profile', !input('tciEnabled').checked && input('tciEnabled').disabled);
+        check('drug switch permits manual TCI without a starting profile', !input('tciEnabled').checked && !input('tciEnabled').disabled);
+        check('uncurated TCI target and rate are blank', input('tciTarget').value === '' && input('tciMaxRate').value === '' && input('tciTargetType').value === 'cp');
+        input('tciEnabled').checked = true;
+        input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
+        check('manual TCI requires both inputs', !app.validateSimulationInputs() && input('tciTarget').classList.contains('is-invalid') && input('tciMaxRate').classList.contains('is-invalid'));
+        input('tciTarget').value = 2;
+        input('tciMaxRate').value = 1;
+        check('manual TCI runs after both inputs are supplied', app.validateSimulationInputs() && app.simulateStrategy(app.getCurrentState()).totalDoseMgKg > 0);
+        app.captureCurrentStrategy();
+        const manualTciId = app.eval('strategies.at(-1).id');
+        app.applyDrugById('propofol');
+        app.loadStrategyToInputs(manualTciId);
+        check('manual TCI strategy restores entered settings', input('tciEnabled').checked && input('tciTarget').value === '2' && input('tciMaxRate').value === '1');
         check('every drug has an explicit example decision', app.eval('DRUGS.every(drug => Object.hasOwn(DRUG_DOSE_EXAMPLES, drug.id))'));
 
         app.applyDrugById('dexmedetomidine');
@@ -69,8 +81,10 @@
         check('bolus-only example clears prior infusion', input('b').value === '0.1' && input('infusion').value === '0');
         app.applyDrugById('bupivacaine');
         check('bupivacaine does not suggest an IV regimen', input('b').value === '0' && input('infusion').value === '0');
+        check('bupivacaine TCI is available with a route warning', !input('tciEnabled').disabled && input('tciPresetNote').textContent.includes('no routine IV'));
         app.applyDrugById('vasopressin');
         check('vasopressin does not imply a mass-to-unit conversion', input('b').value === '0' && input('infusion').value === '0');
+        check('vasopressin TCI is available with a unit warning', !input('tciEnabled').disabled && input('tciPresetNote').textContent.includes('units/min'));
 
         app.applyDrugById('propofol');
         check('propofol example is preserved on drug selection', input('b').value === '1' && input('infusion').value === '100');
@@ -87,6 +101,11 @@
         input('tinfusion').value = 0;
         app.dfsolve();
         check('isolated bolus has no context-sensitive half-time', input('keyContextHalfLife').textContent === 'N/A');
+        input('tciEnabled').checked = true;
+        input('tciTargetType').value = 'ce';
+        input('tciTarget').value = 2;
+        input('tciMaxRate').value = 1;
+        check('effect-site TCI still requires ke0', !app.validateSimulationInputs() && input('ke0').classList.contains('is-invalid'));
 
         app.applyDrugById('propofol');
         input('tciEnabled').checked = true;
