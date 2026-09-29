@@ -34,6 +34,8 @@ const MAX_SIMULATION_MINUTES = 1440;
 const SIMULATION_STEP_MINUTES = 0.1;
 const TIME_EPSILON = 1e-9;
 const MAX_VISIBLE_SCHEDULE_SEGMENTS = 80;
+let tciImportSession = null;
+let latestPdfContext = null;
 
 function escapeHtml(value) {
   return String(value)
@@ -593,30 +595,30 @@ function clearTable(tbl) {
   tbl.tBodies[0].innerHTML = '';
 }
 
-function addBolusRow({ time = 0, dose = 0, duration = 0 } = {}) {
+function addBolusRow({ time = 0, dose = 0, duration = 0 } = {}, container = null) {
   const tbl = document.getElementById('bolusEventsTable');
   if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="time" value="${time}" aria-label="Bolus time in minutes"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="dose" value="${dose}" aria-label="Bolus dose"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="duration" value="${duration}" aria-label="Bolus duration in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="time" value="${time}" min="0" step="any" aria-label="Bolus time in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="dose" value="${dose}" min="0" step="any" aria-label="Bolus dose"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="duration" value="${duration}" min="0" step="any" aria-label="Bolus duration in minutes"></td>
     <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove bolus">×</button></td>
   `;
-  tbl.tBodies[0].appendChild(tr);
+  (container || tbl.tBodies[0]).appendChild(tr);
 }
 
-function addInfusionRow({ start = 0, end = 0, rate = 0 } = {}) {
+function addInfusionRow({ start = 0, end = 0, rate = 0 } = {}, container = null) {
   const tbl = document.getElementById('infusionEventsTable');
   if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="start" value="${start}" aria-label="Infusion start time in minutes"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="end" value="${end}" aria-label="Infusion end time in minutes"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="rate" value="${rate}" aria-label="Infusion rate"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="start" value="${start}" min="0" step="any" aria-label="Infusion start time in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="end" value="${end}" min="0" step="any" aria-label="Infusion end time in minutes"></td>
+    <td><input type="number" class="form-control form-control-sm" data-field="rate" value="${rate}" min="0" step="any" aria-label="Infusion rate"></td>
     <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove infusion segment">×</button></td>
   `;
-  tbl.tBodies[0].appendChild(tr);
+  (container || tbl.tBodies[0]).appendChild(tr);
 }
 
 function getScheduleFromDOM() {
@@ -666,11 +668,15 @@ function setScheduleToDOM(schedule) {
   const bs = (schedule && Array.isArray(schedule.boluses)) ? schedule.boluses : [];
   const ins = (schedule && Array.isArray(schedule.infusions)) ? schedule.infusions : [];
 
-  if (bs.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 });
-  else bs.forEach(b => addBolusRow(b));
+  const bolusFragment = document.createDocumentFragment();
+  const infusionFragment = document.createDocumentFragment();
+  if (bs.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 }, bolusFragment);
+  else bs.forEach(b => addBolusRow(b, bolusFragment));
 
-  if (ins.length === 0) addInfusionRow({ start: 0, end: 0, rate: 0 });
-  else ins.forEach(i => addInfusionRow(i));
+  if (ins.length === 0) addInfusionRow({ start: 0, end: 0, rate: 0 }, infusionFragment);
+  else ins.forEach(i => addInfusionRow(i, infusionFragment));
+  bolusTbl.tBodies[0].appendChild(bolusFragment);
+  infTbl.tBodies[0].appendChild(infusionFragment);
 }
 
 function buildDosingPlan({ schedule, basic, bolusUnit, infusionUnit, weightKg }) {
@@ -728,10 +734,17 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
 
   const instantAt = time => (dosingPlan?.instantEvents || []).reduce((sum, event) =>
     Math.abs(event.time - time) <= TIME_EPSILON ? sum + event.amount : sum, 0);
+  const sortedRateEvents = [...(dosingPlan?.rateEvents || [])].sort((a, b) => a.start - b.start);
+  let nextRateEvent = 0;
+  let activeRateEvents = [];
   const rateOverInterval = (start, end) => {
     const duration = end - start;
     if (duration <= 0) return 0;
-    return (dosingPlan?.rateEvents || []).reduce((sum, event) => {
+    while (nextRateEvent < sortedRateEvents.length && sortedRateEvents[nextRateEvent].start < end) {
+      activeRateEvents.push(sortedRateEvents[nextRateEvent++]);
+    }
+    activeRateEvents = activeRateEvents.filter(event => event.end > start);
+    return activeRateEvents.reduce((sum, event) => {
       const overlap = Math.max(0, Math.min(end, event.end) - Math.max(start, event.start));
       return sum + event.rate * overlap / duration;
     }, 0);
@@ -802,6 +815,8 @@ function importCurrentTciAsSchedule() {
     return;
   }
   if (!validateSimulationInputs()) return;
+  if (getPkInputMode() === 'microconstants') syncClearanceInputsFromMicroInputs();
+  else syncMicroInputsFromClearanceInputs();
 
   const state = getCurrentState();
   const simulation = simulateStrategy(state);
@@ -810,6 +825,7 @@ function importCurrentTciAsSchedule() {
     INFUSIONUNITS[state.units.infusion],
     state.patient.weightKg
   );
+  tciImportSession = { sourceState: state, sourceSimulation: simulation, exactSchedule: schedule };
   selectedTimelineEvent = null;
   timelineUndoSchedule = null;
   document.getElementById('tciEnabled').checked = false;
@@ -818,6 +834,113 @@ function importCurrentTciAsSchedule() {
   expandDrawerCard('scheduleCard');
   dfsolve();
   setSimulationStatus(`TCI rates imported as ${schedule.infusions.length} editable infusion segments. TCI is off; the schedule no longer tracks the target.`, 'ok');
+}
+
+function simplifyTciInfusions(infusions, limit) {
+  if (limit >= infusions.length) return infusions.map(item => ({ ...item }));
+  const runs = [];
+  for (const infusion of infusions) {
+    const last = runs[runs.length - 1];
+    if (last && Math.abs(last[last.length - 1].end - infusion.start) < 1e-8) last.push(infusion);
+    else runs.push([infusion]);
+  }
+  if (runs.length > limit) return null; // Never bridge a zero-rate gap.
+  const groups = runs.map(run => {
+    const duration = [0], dose = [0], squared = [0];
+    run.forEach(item => {
+      const dt = item.end - item.start;
+      duration.push(duration.at(-1) + dt);
+      dose.push(dose.at(-1) + item.rate * dt);
+      squared.push(squared.at(-1) + item.rate * item.rate * dt);
+    });
+    return { run, duration, dose, squared, from: 0, to: run.length };
+  });
+  const loss = (g, a, b) => {
+    const dt = g.duration[b] - g.duration[a];
+    const dose = g.dose[b] - g.dose[a];
+    return dt > 0 ? g.squared[b] - g.squared[a] - dose * dose / dt : 0;
+  };
+  const bestSplit = g => {
+    let best = { at: -1, gain: 0 };
+    const whole = loss(g, g.from, g.to);
+    for (let at = g.from + 1; at < g.to; at++) {
+      const gain = whole - loss(g, g.from, at) - loss(g, at, g.to);
+      if (gain > best.gain + 1e-12) best = { at, gain };
+    }
+    return best;
+  };
+  const heap = [];
+  const push = group => {
+    group.split = bestSplit(group);
+    heap.push(group);
+    let index = heap.length - 1;
+    while (index > 0) {
+      const parent = (index - 1) >> 1;
+      if (heap[parent].split.gain >= heap[index].split.gain) break;
+      [heap[parent], heap[index]] = [heap[index], heap[parent]];
+      index = parent;
+    }
+  };
+  const pop = () => {
+    const top = heap[0], tail = heap.pop();
+    if (heap.length) {
+      heap[0] = tail;
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1, right = left + 1;
+        let largest = index;
+        if (left < heap.length && heap[left].split.gain > heap[largest].split.gain) largest = left;
+        if (right < heap.length && heap[right].split.gain > heap[largest].split.gain) largest = right;
+        if (largest === index) break;
+        [heap[index], heap[largest]] = [heap[largest], heap[index]];
+        index = largest;
+      }
+    }
+    return top;
+  };
+  groups.forEach(push);
+  while (heap.length < limit && heap[0]?.split.gain > 0) {
+    const g = pop();
+    push({ ...g, to: g.split.at });
+    push({ ...g, from: g.split.at });
+  }
+  return heap.map(g => {
+    const dt = g.duration[g.to] - g.duration[g.from];
+    return {
+      start: g.run[g.from].start,
+      end: g.run[g.to - 1].end,
+      rate: Number(formatInputValue((g.dose[g.to] - g.dose[g.from]) / dt))
+    };
+  }).sort((a, b) => a.start - b.start);
+}
+
+function replaceWithTciOriginal(simplified = false) {
+  if (!tciImportSession) return;
+  const exact = tciImportSession.exactSchedule;
+  let infusions = exact.infusions;
+  if (simplified) {
+    const input = document.getElementById('tciSimplifyLimit');
+    const limit = Number(input?.value);
+    if (!Number.isSafeInteger(limit) || limit < 1) {
+      setSimulationStatus('Enter a whole-number segment limit of at least 1.', 'error');
+      return;
+    }
+    infusions = simplifyTciInfusions(exact.infusions, limit);
+    if (!infusions) {
+      setSimulationStatus(`At least ${countTciInfusionRuns(exact.infusions)} segments are needed to preserve zero-rate gaps.`, 'error');
+      return;
+    }
+  }
+  selectedTimelineEvent = null;
+  setScheduleToDOM({ enabled: true, boluses: [], infusions });
+  document.getElementById('tciEnabled').checked = false;
+  disableLegacyBolusInfusionInputs(true);
+  dfsolve();
+  setSimulationStatus(`${simplified ? 'Simplified' : 'Exact'} original TCI schedule restored as ${infusions.length} editable segments. Current schedule edits were replaced.`, 'ok');
+}
+
+function countTciInfusionRuns(infusions) {
+  return infusions.reduce((count, item, index) => count + (index === 0 || Math.abs(infusions[index - 1].end - item.start) >= 1e-8 ? 1 : 0), 0);
 }
 
 function updateRegimenOverview(params, schedule) {
@@ -903,7 +1026,7 @@ function updateRegimenOverview(params, schedule) {
   renderTimelineEventEditor(tci.enabled ? { enabled: false } : schedule);
   updateMainDoseEditor(tci.enabled ? { enabled: true, boluses: [], infusions: [] } : schedule);
   updateTciControls();
-  updatePdfDoseProtocol(params, schedule);
+  latestPdfContext = { params, schedule };
   updatePdfReportSummary(params, schedule);
 }
 
@@ -1354,6 +1477,7 @@ function initDistributionDetails() {
 }
 
 function exportSimulationPdf() {
+  if (latestPdfContext) updatePdfDoseProtocol(latestPdfContext.params, latestPdfContext.schedule);
   const expandableSections = $$('.distribution-details, .model-details');
   const priorStates = expandableSections.map(section => section.open);
   const generatedAt = document.getElementById('pdfGeneratedAt');
@@ -1422,9 +1546,27 @@ function ensureScheduleUI() {
     dfsolve();
   });
   $$('[data-import-tci-schedule]').forEach(button => button.addEventListener('click', importCurrentTciAsSchedule));
+  document.getElementById('simplifyTciScheduleBtn')?.addEventListener('click', () => replaceWithTciOriginal(true));
+  document.getElementById('restoreExactTciScheduleBtn')?.addEventListener('click', () => replaceWithTciOriginal(false));
+  document.getElementById('undoTciImportBtn')?.addEventListener('click', undoTciImport);
+  document.getElementById('showTciReference')?.addEventListener('change', dfsolve);
 
-  bolusTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
-  infTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
+  let scheduleEditTimer = null;
+  const scheduleInput = () => {
+    if (!useCb.checked) return;
+    clearTimeout(scheduleEditTimer);
+    scheduleEditTimer = setTimeout(() => { scheduleEditTimer = null; dfsolve(); }, 250);
+  };
+  const scheduleChange = () => {
+    if (!useCb.checked) return;
+    clearTimeout(scheduleEditTimer);
+    scheduleEditTimer = null;
+    dfsolve();
+  };
+  bolusTbl.addEventListener('input', scheduleInput);
+  infTbl.addEventListener('input', scheduleInput);
+  bolusTbl.addEventListener('change', scheduleChange);
+  infTbl.addEventListener('change', scheduleChange);
 
   bolusTbl.addEventListener('click', (ev) => {
     const btn = ev.target.closest('button');
@@ -1729,6 +1871,14 @@ function clearStrategies() {
 function loadStrategyToInputs(id) {
   const s = strategies.find(x => x.id === id);
   if (!s) return;
+  tciImportSession = null;
+  restoreSimulationState(s);
+  activeStrategyId = s.id;
+  renderStrategyList();
+  dfsolve();
+}
+
+function restoreSimulationState(s) {
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
   try {
@@ -1782,9 +1932,16 @@ function loadStrategyToInputs(id) {
   }
   disableLegacyBolusInfusionInputs(Boolean(tciEnabled?.checked || s.schedule?.enabled));
   setCurrentDrugLabel();
-  activeStrategyId = s.id;
-  renderStrategyList();
+}
+
+function undoTciImport() {
+  if (!tciImportSession) return;
+  const sourceState = tciImportSession.sourceState;
+  tciImportSession = null;
+  selectedTimelineEvent = null;
+  restoreSimulationState(sourceState);
   dfsolve();
+  setSimulationStatus('Original TCI settings restored. Schedule edits made since import were discarded.', 'ok');
 }
 
 function deleteStrategy(id) {
@@ -2149,6 +2306,25 @@ function toArray(m) {
   return [m];
 }
 
+function getScheduleWarnings(schedule, finalTime) {
+  const warnings = [];
+  const infusions = schedule.infusions.filter(i => Number.isFinite(i.start) && Number.isFinite(i.end) && i.end > i.start);
+  let furthestEnd = 0;
+  infusions.forEach((infusion, index) => {
+    if (index && infusion.start < furthestEnd - TIME_EPSILON) {
+      warnings.push('Infusion segments overlap; their rates add during the overlap.');
+    } else if (index && infusion.start > furthestEnd + TIME_EPSILON) {
+      warnings.push('There is a zero-infusion gap between scheduled segments.');
+    }
+    furthestEnd = Math.max(furthestEnd, infusion.end);
+  });
+  if (Number.isFinite(finalTime) && (
+    infusions.some(i => i.start >= finalTime || i.end > finalTime + TIME_EPSILON) ||
+    schedule.boluses.some(b => b.time > finalTime || b.time + b.duration > finalTime + TIME_EPSILON)
+  )) warnings.push('Some dosing extends beyond the simulation end time and is truncated or omitted.');
+  return [...new Set(warnings)];
+}
+
 function validateSimulationInputs() {
   const errors = [];
   const invalidIds = new Set();
@@ -2235,6 +2411,12 @@ function validateSimulationInputs() {
     summary.hidden = errors.length === 0;
     summary.textContent = errors.length ? `Simulation not updated: ${errors.join(' ')}` : '';
   }
+  const scheduleWarnings = document.getElementById('scheduleWarnings');
+  if (scheduleWarnings) {
+    const warnings = scheduleActive ? getScheduleWarnings(schedule, finalTime) : [];
+    scheduleWarnings.hidden = warnings.length === 0;
+    scheduleWarnings.textContent = warnings.length ? `Schedule note: ${warnings.join(' ')}` : '';
+  }
   setSimulationStatus(errors.length ? 'Results are not updated. Correct the highlighted parameters.' : 'Simulation is up to date.', errors.length ? 'error' : 'ok');
   return errors.length === 0;
 }
@@ -2261,6 +2443,83 @@ function undoTimelineDeletion() {
   expandDrawerCard('scheduleCard');
   dfsolve();
   setSimulationStatus('Timeline deletion restored.', 'ok');
+}
+
+function interpolateSimulationValue(simulation, values, time) {
+  const ts = simulation.ts;
+  if (time <= ts[0]) return values[0];
+  if (time >= ts[ts.length - 1]) return values[values.length - 1];
+  let lo = 0, hi = ts.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (ts[mid] <= time) lo = mid;
+    else hi = mid;
+  }
+  const fraction = (time - ts[lo]) / (ts[hi] - ts[lo]);
+  return values[lo] + fraction * (values[hi] - values[lo]);
+}
+
+function maxReplayDifference(original, edited, field, endTime) {
+  let maximum = 0;
+  for (const time of original.ts) {
+    if (time > endTime + TIME_EPSILON) break;
+    maximum = Math.max(maximum, Math.abs(interpolateSimulationValue(edited, edited[field], time) - interpolateSimulationValue(original, original[field], time)));
+  }
+  for (const time of edited.ts) {
+    if (time > endTime + TIME_EPSILON) break;
+    maximum = Math.max(maximum, Math.abs(interpolateSimulationValue(edited, edited[field], time) - interpolateSimulationValue(original, original[field], time)));
+  }
+  return maximum;
+}
+
+function updateTciReplayComparison(simulation, schedule, tci) {
+  const panel = document.getElementById('tciReplayComparison');
+  const tools = document.getElementById('tciSimplifyTools');
+  const active = Boolean(tciImportSession && schedule.enabled && !tci.enabled);
+  if (panel) panel.hidden = !active;
+  if (tools) tools.hidden = !active;
+  if (!active) return [];
+
+  const source = tciImportSession.sourceState;
+  const original = tciImportSession.sourceSimulation;
+  const drug = DRUGS.find(d => d.id === source.drug)?.label || 'Custom model';
+  const sourceText = document.getElementById('tciSourceDescription');
+  if (sourceText) sourceText.textContent = `${drug} · ${source.tci.targetType === 'ce' ? 'Ce' : 'Cp'} target ${formatInputValue(source.tci.target)} ${source.units.conc} · maximum ${formatInputValue(source.tci.maxRate)} ${source.units.infusion} · ${formatInputValue(source.patient.weightKg)} kg · original ${tciImportSession.exactSchedule.infusions.length} segments`;
+
+  const endTime = Math.min(original.ts.at(-1), simulation.ts.at(-1));
+  const cpError = maxReplayDifference(original, simulation, 'cp', endTime) * currentUnit.factor;
+  const ceError = original.hasEffectSite && simulation.hasEffectSite
+    ? maxReplayDifference(original, simulation, 'ce', endTime) * currentUnit.factor : null;
+  const doseDifference = simulation.totalDoseMgKg - original.totalDoseMgKg;
+  const metrics = document.getElementById('tciReplayMetrics');
+  if (metrics) metrics.textContent = `Maximum model replay difference over 0–${formatInputValue(endTime)} min: Cp ${formatInputValue(cpError)} ${currentUnit.name}${ceError == null ? '' : `; Ce ${formatInputValue(ceError)} ${currentUnit.name}`}. Total delivered dose difference: ${doseDifference >= 0 ? '+' : ''}${formatInputValue(doseDifference)} mg/kg.`;
+
+  const current = getCurrentState();
+  const assumptionsChanged = current.drug !== source.drug ||
+    JSON.stringify(current.pk) !== JSON.stringify(source.pk) ||
+    current.patient.weightKg !== source.patient.weightKg ||
+    current.inputs.initialp !== source.inputs.initialp ||
+    current.inputs.tfinal !== source.inputs.tfinal ||
+    JSON.stringify(current.units) !== JSON.stringify(source.units);
+  const warning = document.getElementById('tciReplayWarning');
+  if (warning) warning.textContent = assumptionsChanged
+    ? 'Model, weight, units, initial concentration, or final time changed since import; replay differences also reflect those changes.'
+    : compareMode && strategies.some(s => s.drug === currentDrug)
+      ? 'The original TCI overlay is hidden while strategy comparison is active; turn comparison off to view it.'
+      : '';
+
+  if (!document.getElementById('showTciReference')?.checked) return [];
+  const referenceTimes = original.ts.filter(time => time <= endTime + TIME_EPSILON);
+  if (referenceTimes.at(-1) < endTime - TIME_EPSILON) referenceTimes.push(endTime);
+  const sourceTraces = [{
+    x: referenceTimes, y: referenceTimes.map(time => interpolateSimulationValue(original, original.cp, time) * currentUnit.factor),
+    name: 'Original TCI Cp (model)', line: { color: '#2856b8', width: 2, dash: 'dash' }
+  }];
+  if (original.hasEffectSite) sourceTraces.push({
+    x: referenceTimes, y: referenceTimes.map(time => interpolateSimulationValue(original, original.ce, time) * currentUnit.factor),
+    name: 'Original TCI Ce (model)', line: { color: '#a85a16', width: 2, dash: 'dash' }
+  });
+  return sourceTraces;
 }
 
 function dfsolve() {
@@ -2370,7 +2629,8 @@ function dfsolve() {
   const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(params.tfinal);
   layout1.shapes = [ ...(layout1.shapes || []), ...therShapes ];
 
-  const panel1Traces = [trace_cp, ...(trace_ce ? [trace_ce] : []), ...(trace_target ? [trace_target] : []), ...legendTraces];
+  const originalTciTraces = updateTciReplayComparison(simulation, schedule, tci);
+  const panel1Traces = [trace_cp, ...(trace_ce ? [trace_ce] : []), ...(trace_target ? [trace_target] : []), ...originalTciTraces, ...legendTraces];
   const PLOT_CONFIG = { responsive: true, displaylogo: false };
 
   if (compareMode && strategies.some(s => s.drug === currentDrug)) {
@@ -3137,6 +3397,7 @@ function setCurrentDrugLabel() {
 }
 
 function clearDosingForDrugSwitch() {
+  tciImportSession = null;
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
   initialpnum.value = 0;
@@ -3293,6 +3554,7 @@ function wireInputs() {
         applyDrugById(drugPicker.value);
         return;
       }
+      tciImportSession = null;
       currentDrug = null;
       presetIsModified = false;
       applyTciPreset(null);
@@ -3330,6 +3592,9 @@ function wireInputs() {
   ensureCompareUI();
   initDistributionDetails();
   wireInputs();
+  window.addEventListener('beforeprint', () => {
+    if (latestPdfContext) updatePdfDoseProtocol(latestPdfContext.params, latestPdfContext.schedule);
+  });
   updatePkInputVisibility();
   syncMicroInputsFromClearanceInputs();
   reset();

@@ -136,7 +136,7 @@
           </div>
           <div class="param-row">
             <label class="label" for="tciStopTime">Stop infusion at (min)</label>
-            <input class="form-control" id="tciStopTime" type="number" value="255" min="0" step="0.1" inputmode="decimal" />
+            <input class="form-control" id="tciStopTime" type="number" value="255" min="0" step="any" inputmode="decimal" />
           </div>
         </div>
       </div>
@@ -179,6 +179,16 @@
           <button class="btn btn-sm btn-outline-secondary mb-3" type="button" id="loadScheduleExampleBtn">Convert basic dosing to schedule</button>
           <button class="btn btn-sm btn-outline-primary mb-3" type="button" id="importTciScheduleBtn" data-import-tci-schedule>Import current TCI as schedule</button>
           <p class="small text-muted">TCI import copies each calculated rate interval into an editable, open-loop infusion schedule and turns TCI off. It preserves the current model and units, but later schedule edits will no longer track the concentration target. For simulation only—not a pump program.</p>
+          <div class="tci-simplify-tools mb-3" id="tciSimplifyTools" hidden>
+            <label for="tciSimplifyLimit">Optional simplified copy: at most this many infusion segments</label>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+              <input class="form-control form-control-sm" id="tciSimplifyLimit" type="number" min="1" step="1" value="120" inputmode="numeric" />
+              <button class="btn btn-sm btn-outline-primary" type="button" id="simplifyTciScheduleBtn">Replace with simplified original</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="restoreExactTciScheduleBtn">Restore exact original</button>
+            </div>
+            <p class="small text-muted mb-0 mt-2">These actions replace current schedule edits. The exact imported rates remain available until you switch drugs, load another strategy, or reset.</p>
+          </div>
+          <p class="schedule-warnings" id="scheduleWarnings" role="status" hidden></p>
 
           <div class="d-flex justify-content-between align-items-center mb-1">
             <strong>Boluses</strong>
@@ -398,7 +408,7 @@
             <input type="number" class="form-control form-control-sm" id="mainTciMaxRate" min="0" step="any" inputmode="decimal" />
           </label>
           <label for="mainTciStopTime">Stop at (min)
-            <input type="number" class="form-control form-control-sm" id="mainTciStopTime" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control form-control-sm" id="mainTciStopTime" min="0" step="any" inputmode="decimal" />
           </label>
         </div>
         <button class="btn btn-sm btn-outline-primary" type="button" id="mainImportTciScheduleBtn" data-import-tci-schedule hidden>Convert TCI rates to editable schedule</button>
@@ -427,6 +437,17 @@
             <div class="tci-rate-panel__heading"><span id="deliveryRateHeading">Educational TCI calculated infusion rate</span> <span id="tciRateUnit">mg/kg/min</span></div>
             <div id="tciRatePlot" class="plot plot--tci-rate"></div>
           </div>
+          <section class="tci-replay-comparison" id="tciReplayComparison" aria-label="Original TCI comparison" hidden>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <strong>Against original TCI (model replay)</strong>
+              <button class="btn btn-sm btn-outline-secondary" type="button" id="undoTciImportBtn">Undo import—restore TCI</button>
+            </div>
+            <p class="small mb-1" id="tciSourceDescription"></p>
+            <p class="small mb-1" id="tciReplayMetrics"></p>
+            <p class="small mb-1" id="tciReplayWarning"></p>
+            <label class="small"><input type="checkbox" id="showTciReference" checked /> Show original TCI Cp/Ce on the plot</label>
+            <p class="small text-muted mb-0">This compares predictions within the selected model; it does not validate concentrations in a patient or define a pump program.</p>
+          </section>
           <div class="dose-timeline" aria-live="polite">
             <div class="dose-timeline__header"><span>Dosing timeline <small class="dose-timeline__help">Click to add a bolus · drag to add an infusion · click a dose to edit it</small></span><span id="doseTimelineText">—</span></div>
             <div class="dose-timeline__track" id="doseTimelineTrack" aria-label="Editable dosing timeline"></div>
@@ -440,22 +461,22 @@
               </div>
               <div class="timeline-event-editor__fields" id="timelineEventEditorFields">
                 <label id="timelineBolusTimeField" for="timelineEventTime">Time (min)
-                  <input class="form-control form-control-sm" id="timelineEventTime" type="number" min="0" step="0.1" inputmode="decimal">
+                  <input class="form-control form-control-sm" id="timelineEventTime" type="number" min="0" step="any" inputmode="decimal">
                 </label>
                 <label id="timelineInfusionStartField" for="timelineEventStart">Start (min)
-                  <input class="form-control form-control-sm" id="timelineEventStart" type="number" min="0" step="0.1" inputmode="decimal">
+                  <input class="form-control form-control-sm" id="timelineEventStart" type="number" min="0" step="any" inputmode="decimal">
                 </label>
                 <label id="timelineInfusionEndField" for="timelineEventEnd">End (min)
-                  <input class="form-control form-control-sm" id="timelineEventEnd" type="number" min="0" step="0.1" inputmode="decimal">
+                  <input class="form-control form-control-sm" id="timelineEventEnd" type="number" min="0" step="any" inputmode="decimal">
                 </label>
                 <label id="timelineBolusDoseField" for="timelineEventDose">Dose <span id="timelineEventDoseUnit">mg/kg</span>
-                  <input class="form-control form-control-sm" id="timelineEventDose" type="number" min="0" step="0.01" inputmode="decimal">
+                  <input class="form-control form-control-sm" id="timelineEventDose" type="number" min="0" step="any" inputmode="decimal">
                 </label>
                 <label id="timelineBolusDurationField" for="timelineEventDuration">Duration (min)
-                  <input class="form-control form-control-sm" id="timelineEventDuration" type="number" min="0" step="0.1" inputmode="decimal">
+                  <input class="form-control form-control-sm" id="timelineEventDuration" type="number" min="0" step="any" inputmode="decimal">
                 </label>
                 <label id="timelineInfusionRateField" for="timelineEventRate">Rate <span id="timelineEventRateUnit">mg/kg/min</span>
-                  <input class="form-control form-control-sm" id="timelineEventRate" type="number" min="0" step="0.01" inputmode="decimal">
+                  <input class="form-control form-control-sm" id="timelineEventRate" type="number" min="0" step="any" inputmode="decimal">
                 </label>
               </div>
               <div class="timeline-event-editor__actions">

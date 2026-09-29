@@ -8557,6 +8557,35 @@ body.dark-mode .simulation-status[data-state="error"] {
   z-index: 1;
 }
 
+.tci-simplify-tools,
+.tci-replay-comparison {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.tci-simplify-tools label {
+  color: var(--text);
+  font-size: .86rem;
+  font-weight: 650;
+}
+
+#tciSimplifyLimit { max-width: 95px; }
+
+.tci-replay-comparison {
+  margin: 12px 0;
+  color: var(--text);
+}
+
+.schedule-warnings {
+  padding: 9px 12px;
+  border-left: 3px solid #c87500;
+  color: var(--text);
+  background: var(--panel-2);
+  font-size: .83rem;
+}
+
 .dose-timeline__segment-label {
   position: absolute;
   top: 50%;

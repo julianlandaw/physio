@@ -46,6 +46,12 @@
           basic: {}, bolusUnit: unit, infusionUnit: unit, weightKg: 70
         });
         check('basic and scheduled dosing agree', approx(run(scheduled).cp.at(-1), short.cp.at(-1)));
+        const overlapping = app.buildDosingPlan({
+          schedule: { enabled: true, boluses: [], infusions: [
+            { start: 0, end: 0.15, rate: 1 }, { start: 0.05, end: 0.1, rate: 2 }
+          ] }, basic: {}, bolusUnit: unit, infusionUnit: unit, weightKg: 70
+        });
+        check('overlapping infusion rates add', approx(run(overlapping).totalDoseMgKg, 0.25));
         check('delivery is clipped at the final time',
           approx(run(plan({ bolus: 1, tbolus: 1, infusion: 0, tinfusion: 0 }), 0.05).totalDoseMgKg, 0.05));
         const absolute = app.buildDosingPlan({
@@ -126,12 +132,39 @@
         check('TCI import preserves the stop boundary without adding a bolus', importedSchedule.boluses.length === 0 && importedSchedule.infusions.length > 0 && approx(importedSchedule.infusions.at(-1).end, 1.35));
         check('TCI schedule reproduces total dose', approx(replay.totalDoseMgKg, sourceTci.totalDoseMgKg));
         check('TCI schedule reproduces Cp and Ce', replay.cp.every((value, index) => approx(value, sourceTci.cp[index])) && replay.ce.every((value, index) => approx(value, sourceTci.ce[index])));
+        check('imported fractional inputs are valid', [...input('infusionEventsTable').querySelectorAll('input[type="number"]')].every(el => !el.validity.stepMismatch));
+        check('original TCI replay comparison is visible', !input('tciReplayComparison').hidden && input('tciReplayMetrics').textContent.includes('Cp') && input('tciSourceDescription').textContent.includes('Propofol'));
+        check('original TCI Cp overlay is plotted', input('myDiv1').data.some(trace => trace.name === 'Original TCI Cp (model)'));
+        input('showTciReference').checked = false;
+        input('showTciReference').dispatchEvent(new Event('change', { bubbles: true }));
+        check('original TCI overlay can be hidden', !input('myDiv1').data.some(trace => trace.name === 'Original TCI Cp (model)'));
+        input('showTciReference').checked = true;
+        input('showTciReference').dispatchEvent(new Event('change', { bubbles: true }));
+        input('tciSimplifyLimit').value = '4';
+        input('simplifyTciScheduleBtn').click();
+        const simplified = app.getScheduleFromDOM();
+        check('optional simplified schedule honors segment limit', simplified.infusions.length <= 4);
+        check('simplification approximately preserves total dose', approx(app.simulateStrategy(app.getCurrentState()).totalDoseMgKg, sourceTci.totalDoseMgKg, 1e-6));
+        check('simplified replay reports model deviation', input('tciReplayMetrics').textContent.includes('Ce') && input('tciReplayMetrics').textContent.includes('dose difference'));
+        input('restoreExactTciScheduleBtn').click();
+        check('exact original schedule can be restored', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(importedSchedule));
         input('importTciScheduleBtn').click();
         check('TCI import requires active TCI', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(importedSchedule));
         const firstRateInput = input('infusionEventsTable').querySelector('input[data-field="rate"]');
         firstRateInput.value = String(Number(firstRateInput.value) * 1.5);
         firstRateInput.dispatchEvent(new Event('input', { bubbles: true }));
         check('editing imported rate changes the predicted curve', !approx(app.simulateStrategy(app.getCurrentState()).cp.at(-1), sourceTci.cp.at(-1)));
+        firstRateInput.dispatchEvent(new Event('change', { bubbles: true }));
+        check('replay comparison updates after a schedule edit', input('tciReplayMetrics').textContent.includes('Maximum model replay difference'));
+        input('weight').value = '75';
+        app.dfsolve();
+        check('comparison flags changed model assumptions', input('tciReplayWarning').textContent.includes('weight'));
+        input('tfinal').value = '1';
+        app.dfsolve();
+        check('original overlay stops at the current simulation horizon', input('myDiv1').data.find(trace => trace.name === 'Original TCI Cp (model)').x.at(-1) <= 1);
+        input('undoTciImportBtn').click();
+        check('undo import restores original TCI settings', input('tciEnabled').checked && !input('useSchedule').checked && input('tciTarget').value === '2' && input('tciStopTime').value === '1.35' && input('tfinal').value === '2' && input('weight').value === '70');
+        check('undo import removes frozen comparison', input('tciReplayComparison').hidden && input('tciSimplifyTools').hidden);
 
         app.applyDrugById('remifentanil');
         input('tciEnabled').checked = true;
@@ -201,6 +234,14 @@
         check('loading schedule disables ignored basic fields', input('useSchedule').checked && input('b').disabled);
         check('loading schedule preserves fractional event time',
           approx(app.getScheduleFromDOM().boluses[0].time, 0.025));
+        check('fractional schedule fields avoid browser step errors', [...input('bolusEventsTable').querySelectorAll('input[type="number"]'), ...input('infusionEventsTable').querySelectorAll('input[type="number"]')].every(el => !el.validity.stepMismatch));
+        app.setScheduleToDOM({ enabled: true, boluses: [{ time: 3, dose: 1, duration: 0 }], infusions: [
+          { start: 0, end: 0.2, rate: 1 }, { start: 0.1, end: 0.3, rate: 1 }, { start: 0.5, end: 3, rate: 1 }
+        ] });
+        input('tfinal').value = 2;
+        app.dfsolve();
+        check('schedule warns about overlaps, gaps, and truncated events', ['overlap', 'gap', 'beyond'].every(word => input('scheduleWarnings').textContent.includes(word)));
+        check('schedule warnings do not prevent simulation', input('validationSummary').hidden && !input('scheduleWarnings').hidden);
 
         app.eval('strategies.at(-1).name = "<img src=x onerror=alert(1)>"');
         app.renderStrategyList();
@@ -212,11 +253,15 @@
           input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
           const longSource = app.simulateStrategy(app.getCurrentState());
           input('importTciScheduleBtn').click();
-          check('full-length TCI import creates a schedule', app.getScheduleFromDOM().infusions.length > 100);
+          const originalLongCount = app.getScheduleFromDOM().infusions.length;
+          check('full-length TCI import creates a schedule', originalLongCount > 100);
           const longReplay = app.simulateStrategy(app.getCurrentState());
           check('full-length imported schedule reproduces the TCI curve',
             approx(longReplay.totalDoseMgKg, longSource.totalDoseMgKg) &&
             longReplay.cp.every((value, index) => approx(value, longSource.cp[index], 1e-6)));
+          input('tciSimplifyLimit').value = '120';
+          input('simplifyTciScheduleBtn').click();
+          check('full-length TCI schedule can be simplified', app.getScheduleFromDOM().infusions.length <= 120 && app.getScheduleFromDOM().infusions.length < originalLongCount);
         }
 
         document.body.dataset.result = 'passed';
