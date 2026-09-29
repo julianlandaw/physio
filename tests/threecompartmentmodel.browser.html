@@ -110,6 +110,49 @@
         app.applyDrugById('propofol');
         input('tciEnabled').checked = true;
         input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
+        input('tfinal').value = 2;
+        input('tciStopTime').value = 1.35;
+        input('tciTarget').value = '';
+        input('importTciScheduleBtn').click();
+        check('invalid TCI cannot replace the dosing schedule', input('tciEnabled').checked && !input('useSchedule').checked && input('tciTarget').classList.contains('is-invalid'));
+        input('tciTarget').value = 2;
+        const sourceTci = app.simulateStrategy(app.getCurrentState());
+        check('main TCI view offers schedule import', !input('mainImportTciScheduleBtn').hidden);
+        input('mainImportTciScheduleBtn').click();
+        const importedSchedule = app.getScheduleFromDOM();
+        const replay = app.simulateStrategy(app.getCurrentState());
+        check('TCI import activates an editable schedule and turns TCI off', importedSchedule.enabled && !input('tciEnabled').checked && input('b').disabled && input('mainImportTciScheduleBtn').hidden);
+        check('imported schedule keeps its rate chart visible', !input('tciRatePanel').hidden && input('deliveryRateHeading').textContent.includes('Scheduled'));
+        check('TCI import preserves the stop boundary without adding a bolus', importedSchedule.boluses.length === 0 && importedSchedule.infusions.length > 0 && approx(importedSchedule.infusions.at(-1).end, 1.35));
+        check('TCI schedule reproduces total dose', approx(replay.totalDoseMgKg, sourceTci.totalDoseMgKg));
+        check('TCI schedule reproduces Cp and Ce', replay.cp.every((value, index) => approx(value, sourceTci.cp[index])) && replay.ce.every((value, index) => approx(value, sourceTci.ce[index])));
+        input('importTciScheduleBtn').click();
+        check('TCI import requires active TCI', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(importedSchedule));
+        const firstRateInput = input('infusionEventsTable').querySelector('input[data-field="rate"]');
+        firstRateInput.value = String(Number(firstRateInput.value) * 1.5);
+        firstRateInput.dispatchEvent(new Event('input', { bubbles: true }));
+        check('editing imported rate changes the predicted curve', !approx(app.simulateStrategy(app.getCurrentState()).cp.at(-1), sourceTci.cp.at(-1)));
+
+        app.applyDrugById('remifentanil');
+        input('tciEnabled').checked = true;
+        input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
+        input('tfinal').value = 2;
+        input('tciStopTime').value = 1.35;
+        const effectSiteTci = app.simulateStrategy(app.getCurrentState());
+        input('importTciScheduleBtn').click();
+        const effectSiteReplay = app.simulateStrategy(app.getCurrentState());
+        check('effect-site TCI import preserves Ce and dose',
+          approx(effectSiteReplay.totalDoseMgKg, effectSiteTci.totalDoseMgKg) &&
+          effectSiteReplay.ts.every((time, index) => {
+            const sourceIndex = effectSiteTci.ts.findIndex(sourceTime => approx(sourceTime, time));
+            return sourceIndex >= 0 && approx(effectSiteReplay.ce[index], effectSiteTci.ce[sourceIndex]);
+          }));
+
+        app.applyDrugById('propofol');
+        input('tciEnabled').checked = true;
+        input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
+        input('tfinal').value = 255;
+        input('tciStopTime').value = 255;
         const tciState = app.getCurrentState();
         const tciSimulation = app.simulateStrategy(tciState);
         check('saved-state TCI simulation includes delivered dose', tciSimulation.totalDoseMgKg > 0);
@@ -162,6 +205,19 @@
         app.eval('strategies.at(-1).name = "<img src=x onerror=alert(1)>"');
         app.renderStrategyList();
         check('strategy name is rendered as text', !input('strategyList').querySelector('img'));
+
+        if (new URLSearchParams(location.search).has('long')) {
+          app.applyDrugById('propofol');
+          input('tciEnabled').checked = true;
+          input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
+          const longSource = app.simulateStrategy(app.getCurrentState());
+          input('importTciScheduleBtn').click();
+          check('full-length TCI import creates a schedule', app.getScheduleFromDOM().infusions.length > 100);
+          const longReplay = app.simulateStrategy(app.getCurrentState());
+          check('full-length imported schedule reproduces the TCI curve',
+            approx(longReplay.totalDoseMgKg, longSource.totalDoseMgKg) &&
+            longReplay.cp.every((value, index) => approx(value, longSource.cp[index], 1e-6)));
+        }
 
         document.body.dataset.result = 'passed';
       } catch (error) {

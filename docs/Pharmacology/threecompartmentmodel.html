@@ -177,6 +177,8 @@
             <b>Infusion</b> unit. A bolus with duration 0 is treated as instantaneous. Enabling a schedule replaces the basic dosing fields above.
           </div>
           <button class="btn btn-sm btn-outline-secondary mb-3" type="button" id="loadScheduleExampleBtn">Convert basic dosing to schedule</button>
+          <button class="btn btn-sm btn-outline-primary mb-3" type="button" id="importTciScheduleBtn" data-import-tci-schedule>Import current TCI as schedule</button>
+          <p class="small text-muted">TCI import copies each calculated rate interval into an editable, open-loop infusion schedule and turns TCI off. It preserves the current model and units, but later schedule edits will no longer track the concentration target. For simulation only—not a pump program.</p>
 
           <div class="d-flex justify-content-between align-items-center mb-1">
             <strong>Boluses</strong>
@@ -208,7 +210,7 @@
             </div>
           </div>
 
-          <div class="table-responsive">
+          <div class="table-responsive schedule-infusion-scroll">
             <table class="table table-sm table-bordered text-center align-middle" id="infusionEventsTable">
               <thead class="table-light">
                 <tr>
@@ -399,6 +401,7 @@
             <input type="number" class="form-control form-control-sm" id="mainTciStopTime" min="0" step="0.1" inputmode="decimal" />
           </label>
         </div>
+        <button class="btn btn-sm btn-outline-primary" type="button" id="mainImportTciScheduleBtn" data-import-tci-schedule hidden>Convert TCI rates to editable schedule</button>
       </section>
       <p class="simulation-help">Start by selecting a drug, then set patient weight and dosing in <strong>Edit parameters</strong>. This educational PK simulation is not a dosing recommendation; verify any clinical decision against current guidance and patient-specific factors.</p>
     </section>
@@ -421,7 +424,7 @@
         <div class="card-body">
           <div id="myDiv1" class="plot plot--primary"></div>
           <div class="tci-rate-panel" id="tciRatePanel" hidden>
-            <div class="tci-rate-panel__heading">Educational TCI calculated infusion rate <span id="tciRateUnit">mg/kg/min</span></div>
+            <div class="tci-rate-panel__heading"><span id="deliveryRateHeading">Educational TCI calculated infusion rate</span> <span id="tciRateUnit">mg/kg/min</span></div>
             <div id="tciRatePlot" class="plot plot--tci-rate"></div>
           </div>
           <div class="dose-timeline" aria-live="polite">

@@ -33,6 +33,7 @@ function roundToSignificantFigures(num, sigFigs) {
 const MAX_SIMULATION_MINUTES = 1440;
 const SIMULATION_STEP_MINUTES = 0.1;
 const TIME_EPSILON = 1e-9;
+const MAX_VISIBLE_SCHEDULE_SEGMENTS = 80;
 
 function escapeHtml(value) {
   return String(value)
@@ -515,6 +516,8 @@ function updateTciControls() {
   if (testTargetUnit) testTargetUnit.textContent = targetUnit;
   const mainControls = document.getElementById('mainTciControls');
   if (mainControls) mainControls.hidden = !config.enabled;
+  const mainImportButton = document.getElementById('mainImportTciScheduleBtn');
+  if (mainImportButton) mainImportButton.hidden = !config.enabled;
   const mainTargetType = document.getElementById('mainTciTargetType');
   const mainTarget = document.getElementById('mainTciTarget');
   const mainMaxRate = document.getElementById('mainTciMaxRate');
@@ -779,6 +782,44 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
   };
 }
 
+function buildScheduleFromTciSimulation(simulation, infusionUnit, weightKg) {
+  const infusions = [];
+  simulation.intervalRates.forEach((rateMgKgMin, index) => {
+    if (!(rateMgKgMin > 0)) return;
+    const start = Number(formatInputValue(simulation.ts[index]));
+    const end = Number(formatInputValue(simulation.ts[index + 1]));
+    const rate = Number(formatInputValue(convertMgKgMinToInfusionValue(rateMgKgMin, infusionUnit, weightKg)));
+    const last = infusions[infusions.length - 1];
+    if (last && last.end === start && last.rate === rate) last.end = end;
+    else infusions.push({ start, end, rate });
+  });
+  return { enabled: true, boluses: [], infusions };
+}
+
+function importCurrentTciAsSchedule() {
+  if (!document.getElementById('tciEnabled')?.checked) {
+    setSimulationStatus('Enable TCI and enter a target and maximum rate before importing its infusion schedule.', 'error');
+    return;
+  }
+  if (!validateSimulationInputs()) return;
+
+  const state = getCurrentState();
+  const simulation = simulateStrategy(state);
+  const schedule = buildScheduleFromTciSimulation(
+    simulation,
+    INFUSIONUNITS[state.units.infusion],
+    state.patient.weightKg
+  );
+  selectedTimelineEvent = null;
+  timelineUndoSchedule = null;
+  document.getElementById('tciEnabled').checked = false;
+  setScheduleToDOM(schedule);
+  disableLegacyBolusInfusionInputs(true);
+  expandDrawerCard('scheduleCard');
+  dfsolve();
+  setSimulationStatus(`TCI rates imported as ${schedule.infusions.length} editable infusion segments. TCI is off; the schedule no longer tracks the target.`, 'ok');
+}
+
 function updateRegimenOverview(params, schedule) {
   const drug = DRUGS.find(d => d.id === currentDrug);
   const drugLabel = drug ? `${drug.label}${presetIsModified ? ' — modified' : ''}` : 'Custom model';
@@ -811,9 +852,12 @@ function updateRegimenOverview(params, schedule) {
     const boluses = schedule.boluses || [];
     const infusions = schedule.infusions || [];
     description = `${boluses.length} bolus${boluses.length === 1 ? '' : 'es'} · ${infusions.length} infusion segment${infusions.length === 1 ? '' : 's'}`;
+    const displayedInfusions = infusions.length > MAX_VISIBLE_SCHEDULE_SEGMENTS
+      ? [{ start: infusions[0].start, end: infusions[infusions.length - 1].end, summary: true }]
+      : infusions;
     segments = [
       ...boluses.map((event, index) => ({ start: event.time, end: event.duration > 0 ? event.time + event.duration : event.time, type: 'bolus', index, label: `Bolus ${index + 1}` })),
-      ...infusions.map((event, index) => ({ start: event.start, end: event.end, type: 'infusion', index, label: `Infusion ${index + 1}` }))
+      ...displayedInfusions.map((event, index) => ({ start: event.start, end: event.end, type: 'infusion', index: event.summary ? -1 : index, summary: Boolean(event.summary), label: event.summary ? `${infusions.length} infusion segments` : `Infusion ${index + 1}` }))
     ];
   } else {
     description = `Bolus ${formatInputValue(parseFloatSafe(bnum.value, 0))} ${currentBolusUnit.name} over ${formatInputValue(params.tbolus)} min · infusion ${formatInputValue(parseFloatSafe(infusionnum.value, 0))} ${currentInfusionUnit.name} for ${formatInputValue(params.tinfusion)} min`;
@@ -834,21 +878,21 @@ function updateRegimenOverview(params, schedule) {
     const start = clamp(segment.start, 0, params.tfinal);
     const end = clamp(segment.end, 0, params.tfinal);
     const marker = document.createElement('span');
-    marker.className = `dose-timeline__segment dose-timeline__segment--${segment.type}`;
+    marker.className = `dose-timeline__segment dose-timeline__segment--${segment.type}${segment.summary ? ' dose-timeline__segment--summary' : ''}`;
     marker.dataset.eventType = segment.type;
     marker.dataset.eventIndex = String(segment.index);
     marker.style.left = `${(start / params.tfinal) * 100}%`;
     marker.style.width = `${Math.max(1.2, ((Math.max(end, start) - start) / params.tfinal) * 100)}%`;
-    const eventDetails = tci.enabled ? description : getTimelineEventDetails(segment, schedule);
-    marker.title = tci.enabled ? eventDetails : `${eventDetails}. Click to edit.`;
-    if (!tci.enabled) {
+    const eventDetails = segment.summary ? `${segment.label}; edit individual rates in Dosing Schedule` : tci.enabled ? description : getTimelineEventDetails(segment, schedule);
+    marker.title = tci.enabled || segment.summary ? eventDetails : `${eventDetails}. Click to edit.`;
+    if (!tci.enabled && !segment.summary) {
       marker.setAttribute('role', 'button');
       marker.setAttribute('tabindex', '0');
       marker.setAttribute('aria-label', `Edit ${eventDetails}`);
     }
     const label = document.createElement('span');
     label.className = 'dose-timeline__segment-label';
-    label.textContent = tci.enabled ? `TCI 0–${formatInputValue(end)} min` : segment.type === 'bolus'
+    label.textContent = segment.summary ? segment.label : tci.enabled ? `TCI 0–${formatInputValue(end)} min` : segment.type === 'bolus'
       ? `B ${formatInputValue(start)}m`
       : `Infusion ${formatInputValue(start)}–${formatInputValue(end)} min`;
     marker.appendChild(label);
@@ -1377,6 +1421,7 @@ function ensureScheduleUI() {
     disableLegacyBolusInfusionInputs(true);
     dfsolve();
   });
+  $$('[data-import-tci-schedule]').forEach(button => button.addEventListener('click', importCurrentTciAsSchedule));
 
   bolusTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
   infTbl.addEventListener('input', () => { if (useCb.checked) dfsolve(); });
@@ -2070,6 +2115,16 @@ function addEventMarkers(layout) {
     }
   });
 
+  if (infs.length > MAX_VISIBLE_SCHEDULE_SEGMENTS) {
+    [infs[0].start, infs[infs.length - 1].end].forEach((time, index) => {
+      if (time >= 0 && time <= finalTime) {
+        layout.shapes.push({ type: 'line', x0: time, x1: time, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: 'blue', width: 0.6, dash: 'dot' } });
+        layout.annotations.push({ x: time, y: 1, xref: 'x', yref: 'paper', text: index === 0 ? 'Variable infusion start' : 'Variable infusion end', showarrow: false, yanchor: 'bottom', font: { color: 'blue', size: 10 } });
+      }
+    });
+    return layout;
+  }
+
   infs.forEach((seg, k) => {
     const s = Math.max(0, seg.start);
     const e = Math.max(0, seg.end);
@@ -2330,12 +2385,14 @@ function dfsolve() {
   Plotly.newPlot('myDiv3', [trace_p2], layout3, PLOT_CONFIG);
 
   const tciRatePanel = document.getElementById('tciRatePanel');
-  if (tciRatePanel) tciRatePanel.hidden = !tci.enabled;
-  if (tci.enabled) {
+  if (tciRatePanel) tciRatePanel.hidden = !(tci.enabled || schedule.enabled);
+  const deliveryRateHeading = document.getElementById('deliveryRateHeading');
+  if (deliveryRateHeading) deliveryRateHeading.textContent = tci.enabled ? 'Educational TCI calculated infusion rate' : 'Scheduled delivery rate';
+  if (tci.enabled || schedule.enabled) {
     const rateTrace = {
       x: ts.slice(0, N),
       y: simulation.intervalRates.map(rate => convertMgKgMinToInfusionValue(rate, currentInfusionUnit, params.weightKg)),
-      name: `Calculated rate (${currentInfusionUnit.name})`,
+      name: `${tci.enabled ? 'Calculated' : 'Scheduled'} rate (${currentInfusionUnit.name})`,
       line: { color: '#198754', width: 2, shape: 'hv' },
       fill: 'tozeroy',
       fillcolor: 'rgba(25, 135, 84, .12)'

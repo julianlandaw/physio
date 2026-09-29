@@ -8541,6 +8541,22 @@ body.dark-mode .simulation-status[data-state="error"] {
   z-index: 1;
 }
 
+.dose-timeline__segment--summary {
+  pointer-events: none;
+  opacity: .75;
+}
+
+.schedule-infusion-scroll {
+  max-height: 34rem;
+  overflow: auto;
+}
+
+.schedule-infusion-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .dose-timeline__segment-label {
   position: absolute;
   top: 50%;
