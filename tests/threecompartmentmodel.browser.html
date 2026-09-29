@@ -61,10 +61,32 @@
         });
         check('absolute bolus uses patient weight', approx(run(absolute).totalDoseMgKg, 1));
 
+        input('darkModeBtnTop').click();
+        check('dark mode themes the concentration plots', input('myDiv1')._fullLayout.paper_bgcolor === '#121212' && input('myDiv2')._fullLayout.plot_bgcolor === '#1e1e1e');
+        input('darkModeBtnTop').click();
+        check('light mode restores plot colors', input('myDiv1')._fullLayout.paper_bgcolor === '#ffffff');
+        input('scaleToggleBtnTop').click();
+        app.dfsolve();
+        check('log axis survives a simulation redraw', input('myDiv1')._fullLayout.yaxis.type === 'log' && input('myDiv2')._fullLayout.yaxis.type === 'log' && input('scaleToggleBtnTop').textContent === 'Linear Y-axis');
+        input('scaleToggleBtnTop').click();
+        check('linear axis can be restored', input('myDiv1')._fullLayout.yaxis.type === 'linear');
+
+        const originalNewPlot = app.Plotly.newPlot;
+        let plotCalls = 0;
+        app.Plotly.newPlot = function (...args) { plotCalls++; return originalNewPlot.apply(this, args); };
+        app.reset();
+        check('reset renders once after loading the preset', plotCalls === 3);
+        plotCalls = 0;
+        app.propofol();
+        check('direct preset calls still render', plotCalls === 3);
+        plotCalls = 0;
+
         input('b').value = 5;
         input('initialp').value = 2;
         input('tciEnabled').checked = true;
         app.applyDrugById('fentanyl');
+        check('drug switch renders once after loading the example', plotCalls === 3);
+        app.Plotly.newPlot = originalNewPlot;
         check('drug switch replaces prior dose with fentanyl example', input('b').value === '1' && input('infusion').value === '1' && input('initialp').value === '0');
         check('drug switch permits manual TCI without a starting profile', !input('tciEnabled').checked && !input('tciEnabled').disabled);
         check('uncurated TCI target and rate are blank', input('tciTarget').value === '' && input('tciMaxRate').value === '' && input('tciTargetType').value === 'cp');
@@ -74,11 +96,30 @@
         input('tciTarget').value = 2;
         input('tciMaxRate').value = 1;
         check('manual TCI runs after both inputs are supplied', app.validateSimulationInputs() && app.simulateStrategy(app.getCurrentState()).totalDoseMgKg > 0);
+        app.dfsolve();
+        input('darkModeBtnTop').click();
+        check('dark mode also themes the TCI rate plot', input('tciRatePlot')._fullLayout.paper_bgcolor === '#121212');
+        input('darkModeBtnTop').click();
         app.captureCurrentStrategy();
         const manualTciId = app.eval('strategies.at(-1).id');
         app.applyDrugById('propofol');
+        let restoredPlotCalls = 0;
+        app.Plotly.newPlot = function (...args) { restoredPlotCalls++; return originalNewPlot.apply(this, args); };
         app.loadStrategyToInputs(manualTciId);
+        app.Plotly.newPlot = originalNewPlot;
+        check('restoring a TCI strategy renders once', restoredPlotCalls === 4);
         check('manual TCI strategy restores entered settings', input('tciEnabled').checked && input('tciTarget').value === '2' && input('tciMaxRate').value === '1');
+        input('scaleToggleBtnTop').click();
+        input('compareMode').checked = true;
+        input('compareMode').dispatchEvent(new Event('change', { bubbles: true }));
+        check('log scale persists in strategy comparison', input('myDiv1')._fullLayout.yaxis.type === 'log');
+        check('strategy comparison still reports calculated metrics', input('compareResults').querySelectorAll('tbody tr').length === 2 && input('compareResults').textContent.includes('AUC Cp'));
+        input('darkModeBtnTop').click();
+        check('dark theme applies in strategy comparison', input('myDiv1')._fullLayout.paper_bgcolor === '#121212');
+        input('darkModeBtnTop').click();
+        input('compareMode').checked = false;
+        input('compareMode').dispatchEvent(new Event('change', { bubbles: true }));
+        input('scaleToggleBtnTop').click();
         check('every drug has an explicit example decision', app.eval('DRUGS.every(drug => Object.hasOwn(DRUG_DOSE_EXAMPLES, drug.id))'));
 
         app.applyDrugById('dexmedetomidine');

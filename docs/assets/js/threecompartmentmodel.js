@@ -214,8 +214,17 @@ const darkLayout = {
   title: { font: {family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif', size: 18, color: '#e9ecef'} }
 };
 
-function applyPlotTheme() {
-  Plotly.defaults = { layout: document.body.classList.contains('dark-mode') ? darkLayout : lightLayout };
+function themedPlotLayout(layout) {
+  const theme = document.body.classList.contains('dark-mode') ? darkLayout : lightLayout;
+  return {
+    ...theme,
+    ...layout,
+    font: { ...theme.font, ...layout.font },
+    margin: { ...theme.margin, ...layout.margin },
+    xaxis: { ...theme.xaxis, ...layout.xaxis },
+    yaxis: { ...theme.yaxis, ...layout.yaxis },
+    title: { ...theme.title, ...layout.title, font: { ...theme.title.font, ...layout.title?.font } }
+  };
 }
 
 function toggleDarkMode() {
@@ -226,8 +235,7 @@ function toggleDarkMode() {
     btn.setAttribute('aria-pressed', String(enabled));
     btn.textContent = enabled ? 'Light mode' : 'Dark mode';
   }
-  applyPlotTheme();
-  if (window.dfsolve) dfsolve();
+  dfsolve();
 }
 
 let isLogScale = false;
@@ -414,14 +422,6 @@ function convertMgKgToBolusValue(valueMgKg, unitObj, weightKg = getWeightKg()) {
 function convertMgKgMinToInfusionValue(valueMgKgMin, unitObj, weightKg = getWeightKg()) {
   const perKgValue = unitObj?.perKg ? valueMgKgMin : valueMgKgMin * weightKg;
   return perKgValue * (unitObj?.factor ?? 1);
-}
-
-function convertBolusToMgKg(value, unitObj = currentBolusUnit) {
-  return convertBolusValueToMgKg(value, unitObj, getWeightKg());
-}
-
-function convertInfusionToMgKgMin(value, unitObj = currentInfusionUnit) {
-  return convertInfusionValueToMgKgMin(value, unitObj, getWeightKg());
 }
 
 function populateUnitSelect(selectEl, unitsMap, order) {
@@ -1882,7 +1882,7 @@ function restoreSimulationState(s) {
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
   try {
-    if (s.drug && typeof window[s.drug] === 'function') window[s.drug]();
+    if (s.drug && typeof window[s.drug] === 'function') withoutIntermediateSolve(() => window[s.drug]());
   } catch (e) {
     console.warn('Could not switch drug preset:', e);
   }
@@ -2052,7 +2052,7 @@ function trapz(y, x) {
 }
 
 
-function computeMetrics(state, sim) {
+function computeMetrics(sim) {
   const { ts, cp, ce } = sim;
   const idxCp = cp.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
   const idxCe = sim.hasEffectSite ? ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0) : null;
@@ -2061,8 +2061,7 @@ function computeMetrics(state, sim) {
     totalDose_mgkg: sim.totalDoseMgKg,
     cmaxCp: cp[idxCp], tmaxCp: ts[idxCp],
     cmaxCe: idxCe == null ? null : ce[idxCe], tmaxCe: idxCe == null ? null : ts[idxCe],
-    aucCp: trapz(cp, ts), aucCe: sim.hasEffectSite ? trapz(ce, ts) : null,
-    finalCp: cp[cp.length - 1], finalCe: sim.hasEffectSite ? ce[ce.length - 1] : null
+    aucCp: trapz(cp, ts), aucCe: sim.hasEffectSite ? trapz(ce, ts) : null
   };
 }
 
@@ -2127,13 +2126,13 @@ function plotComparisonFromCurrent() {
     if (sim.hasEffectSite) {
       traces.push({ x: sim.ts, y: sim.ce.map(v => v * yFactor), name: `${s.name} Ce (${unitLabel})`, legendgroup: s.id, line: { color, width: 2, dash: 'dot' } });
     }
-    metricsRows.push({ state: s, sim, metrics: computeMetrics(s, sim) });
+    metricsRows.push({ state: s, metrics: computeMetrics(sim) });
   });
 
   const layout = {
     title: { text: 'Central vs Effect-site (Comparison)' },
     xaxis: { title: { text: 'Time (min)' } },
-    yaxis: { title: { text: `Concentration (${unitLabel})` } }
+    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' }
   };
 
   const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(live.inputs.tfinal);
@@ -2141,7 +2140,7 @@ function plotComparisonFromCurrent() {
   legendOutsideBottom(layout, { y: -0.42, bottom: 160 });
 
   const PLOT_CONFIG = { responsive: true, displaylogo: false };
-  Plotly.newPlot('myDiv1', [...traces, ...legendTraces], layout, PLOT_CONFIG);
+  Plotly.newPlot('myDiv1', [...traces, ...legendTraces], themedPlotLayout(layout), PLOT_CONFIG);
   renderCompareResults(metricsRows, unitLabel);
 }
 
@@ -2522,8 +2521,16 @@ function updateTciReplayComparison(simulation, schedule, tci) {
   return sourceTraces;
 }
 
+let suppressIntermediateSolve = 0;
+
+function withoutIntermediateSolve(action) {
+  suppressIntermediateSolve++;
+  try { return action(); }
+  finally { suppressIntermediateSolve--; }
+}
+
 function dfsolve() {
-  let params = { b: [], Cl: [], Q2: [], Q3: [], Vd1: [], Vd2: [], Vd3: [], tbolus: [], tinfusion: [], initialp: [], tfinal: [], dt: [], ke0: [], weightKg: [] };
+  if (suppressIntermediateSolve) return;
 
   if (!validateSimulationInputs()) return;
 
@@ -2531,12 +2538,11 @@ function dfsolve() {
   else syncMicroInputsFromClearanceInputs();
 
   const pk = getPkParametersFromInputs();
+  const params = {};
   params.Vd1 = pk.V1; // mL/kg
   params.Vd2 = pk.V2; // mL/kg, derived in microconstant mode
   params.Vd3 = pk.V3; // mL/kg, derived in microconstant mode
   params.Cl = pk.Cl;  // mL/kg/min
-  params.Q2 = pk.Q2;  // mL/kg/min
-  params.Q3 = pk.Q3;  // mL/kg/min
 
   const k10 = pk.k10; // 1/min
   const k12 = pk.k12; // 1/min
@@ -2605,18 +2611,18 @@ function dfsolve() {
   let layout1 = {
     title: { text: hasEffectSite ? 'Central vs Effect-site' : 'Central concentration (effect site not modeled)' },
     xaxis: { title: { text: 'Time (min)' } },
-    yaxis: { title: { text: `Concentration (${unitLabel})` } }
+    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' }
   };
   let layout2 = {
     title: { text: 'Rapid peripheral compartment' },
     xaxis: { title: { text: 'Time (min)' } },
-    yaxis: { title: { text: `Concentration (${unitLabel})` } },
+    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' },
     showlegend: false
   };
   let layout3 = {
     title: { text: 'Slow peripheral compartment' },
     xaxis: { title: { text: 'Time (min)' } },
-    yaxis: { title: { text: `Concentration (${unitLabel})` } },
+    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' },
     showlegend: false
   };
 
@@ -2636,13 +2642,13 @@ function dfsolve() {
   if (compareMode && strategies.some(s => s.drug === currentDrug)) {
     plotComparisonFromCurrent();
   } else {
-    Plotly.newPlot('myDiv1', panel1Traces, layout1, PLOT_CONFIG);
+    Plotly.newPlot('myDiv1', panel1Traces, themedPlotLayout(layout1), PLOT_CONFIG);
     const compareResults = document.getElementById('compareResults');
     if (compareResults) compareResults.textContent = '';
   }
 
-  Plotly.newPlot('myDiv2', [trace_p1], layout2, PLOT_CONFIG);
-  Plotly.newPlot('myDiv3', [trace_p2], layout3, PLOT_CONFIG);
+  Plotly.newPlot('myDiv2', [trace_p1], themedPlotLayout(layout2), PLOT_CONFIG);
+  Plotly.newPlot('myDiv3', [trace_p2], themedPlotLayout(layout3), PLOT_CONFIG);
 
   const tciRatePanel = document.getElementById('tciRatePanel');
   if (tciRatePanel) tciRatePanel.hidden = !(tci.enabled || schedule.enabled);
@@ -2657,12 +2663,12 @@ function dfsolve() {
       fill: 'tozeroy',
       fillcolor: 'rgba(25, 135, 84, .12)'
     };
-    Plotly.newPlot('tciRatePlot', [rateTrace], {
+    Plotly.newPlot('tciRatePlot', [rateTrace], themedPlotLayout({
       margin: { l: 60, r: 30, t: 12, b: 42 },
       xaxis: { title: { text: 'Time (min)' } },
       yaxis: { title: { text: `Rate (${currentInfusionUnit.name})` } },
       showlegend: false
-    }, PLOT_CONFIG);
+    }), PLOT_CONFIG);
   }
 
   // Results
@@ -3420,7 +3426,7 @@ function applyDrugById(id, { clearDosing = true } = {}) {
 
   if (clearDosing) clearDosingForDrugSwitch();
   presetIsModified = false;
-  fn();                 // runs the preset (sets units + PK + dfsolve())
+  withoutIntermediateSolve(fn); // Apply preset parameters; render after all dosing and TCI fields are ready.
   if (clearDosing) applyDrugDoseExample(id);
   applyTciPreset(id);
   setCurrentDrugLabel();
@@ -3447,7 +3453,7 @@ function reset() {
   if (pkInputModeSelect) pkInputModeSelect.value = 'clearance';
   updatePkInputVisibility();
   presetIsModified = false;
-  propofol();
+  withoutIntermediateSolve(propofol);
   applyDrugDoseExample('propofol');
   applyTciPreset('propofol');
   const testTarget = document.getElementById('testRegimenTarget');
@@ -3582,7 +3588,6 @@ function wireInputs() {
 }
 
 (function init() {
-  applyPlotTheme();
   initDrawer();
   populateDrugPicker();
   initializeUnitSelectors();
