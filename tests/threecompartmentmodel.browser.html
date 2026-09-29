@@ -59,10 +59,21 @@
         input('initialp').value = 2;
         input('tciEnabled').checked = true;
         app.applyDrugById('fentanyl');
-        check('drug switch clears bolus and initial concentration', input('b').value === '0' && input('initialp').value === '0');
+        check('drug switch replaces prior dose with fentanyl example', input('b').value === '1' && input('infusion').value === '1' && input('initialp').value === '0');
         check('drug switch turns off TCI without a curated profile', !input('tciEnabled').checked && input('tciEnabled').disabled);
+        check('every drug has an explicit example decision', app.eval('DRUGS.every(drug => Object.hasOwn(DRUG_DOSE_EXAMPLES, drug.id))'));
+
+        app.applyDrugById('dexmedetomidine');
+        check('dexmedetomidine example uses its own dose units', input('b').value === '1' && input('tbolus').value === '10' && input('infusion').value === '0.5' && input('infusionUnitSelect').value === 'µg/kg/hr');
+        app.applyDrugById('ephedrine');
+        check('bolus-only example clears prior infusion', input('b').value === '0.1' && input('infusion').value === '0');
+        app.applyDrugById('bupivacaine');
+        check('bupivacaine does not suggest an IV regimen', input('b').value === '0' && input('infusion').value === '0');
+        app.applyDrugById('vasopressin');
+        check('vasopressin does not imply a mass-to-unit conversion', input('b').value === '0' && input('infusion').value === '0');
 
         app.applyDrugById('propofol');
+        check('propofol example is preserved on drug selection', input('b').value === '1' && input('infusion').value === '100');
         input('Vd1').value = 229;
         input('Vd1').dispatchEvent(new Event('change', { bubbles: true }));
         check('edited PK is marked modified', input('summaryDrug').textContent.includes('modified'));

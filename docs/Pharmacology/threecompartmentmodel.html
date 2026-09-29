@@ -77,6 +77,7 @@
             <select id="drawerDrugPicker" class="form-control" aria-describedby="drawerDrugPickerHelp"></select>
             <span class="sr-only" id="drawerDrugPickerHelp">Drug presets are grouped by clinical class. Choose Custom model to keep and edit the current parameters.</span>
           </div>
+          <p class="param-note">Selecting a drug loads an illustrative adult IV dose for graph exploration, not a clinical recommendation. Bupivacaine and vasopressin remain at zero because this model has no suitable IV mass-dose example for them.</p>
           <div class="param-row">
             <label id="weighthtml" class="label" for="weight">Patient weight (kg)</label>
             <input type="number" class="form-control" id="weight" value="70" min="0.1" step="0.1" inputmode="decimal" />
@@ -92,7 +93,7 @@
           <div class="param-note" id="doseUnitsHelp">Use per-kg dosing (mg/kg, µg/kg/min) or absolute dosing (mg, mg/min, mg/hr). Absolute units are converted internally using patient weight.</div>
           <div class="param-row">
             <label id="bhtml" class="label" for="b"></label>
-            <input type="number" class="form-control" id="b" value="0.1" min="0" step="0.01" inputmode="decimal" aria-describedby="doseUnitsHelp" />
+            <input type="number" class="form-control" id="b" value="0.1" min="0" step="any" inputmode="decimal" aria-describedby="doseUnitsHelp" />
           </div>
           <div class="param-row">
             <label id="tbolushtml" class="label" for="tbolus"></label>
@@ -100,7 +101,7 @@
           </div>
           <div class="param-row">
             <label id="infusionhtml" class="label" for="infusion"></label>
-            <input type="number" class="form-control" id="infusion" value="0" min="0" step="0.01" inputmode="decimal" aria-describedby="doseUnitsHelp" />
+            <input type="number" class="form-control" id="infusion" value="0" min="0" step="any" inputmode="decimal" aria-describedby="doseUnitsHelp" />
           </div>
           <div class="param-row">
             <label id="tinfusionhtml" class="label" for="tinfusion"></label>
@@ -375,10 +376,10 @@
         </div>
         <div class="quick-dose-editor__fields">
           <label for="mainBolusAmount"><span id="mainBolusLabel">Bolus</span> <span id="mainBolusUnit">mg/kg</span>
-            <input type="number" class="form-control form-control-sm" id="mainBolusAmount" min="0" step="0.01" inputmode="decimal" />
+            <input type="number" class="form-control form-control-sm" id="mainBolusAmount" min="0" step="any" inputmode="decimal" />
           </label>
           <label for="mainInfusionRate"><span id="mainInfusionLabel">Infusion</span> <span id="mainInfusionUnit">mg/kg/min</span>
-            <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="0.01" inputmode="decimal" />
+            <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="any" inputmode="decimal" />
           </label>
         </div>
         <div class="quick-dose-editor__fields quick-dose-editor__fields--tci" id="mainTciControls" hidden>

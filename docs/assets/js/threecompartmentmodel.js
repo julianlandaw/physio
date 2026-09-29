@@ -2991,6 +2991,50 @@ const DRUGS = [
   { id: 'vasopressin', label: 'Vasopressin', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' }
 ];
 
+// Illustrative adult IV inputs in each preset's displayed units. These make a
+// useful starting curve, not a regimen for clinical use. Zero means no example
+// for that route or dose unit, not a recommendation to omit treatment.
+const DRUG_DOSE_EXAMPLES = Object.freeze({
+  propofol: { bolus: 1, bolusMinutes: 1, infusion: 100, infusionMinutes: 60, finalMinutes: 255 },
+  etomidate: { bolus: 0.3, bolusMinutes: 1 },
+  ketamine: { bolus: 1, bolusMinutes: 1, infusion: 1, infusionMinutes: 60 },
+  dexmedetomidine: { bolus: 1, bolusMinutes: 10, infusion: 0.5, infusionMinutes: 60 },
+  midazolam: { bolus: 0.05, bolusMinutes: 2, infusion: 1, infusionMinutes: 60 },
+  diazepam: { bolus: 0.1, bolusMinutes: 2 },
+  fentanyl: { bolus: 1, bolusMinutes: 1, infusion: 1, infusionMinutes: 60 },
+  hydromorphone: { bolus: 0.005, bolusMinutes: 2 },
+  remifentanil: { bolus: 0.5, bolusMinutes: 1, infusion: 0.1, infusionMinutes: 60 },
+  sufentanil: { bolus: 0.2, bolusMinutes: 1, infusion: 0.3, infusionMinutes: 60 },
+  alfentanil: { bolus: 10, bolusMinutes: 1, infusion: 0.5, infusionMinutes: 60 },
+  methadone: { bolus: 0.05, bolusMinutes: 2 },
+  rocuronium: { bolus: 0.6, bolusMinutes: 1 },
+  vecuronium: { bolus: 0.1, bolusMinutes: 1 },
+  cisatracurium: { bolus: 0.15, bolusMinutes: 1, infusion: 1, infusionMinutes: 60 },
+  pancuronium: { bolus: 0.08, bolusMinutes: 1 },
+  succinylcholine: { bolus: 1, bolusMinutes: 0.5 },
+  lidocaine: { bolus: 1, bolusMinutes: 2, infusion: 1, infusionMinutes: 60 },
+  // No routine IV bupivacaine example; systemic exposure here is a modeling aid only.
+  bupivacaine: {},
+  phenylephrine: { bolus: 1, bolusMinutes: 0, infusion: 0.5, infusionMinutes: 60 },
+  ephedrine: { bolus: 0.1, bolusMinutes: 0 },
+  epinephrine: { infusion: 0.05, infusionMinutes: 60 },
+  dobutamine: { infusion: 5, infusionMinutes: 60 },
+  dopamine: { infusion: 5, infusionMinutes: 60 },
+  milrinone: { bolus: 50, bolusMinutes: 10, infusion: 0.375, infusionMinutes: 60 },
+  // Vasopressin is dosed in units/min; a mass-based default would be misleading.
+  vasopressin: {}
+});
+
+function applyDrugDoseExample(id) {
+  const example = DRUG_DOSE_EXAMPLES[id];
+  if (!example) return;
+  bnum.value = formatInputValue(example.bolus ?? 0);
+  tbolusnum.value = formatInputValue(example.bolusMinutes ?? 0);
+  infusionnum.value = formatInputValue(example.infusion ?? 0);
+  tinfusionnum.value = formatInputValue(example.infusionMinutes ?? 0);
+  tfinalnum.value = formatInputValue(example.finalMinutes ?? 120);
+}
+
 function populateDrugPicker() {
   ['drugPicker', 'drawerDrugPicker'].forEach(id => {
     const picker = document.getElementById(id);
@@ -3054,10 +3098,14 @@ function applyDrugById(id, { clearDosing = true } = {}) {
   if (clearDosing) clearDosingForDrugSwitch();
   presetIsModified = false;
   fn();                 // runs the preset (sets units + PK + dfsolve())
+  if (clearDosing) applyDrugDoseExample(id);
   applyTciPreset(id);
   setCurrentDrugLabel();
   dfsolve();
-  if (clearDosing) setSimulationStatus('Drug preset loaded. Previous doses and initial concentration were cleared; TCI is off.', 'ok');
+  if (clearDosing) setSimulationStatus(
+    id === 'bupivacaine' ? 'Bupivacaine has no routine IV dosing example; dosing remains zero. This systemic PK model is educational only.' :
+    id === 'vasopressin' ? 'Vasopressin is dosed in units/min, which this mass-based model does not support; dosing remains zero.' :
+    'Drug preset loaded with an illustrative adult IV dosing example. Previous dosing was replaced; TCI is off.', 'ok');
 
   [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')]
     .filter(Boolean)
@@ -3077,12 +3125,8 @@ function reset() {
   updatePkInputVisibility();
   presetIsModified = false;
   propofol();
+  applyDrugDoseExample('propofol');
   applyTciPreset('propofol');
-  bnum.value = 1;
-  tbolusnum.value = 1;
-  tinfusionnum.value = 60;
-  infusionnum.value = 100;
-  tfinalnum.value = 255;
   const testTarget = document.getElementById('testRegimenTarget');
   if (testTarget) testTarget.value = '';
   const tciStopTime = document.getElementById('tciStopTime');
