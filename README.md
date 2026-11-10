@@ -67,6 +67,7 @@ The main model is implemented by:
 
 - `docs/Pharmacology/threecompartmentmodel.html` — application markup and local library references.
 - `docs/assets/js/threecompartmentmodel.js` — PK/PD solver, drug presets, schedule handling, graph creation, comparison workflow, validation, export, and UI logic.
+- `docs/assets/js/threecompartmentmodel_files.js` — validated, versioned regimen JSON save/load, including comparison strategies and original TCI snapshots.
 - `docs/assets/css/threecompartmentmodel.css` — responsive dashboard layout, drawer, graph/timeline, dark mode, and print styling.
 
 Key capabilities include:
@@ -75,9 +76,12 @@ Key capabilities include:
 - Clearance/volume or microconstant model entry.
 - Weight-aware unit conversion for bolus and infusion dosing.
 - Basic bolus/infusion regimen plus multi-event schedules.
-- Editable dosing timeline: click to add a bolus, drag to add an infusion, and click an event to remove it.
+- Larger schedule editor with infusion rows in pages of 50, jump-to-time navigation, and complete schedule CSV export.
+- Regimen JSON save/load to retain model inputs, units, schedules, comparison strategies, and TCI import references across visits. Use **Save regimen** and **Load regimen** under **Summary, settings & export**; loading a file replaces the current regimen and comparison list.
+- Editable dosing timeline: click to add a bolus, drag to add an infusion, and select an event to edit, duplicate, or delete it.
 - Direct main-screen bolus and infusion-rate controls.
 - Cp/Ce concentration plots, distribution-compartment plots, half-life metrics, comparisons, therapeutic-range overlays where available, dark mode, log Y-axis, and PDF export.
+- Chart time-window controls and retained zoom during routine edits; reference ranges appear in a separate key below the graph.
 
 The parameter tables and `DrugModels/` are reference resources. Preset/model assumptions must be reviewed before teaching or research use.
 
@@ -125,6 +129,7 @@ Do not edit minified or vendored files unless deliberately upgrading a dependenc
 - Preserve vendor files and third-party license notices.
 - Preserve source PDFs and generated artifacts unless the task explicitly calls for changing them.
 - Open affected pages in a browser after changes; run `git diff --check` to catch whitespace errors.
+- Browser checks are in `tests/threecompartmentmodel.browser.html` (add `?long=1` for full TCI import, paging, and file round-trips) and `tests/csht.browser.html` (responsive charts and calculation checks). Serve the repository root to open these test pages; each reports PASS/FAIL results.
 
 ## Clinical and scientific limitations
 

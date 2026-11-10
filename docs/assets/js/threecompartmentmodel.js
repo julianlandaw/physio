@@ -16,6 +16,14 @@
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
+// Mirror raw entries, including blanks, so validation never turns an incomplete dose into zero.
+const MAIN_INPUT_LINKS = {
+  mainWeight: 'weight', mainFinalTime: 'tfinal',
+  mainBolusAmount: 'b', mainLoadingDuration: 'tbolus',
+  mainInfusionRate: 'infusion', mainInfusionDuration: 'tinfusion',
+  mainTciTarget: 'tciTarget', mainTciMaxRate: 'tciMaxRate', mainTciStopTime: 'tciStopTime'
+};
+
 function parseFloatSafe(v, defVal = 0) {
   const x = parseFloat(v);
   return Number.isFinite(x) ? x : defVal;
@@ -36,6 +44,28 @@ const TIME_EPSILON = 1e-9;
 const MAX_VISIBLE_SCHEDULE_SEGMENTS = 80;
 let tciImportSession = null;
 let latestPdfContext = null;
+let chartRevision = 0;
+let schedulePage = 0;
+const SCHEDULE_PAGE_SIZE = 50;
+
+function chartConfig() {
+  return { responsive: true, displaylogo: false, displayModeBar: window.innerWidth > 690 };
+}
+
+function renderPlot(id, traces, layout) {
+  const themed = themedPlotLayout(layout);
+  themed.uirevision = `${currentDrug}:${chartRevision}`;
+  themed.yaxis.uirevision = `${chartRevision}:${isLogScale}`;
+  return Plotly.react(id, traces, themed, chartConfig());
+}
+
+function setChartWindow(windowMinutes) {
+  const end = parseFloatSafe(tfinalnum.value, 240);
+  const range = [0, windowMinutes === 'full' ? end : Math.min(end, Number(windowMinutes))];
+  ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach(id => {
+    if (document.getElementById(id)?.data) Plotly.relayout(id, { 'xaxis.range': range, 'xaxis.autorange': false });
+  });
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -103,6 +133,7 @@ function initDrawer() {
 
   function openDrawer() {
     previousFocus = document.activeElement;
+    drawer?.removeAttribute('inert');
     document.body.classList.add('drawer-open');
     setBackgroundInert(true);
     btn?.setAttribute('aria-expanded', 'true');
@@ -124,6 +155,7 @@ function initDrawer() {
     backdrop?.setAttribute('aria-hidden', 'true');
     const focusTarget = previousFocus && document.contains(previousFocus) ? previousFocus : btn;
     focusTarget?.focus?.();
+    drawer?.setAttribute('inert', '');
   }
 
   btn?.addEventListener('click', openDrawer);
@@ -528,6 +560,31 @@ function updateTciControls() {
   if (mainTarget) mainTarget.value = document.getElementById('tciTarget')?.value || '';
   if (mainMaxRate) mainMaxRate.value = document.getElementById('tciMaxRate')?.value || '';
   if (mainStopTime) mainStopTime.value = document.getElementById('tciStopTime')?.value || '';
+  updateDosingWorkspace();
+}
+
+function updateDosingWorkspace() {
+  const tci = Boolean(document.getElementById('tciEnabled')?.checked);
+  const schedule = !tci && Boolean(document.getElementById('useSchedule')?.checked);
+  const mode = tci ? 'tci' : schedule ? 'schedule' : 'basic';
+  $$('input[name="dosingMode"]').forEach(input => { input.checked = input.value === mode; });
+  document.getElementById('mainManualControls').hidden = tci;
+  document.getElementById('mainBolusAmount').disabled = tci || (schedule && !getQuickScheduleRow('bolus'));
+  document.getElementById('mainInfusionRate').disabled = tci || (schedule && !getQuickScheduleRow('infusion'));
+  document.getElementById('mainScheduleControls').hidden = !schedule;
+  $$('.basic-only').forEach(el => { el.hidden = mode !== 'basic'; });
+  document.getElementById('quickDoseEditorHeading').textContent = tci ? 'TCI settings' : schedule ? 'Scheduled dosing' : 'Basic dosing';
+  Object.entries(MAIN_INPUT_LINKS).forEach(([mainId, sourceId]) => {
+    if (schedule && ['mainBolusAmount', 'mainInfusionRate'].includes(mainId)) return;
+    document.getElementById(mainId).value = document.getElementById(sourceId).value;
+  });
+}
+
+function setDosingMode(mode) {
+  document.getElementById('tciEnabled').checked = mode === 'tci';
+  document.getElementById('useSchedule').checked = mode === 'schedule';
+  disableLegacyBolusInfusionInputs(mode !== 'basic');
+  dfsolve();
 }
 
 function applyMainTciAdjustment() {
@@ -619,13 +676,14 @@ function addInfusionRow({ start = 0, end = 0, rate = 0 } = {}, container = null)
     <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove infusion segment">×</button></td>
   `;
   (container || tbl.tBodies[0]).appendChild(tr);
+  if (!container && document.getElementById('scheduleEditor').open) schedulePage = Math.floor((tbl.tBodies[0].rows.length - 1) / SCHEDULE_PAGE_SIZE);
 }
 
-function getScheduleFromDOM() {
+function getScheduleFromDOM({ includeInactive = false } = {}) {
   const schedule = { enabled: false, boluses: [], infusions: [] };
   const useCb = document.getElementById('useSchedule');
-  if (!useCb || !useCb.checked) return schedule;
-  schedule.enabled = true;
+  if (!useCb || (!useCb.checked && !includeInactive)) return schedule;
+  schedule.enabled = useCb.checked;
 
   const bolusTbl = document.getElementById('bolusEventsTable');
   const infTbl = document.getElementById('infusionEventsTable');
@@ -677,6 +735,95 @@ function setScheduleToDOM(schedule) {
   else ins.forEach(i => addInfusionRow(i, infusionFragment));
   bolusTbl.tBodies[0].appendChild(bolusFragment);
   infTbl.tBodies[0].appendChild(infusionFragment);
+  schedulePage = 0;
+  updateSchedulePage();
+}
+
+function updateSchedulePage() {
+  const rows = [...document.getElementById('infusionEventsTable').tBodies[0].rows];
+  const pages = Math.max(1, Math.ceil(rows.length / SCHEDULE_PAGE_SIZE));
+  schedulePage = clamp(schedulePage, 0, pages - 1);
+  const editing = document.getElementById('scheduleEditor').open;
+  rows.forEach((row, index) => { row.hidden = editing && Math.floor(index / SCHEDULE_PAGE_SIZE) !== schedulePage; });
+  document.getElementById('schedulePageStatus').textContent = `Infusion rows ${schedulePage * SCHEDULE_PAGE_SIZE + 1}–${Math.min(rows.length, (schedulePage + 1) * SCHEDULE_PAGE_SIZE)} of ${rows.length}`;
+  document.getElementById('schedulePreviousBtn').disabled = schedulePage === 0;
+  document.getElementById('scheduleNextBtn').disabled = schedulePage === pages - 1;
+}
+
+function initScheduleWorkspace() {
+  const dialog = document.getElementById('scheduleEditor');
+  const card = document.getElementById('scheduleCard');
+  const anchor = document.createComment('schedule drawer position');
+  card.before(anchor);
+  let returnFocus = null;
+  const open = () => {
+    if (dialog.open) return;
+    returnFocus = document.activeElement;
+    if (document.body.classList.contains('drawer-open')) document.getElementById('drawerCloseBtn').click();
+    document.getElementById('scheduleEditorBody').appendChild(card);
+    expandDrawerCard('scheduleCard');
+    dialog.showModal();
+    document.body.classList.add('schedule-editor-open');
+    updateSchedulePage();
+  };
+  document.getElementById('mainEditScheduleBtn').addEventListener('click', open);
+  $$('[data-open-schedule]').forEach(button => button.addEventListener('click', open));
+  const restoreDrawer = () => {
+    if (!dialog.contains(card)) return;
+    anchor.after(card);
+    document.body.classList.remove('schedule-editor-open');
+    updateSchedulePage();
+    const target = returnFocus?.closest('#paramsDrawer') ? document.getElementById('paramsBtn') : returnFocus;
+    target?.focus();
+  };
+  const close = () => { dialog.close(); restoreDrawer(); };
+  document.getElementById('closeScheduleEditorBtn').addEventListener('click', close);
+  dialog.addEventListener('close', restoreDrawer);
+  dialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    close();
+  });
+  ['schedulePreviousBtn', 'scheduleNextBtn'].forEach((id, index) => {
+    document.getElementById(id).addEventListener('click', () => {
+      schedulePage += index ? 1 : -1;
+      updateSchedulePage();
+      document.getElementById('scheduleEditorBody').scrollTop = 0;
+    });
+  });
+  document.getElementById('scheduleJumpBtn').addEventListener('click', () => {
+    const input = document.getElementById('scheduleJumpTime');
+    const raw = input.value.trim();
+    const time = Number(raw);
+    input.setCustomValidity(!raw || !Number.isFinite(time) || time < 0 ? 'Enter a time of at least 0 minutes.' : '');
+    if (!input.reportValidity()) return;
+    const rows = [...document.getElementById('infusionEventsTable').tBodies[0].rows];
+    const intervals = rows.map((row, index) => ({ row, index, start: Number(row.querySelector('[data-field="start"]').value), end: Number(row.querySelector('[data-field="end"]').value) })).sort((a, b) => a.start - b.start);
+    const found = intervals.find(item => item.end > time) || intervals.at(-1);
+    if (!found) return;
+    schedulePage = Math.floor(found.index / SCHEDULE_PAGE_SIZE);
+    updateSchedulePage();
+    found.row.querySelector('input').focus();
+    found.row.scrollIntoView({ block: 'center' });
+  });
+  document.getElementById('scheduleJumpTime').addEventListener('input', event => event.target.setCustomValidity(''));
+  document.getElementById('scheduleJumpTime').addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); document.getElementById('scheduleJumpBtn').click(); }
+  });
+  document.getElementById('scheduleCsvBtn').addEventListener('click', () => {
+    if (!document.getElementById('useSchedule').checked || !validateSimulationInputs()) {
+      document.getElementById('scheduleEditorErrors').hidden = false;
+      document.getElementById('scheduleEditorErrors').textContent = 'Enable the schedule and correct any incomplete entries before exporting.';
+      return;
+    }
+    downloadText('physio-schedule.csv', scheduleCsv(getScheduleFromDOM()), 'text/csv');
+  });
+}
+
+function scheduleCsv(schedule) {
+  const rows = [['type', 'start_min', 'end_min', 'dose', 'duration_min', 'rate', 'unit', 'weight_kg']];
+  schedule.boluses.forEach(b => rows.push(['bolus', b.time, b.time + b.duration, b.dose, b.duration, '', currentBolusUnit.name, getWeightKg()]));
+  schedule.infusions.forEach(i => rows.push(['infusion', i.start, i.end, '', '', i.rate, currentInfusionUnit.name, getWeightKg()]));
+  return rows.map(row => row.join(',')).join('\r\n');
 }
 
 function buildDosingPlan({ schedule, basic, bolusUnit, infusionUnit, weightKg }) {
@@ -969,7 +1116,7 @@ function updateRegimenOverview(params, schedule) {
   if (tci.enabled) {
     const compartment = tci.targetType === 'ce' ? 'effect-site (Ce)' : 'plasma (Cp)';
     const stopTime = Math.min(tci.stopTime, params.tfinal);
-    description = `Educational TCI · ${compartment} target ${formatInputValue(tci.target)} ${currentUnit.name} until ${formatInputValue(stopTime)} min · maximum ${formatInputValue(document.getElementById('tciMaxRate')?.value)} ${currentInfusionUnit.name}`;
+    description = `Educational TCI · ${compartment} target ${formatInputValue(tci.target)} ${currentUnit.name} until ${formatInputValue(stopTime)} min · maximum ${formatInputValue(Number(document.getElementById('tciMaxRate')?.value))} ${currentInfusionUnit.name}`;
     segments = [{ start: 0, end: stopTime, type: 'infusion', index: -1, label: 'Educational TCI' }];
   } else if (schedule?.enabled) {
     const boluses = schedule.boluses || [];
@@ -1025,7 +1172,6 @@ function updateRegimenOverview(params, schedule) {
   track.dataset.tciMode = String(tci.enabled);
   renderTimelineEventEditor(tci.enabled ? { enabled: false } : schedule);
   updateMainDoseEditor(tci.enabled ? { enabled: true, boluses: [], infusions: [] } : schedule);
-  updateTciControls();
   latestPdfContext = { params, schedule };
   updatePdfReportSummary(params, schedule);
 }
@@ -1047,7 +1193,7 @@ function updateMainDoseEditor(schedule) {
     infusionInput.disabled = true;
     if (bolusLabel) bolusLabel.textContent = 'Manual bolus disabled';
     if (infusionLabel) infusionLabel.textContent = 'Manual infusion disabled';
-    if (hint) hint.textContent = 'Educational TCI is active. Adjust the target and maximum rate above.';
+    if (hint) hint.textContent = 'Enter a target and maximum rate in the displayed units.';
     return;
   }
 
@@ -1402,7 +1548,7 @@ function updatePdfDoseProtocol(params, schedule) {
     addTable(
       'Educational target-controlled infusion settings',
       ['Target compartment', `Target (${currentUnit.name})`, `Maximum rate (${currentInfusionUnit.name})`, 'Infusion stop'],
-      [[tci.targetType === 'ce' ? 'Effect site (Ce)' : 'Plasma (Cp)', formatInputValue(tci.target), formatInputValue(document.getElementById('tciMaxRate')?.value), formatTime(Math.min(tci.stopTime, params.tfinal))]]
+      [[tci.targetType === 'ce' ? 'Effect site (Ce)' : 'Plasma (Cp)', formatInputValue(tci.target), formatInputValue(Number(document.getElementById('tciMaxRate')?.value)), formatTime(Math.min(tci.stopTime, params.tfinal))]]
     );
     const note = document.createElement('p');
     note.className = 'pdf-dose-note';
@@ -1478,7 +1624,7 @@ function initDistributionDetails() {
 
 function exportSimulationPdf() {
   if (latestPdfContext) updatePdfDoseProtocol(latestPdfContext.params, latestPdfContext.schedule);
-  const expandableSections = $$('.distribution-details, .model-details');
+  const expandableSections = $$('.distribution-details, .model-details, .regimen-more, .regimen-model-details');
   const priorStates = expandableSections.map(section => section.open);
   const generatedAt = document.getElementById('pdfGeneratedAt');
   if (generatedAt) {
@@ -1659,10 +1805,9 @@ function valToDisplayY(value, unitName) {
 
 function buildTherapeuticShapes(finalTime) {
   const shapes = [];
-  const legendTraces = [];
-  if (!showTherapeutic || !currentDrug || presetIsModified) return { shapes, legendTraces };
+  if (!showTherapeutic || !currentDrug || presetIsModified) return { shapes };
   const ranges = EFFECT_SITE_RANGES[currentDrug] || [];
-  if (!Array.isArray(ranges) || ranges.length === 0) return { shapes, legendTraces };
+  if (!Array.isArray(ranges) || ranges.length === 0) return { shapes };
   const x0 = 0, x1 = finalTime;
 
   ranges.forEach((r) => {
@@ -1671,19 +1816,26 @@ function buildTherapeuticShapes(finalTime) {
     shapes.push({
       type: 'rect', xref: 'x', yref: 'y',
       x0, x1, y0: yLow, y1: yHigh,
-      fillcolor: r.color, opacity: 0.15, line: { width: 0 }
-    });
-    legendTraces.push({
-      x: [null], y: [null], mode: 'lines',
-      name: `${r.label} ${r.low}–${r.high} ${r.unit}`,
-      line: { color: r.color, width: 10 },
-      hoverinfo: 'skip',
-      legendgroup: 'therapeutic',
-      legendgrouptitle: { text: 'Therapeutic ranges (Cp/Ce)' }
+      fillcolor: r.color, opacity: 0.07, line: { width: 0 }
     });
   });
 
-  return { shapes, legendTraces };
+  return { shapes };
+}
+
+function renderTherapeuticRangeKey() {
+  const key = document.getElementById('therapeuticRangeKey');
+  const ranges = showTherapeutic && !presetIsModified ? EFFECT_SITE_RANGES[currentDrug] || [] : [];
+  key.replaceChildren();
+  key.hidden = !ranges.length;
+  ranges.forEach(range => {
+    const item = document.createElement('span');
+    const swatch = document.createElement('i');
+    swatch.style.backgroundColor = range.color;
+    swatch.setAttribute('aria-hidden', 'true');
+    item.append(swatch, document.createTextNode(`${range.label}: ${range.low}–${range.high} ${range.unit}`));
+    key.appendChild(item);
+  });
 }
 
 function ensureTherapeuticToggle() {
@@ -1691,7 +1843,6 @@ function ensureTherapeuticToggle() {
   try {
     const container = document.createElement('div');
     container.id = 'therapeuticToggleContainer';
-    container.style.margin = '10px 0 0';
     container.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
 
     const label = document.createElement('label');
@@ -1707,8 +1858,7 @@ function ensureTherapeuticToggle() {
     label.appendChild(text);
     container.appendChild(label);
 
-    const plotDiv = document.getElementById('myDiv1');
-    if (plotDiv && plotDiv.parentNode) plotDiv.parentNode.insertBefore(container, plotDiv);
+    document.getElementById('chartToolbar').appendChild(container);
 
     cb.addEventListener('change', function () {
       showTherapeutic = this.checked;
@@ -1720,7 +1870,7 @@ function ensureTherapeuticToggle() {
 }
 
 // Legend formatting helper
-function legendOutsideBottom(layout, { y = -0.40, bottom = 140, fontSize = 11, itemWidth = 90 } = {}) {
+function legendOutsideBottom(layout, { y = -0.22, bottom = 90, fontSize = 11, itemWidth = 30 } = {}) {
   layout.legend = {
     ...(layout.legend || {}),
     orientation: 'h',
@@ -1871,6 +2021,7 @@ function clearStrategies() {
 function loadStrategyToInputs(id) {
   const s = strategies.find(x => x.id === id);
   if (!s) return;
+  chartRevision++;
   tciImportSession = null;
   restoreSimulationState(s);
   activeStrategyId = s.id;
@@ -2135,12 +2286,10 @@ function plotComparisonFromCurrent() {
     yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' }
   };
 
-  const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(live.inputs.tfinal);
+  const { shapes: therShapes } = buildTherapeuticShapes(live.inputs.tfinal);
   layout.shapes = [ ...(layout.shapes || []), ...therShapes ];
-  legendOutsideBottom(layout, { y: -0.42, bottom: 160 });
-
-  const PLOT_CONFIG = { responsive: true, displaylogo: false };
-  Plotly.newPlot('myDiv1', [...traces, ...legendTraces], themedPlotLayout(layout), PLOT_CONFIG);
+  legendOutsideBottom(layout);
+  renderPlot('myDiv1', traces, layout);
   renderCompareResults(metricsRows, unitLabel);
 }
 
@@ -2327,7 +2476,19 @@ function getScheduleWarnings(schedule, finalTime) {
 function validateSimulationInputs() {
   const errors = [];
   const invalidIds = new Set();
-  const addError = (id, message) => { errors.push(message); if (id) invalidIds.add(id); };
+  const addError = (id, message) => {
+    errors.push(message);
+    if (!id) return;
+    const linkedIds = [id];
+    Object.entries(MAIN_INPUT_LINKS).forEach(([mainId, sourceId]) => {
+      if (sourceId === id) linkedIds.push(mainId);
+    });
+    linkedIds.forEach(invalidId => {
+      invalidIds.add(invalidId);
+      const error = document.getElementById(`${invalidId}Error`);
+      if (error && !error.textContent) { error.textContent = message; error.hidden = false; }
+    });
+  };
   const readNumber = (id, label, { min = -Infinity, strictlyPositive = false, optional = false } = {}) => {
     const el = document.getElementById(id);
     const raw = el?.value?.trim();
@@ -2340,7 +2501,8 @@ function validateSimulationInputs() {
     return value;
   };
 
-  $$('.form-control.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  $$('.form-control.is-invalid').forEach(el => { el.classList.remove('is-invalid'); el.removeAttribute('aria-invalid'); });
+  $$('.field-error').forEach(el => { el.hidden = true; el.textContent = ''; });
   readNumber('weight', 'Weight', { strictlyPositive: true });
   const finalTime = readNumber('tfinal', 'Final time', { strictlyPositive: true });
   if (finalTime != null && finalTime > MAX_SIMULATION_MINUTES) {
@@ -2392,6 +2554,9 @@ function validateSimulationInputs() {
       if (fields.some(value => value === '') || !Number.isFinite(time) || time < 0 || !Number.isFinite(dose) || dose < 0 || !Number.isFinite(duration) || duration < 0) {
         addError(null, `Bolus ${index + 1} must have non-negative time, dose, and duration.`);
         $$('input', row).forEach(el => el.classList.add('is-invalid'));
+        if (row === getQuickScheduleRow('bolus') && (fields[1] === '' || !Number.isFinite(dose) || dose < 0)) {
+          addError('mainBolusAmount', 'Bolus amount must be a number at least 0.');
+        }
       }
     });
     $$('#infusionEventsTable tbody tr').forEach((row, index) => {
@@ -2400,16 +2565,24 @@ function validateSimulationInputs() {
       if (fields.some(value => value === '') || !Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end < start || !Number.isFinite(rate) || rate < 0) {
         addError(null, `Infusion ${index + 1} must have non-negative start/end/rate values, with end at or after start.`);
         $$('input', row).forEach(el => el.classList.add('is-invalid'));
+        if (row === getQuickScheduleRow('infusion') && (fields[2] === '' || !Number.isFinite(rate) || rate < 0)) {
+          addError('mainInfusionRate', 'Infusion rate must be a number at least 0.');
+        }
       }
     });
   }
 
   invalidIds.forEach(id => document.getElementById(id)?.classList.add('is-invalid'));
+  $$('.is-invalid').forEach(el => el.setAttribute('aria-invalid', 'true'));
   const summary = document.getElementById('validationSummary');
   if (summary) {
     summary.hidden = errors.length === 0;
     summary.textContent = errors.length ? `Simulation not updated: ${errors.join(' ')}` : '';
   }
+  document.getElementById('mainValidationSummary').hidden = errors.length === 0;
+  document.getElementById('mainInputErrors').textContent = errors.length ? `Results have not updated. ${[...new Set(errors)].join(' ')}` : '';
+  document.getElementById('scheduleEditorErrors').hidden = errors.length === 0;
+  document.getElementById('scheduleEditorErrors').textContent = errors.join(' ');
   const scheduleWarnings = document.getElementById('scheduleWarnings');
   if (scheduleWarnings) {
     const warnings = scheduleActive ? getScheduleWarnings(schedule, finalTime) : [];
@@ -2532,6 +2705,9 @@ function withoutIntermediateSolve(action) {
 function dfsolve() {
   if (suppressIntermediateSolve) return;
 
+  updateTciControls();
+  updateSchedulePage();
+
   if (!validateSimulationInputs()) return;
 
   if (getPkInputMode() === "microconstants") syncClearanceInputsFromMicroInputs();
@@ -2630,25 +2806,25 @@ function dfsolve() {
   layout2 = addEventMarkers(layout2);
   layout3 = addEventMarkers(layout3);
 
-  layout1 = legendOutsideBottom(layout1, { y: -0.42, bottom: 150, fontSize: 11, itemWidth: 90 });
+  layout1 = legendOutsideBottom(layout1);
 
-  const { shapes: therShapes, legendTraces } = buildTherapeuticShapes(params.tfinal);
+  const { shapes: therShapes } = buildTherapeuticShapes(params.tfinal);
   layout1.shapes = [ ...(layout1.shapes || []), ...therShapes ];
 
   const originalTciTraces = updateTciReplayComparison(simulation, schedule, tci);
-  const panel1Traces = [trace_cp, ...(trace_ce ? [trace_ce] : []), ...(trace_target ? [trace_target] : []), ...originalTciTraces, ...legendTraces];
-  const PLOT_CONFIG = { responsive: true, displaylogo: false };
+  const panel1Traces = [trace_cp, ...(trace_ce ? [trace_ce] : []), ...(trace_target ? [trace_target] : []), ...originalTciTraces];
+  renderTherapeuticRangeKey();
 
   if (compareMode && strategies.some(s => s.drug === currentDrug)) {
     plotComparisonFromCurrent();
   } else {
-    Plotly.newPlot('myDiv1', panel1Traces, themedPlotLayout(layout1), PLOT_CONFIG);
+    renderPlot('myDiv1', panel1Traces, layout1);
     const compareResults = document.getElementById('compareResults');
     if (compareResults) compareResults.textContent = '';
   }
 
-  Plotly.newPlot('myDiv2', [trace_p1], themedPlotLayout(layout2), PLOT_CONFIG);
-  Plotly.newPlot('myDiv3', [trace_p2], themedPlotLayout(layout3), PLOT_CONFIG);
+  renderPlot('myDiv2', [trace_p1], layout2);
+  renderPlot('myDiv3', [trace_p2], layout3);
 
   const tciRatePanel = document.getElementById('tciRatePanel');
   if (tciRatePanel) tciRatePanel.hidden = !(tci.enabled || schedule.enabled);
@@ -2663,12 +2839,12 @@ function dfsolve() {
       fill: 'tozeroy',
       fillcolor: 'rgba(25, 135, 84, .12)'
     };
-    Plotly.newPlot('tciRatePlot', [rateTrace], themedPlotLayout({
+    renderPlot('tciRatePlot', [rateTrace], {
       margin: { l: 60, r: 30, t: 12, b: 42 },
       xaxis: { title: { text: 'Time (min)' } },
       yaxis: { title: { text: `Rate (${currentInfusionUnit.name})` } },
       showlegend: false
-    }), PLOT_CONFIG);
+    });
   }
 
   // Results
@@ -3423,6 +3599,7 @@ function applyDrugById(id, { clearDosing = true } = {}) {
   if (!id) return;
   const fn = window[id];
   if (typeof fn !== 'function') return;
+  chartRevision++;
 
   if (clearDosing) clearDosingForDrugSwitch();
   presetIsModified = false;
@@ -3446,6 +3623,7 @@ function applyDrugById(id, { clearDosing = true } = {}) {
 // Reset + init
 // ============================
 function reset() {
+  chartRevision++;
   selectedTimelineEvent = null;
   timelineUndoSchedule = null;
   clearDosingForDrugSwitch();
@@ -3475,36 +3653,61 @@ function reset() {
   updateScheduleUnitLabels();
   setCurrentDrugLabel();
   dfsolve();
-  setSimulationStatus('Simulation reset to the default propofol example.', 'ok');
+  setSimulationStatus('Default propofol example loaded.', 'ok');
+}
+
+function getQuickScheduleRow(type) {
+  const table = document.getElementById(type === 'bolus' ? 'bolusEventsTable' : 'infusionEventsTable');
+  const amount = type === 'bolus' ? 'dose' : 'rate';
+  const time = type === 'bolus' ? 'time' : 'start';
+  return [...table.tBodies[0].rows]
+    .filter(row => {
+      const value = row.querySelector(`[data-field="${amount}"]`).value;
+      return value.trim() === '' || Number(value) !== 0;
+    })
+    .sort((a, b) => Number(a.querySelector(`[data-field="${time}"]`).value) - Number(b.querySelector(`[data-field="${time}"]`).value))[0];
 }
 
 function applyMainDoseAdjustment(type) {
   const input = document.getElementById(type === 'bolus' ? 'mainBolusAmount' : 'mainInfusionRate');
-  const value = Number(input?.value);
-  if (!Number.isFinite(value) || value < 0) {
-    input?.classList.add('is-invalid');
-    setSimulationStatus(`${type === 'bolus' ? 'Bolus amount' : 'Infusion rate'} must be zero or greater.`, 'error');
-    return;
-  }
-  input?.classList.remove('is-invalid');
-
-  const schedule = getScheduleFromDOM();
-  if (schedule.enabled) {
-    const events = type === 'bolus' ? schedule.boluses : schedule.infusions;
+  if (document.getElementById('useSchedule').checked) {
+    const row = getQuickScheduleRow(type);
     const field = type === 'bolus' ? 'dose' : 'rate';
-    if (!events?.length) return;
-    events[0][field] = value;
-    setScheduleToDOM(schedule);
-  } else if (type === 'bolus' && bnum) {
-    bnum.value = value;
-  } else if (type === 'infusion' && infusionnum) {
-    infusionnum.value = value;
+    if (!row) return;
+    row.querySelector(`[data-field="${field}"]`).value = input.value;
+  } else {
+    document.getElementById(MAIN_INPUT_LINKS[input.id]).value = input.value;
   }
   dfsolve();
 }
 
 
 function wireInputs() {
+  $$('[data-chart-window]').forEach(button => button.addEventListener('click', () => setChartWindow(button.dataset.chartWindow)));
+  document.getElementById('downloadChartBtn').addEventListener('click', () => Plotly.downloadImage('myDiv1', { format: 'png', filename: 'physio-concentrations' }));
+  Object.entries(MAIN_INPUT_LINKS).forEach(([mainId, sourceId]) => {
+    const input = document.getElementById(mainId);
+    const error = document.createElement('span');
+    error.id = `${mainId}Error`;
+    error.className = 'field-error';
+    error.hidden = true;
+    input.after(error);
+    input.setAttribute('aria-describedby', error.id);
+    if (['mainBolusAmount', 'mainInfusionRate', 'mainTciTarget', 'mainTciMaxRate', 'mainTciStopTime'].includes(mainId)) return;
+    input.addEventListener('change', () => {
+      document.getElementById(sourceId).value = input.value;
+      dfsolve();
+    });
+  });
+  $$('input[name="dosingMode"]').forEach(input => input.addEventListener('change', () => setDosingMode(input.value)));
+  document.getElementById('mainConvertBasicBtn').addEventListener('click', () => document.getElementById('loadScheduleExampleBtn').click());
+  document.getElementById('reviewInvalidInputsBtn').addEventListener('click', () => {
+    const field = document.querySelector('#paramsDrawer .is-invalid');
+    document.getElementById('paramsBtn').click();
+    const card = field?.closest('.card');
+    if (card) expandDrawerCard(card.id);
+    setTimeout(() => field?.focus(), 0);
+  });
   [
     Vd1num, Vd2num, Vd3num,
     Clnum, Q2num, Q3num,
@@ -3588,15 +3791,22 @@ function wireInputs() {
 }
 
 (function init() {
+  const desktopWorkspace = window.matchMedia('(min-width: 992px)');
+  const setSummaryVisibility = () => { document.getElementById('regimenMore').open = desktopWorkspace.matches; };
+  setSummaryVisibility();
+  desktopWorkspace.addEventListener('change', setSummaryVisibility);
+  window.matchMedia('(max-width: 690px)').addEventListener('change', () => dfsolve());
   initDrawer();
   populateDrugPicker();
   initializeUnitSelectors();
   ensureTherapeuticToggle();
   ensureScheduleUI();
+  initScheduleWorkspace();
   ensureTimelineEditor();
   ensureCompareUI();
   initDistributionDetails();
   wireInputs();
+  initRegimenFiles();
   window.addEventListener('beforeprint', () => {
     if (latestPdfContext) updatePdfDoseProtocol(latestPdfContext.params, latestPdfContext.schedule);
   });

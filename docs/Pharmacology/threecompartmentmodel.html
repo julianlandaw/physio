@@ -53,7 +53,7 @@
   <div class="drawer-backdrop" id="drawerBackdrop" tabindex="-1" aria-hidden="true"></div>
 
   <!-- Right parameters drawer -->
-  <aside class="drawer" id="paramsDrawer" role="dialog" aria-modal="true" aria-labelledby="paramsDrawerTitle" aria-hidden="true">
+  <aside class="drawer" id="paramsDrawer" role="dialog" aria-modal="true" aria-labelledby="paramsDrawerTitle" aria-hidden="true" inert>
     <div class="drawer__header">
       <div>
         <div class="drawer__title" id="paramsDrawerTitle">Parameters</div>
@@ -80,7 +80,7 @@
           <p class="param-note">Selecting a drug loads an illustrative adult IV dose for graph exploration, not a clinical recommendation. Bupivacaine and vasopressin remain at zero because this model has no suitable IV mass-dose example for them.</p>
           <div class="param-row">
             <label id="weighthtml" class="label" for="weight">Patient weight (kg)</label>
-            <input type="number" class="form-control" id="weight" value="70" min="0.1" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="weight" value="70" min="0" step="any" inputmode="decimal" />
           </div>
           <div class="param-row">
             <label class="label" for="bolusUnitSelect">Bolus unit</label>
@@ -97,7 +97,7 @@
           </div>
           <div class="param-row">
             <label id="tbolushtml" class="label" for="tbolus"></label>
-            <input type="number" class="form-control" id="tbolus" value="0.1" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="tbolus" value="0.1" min="0" step="any" inputmode="decimal" />
           </div>
           <div class="param-row">
             <label id="infusionhtml" class="label" for="infusion"></label>
@@ -105,7 +105,7 @@
           </div>
           <div class="param-row">
             <label id="tinfusionhtml" class="label" for="tinfusion"></label>
-            <input type="number" class="form-control" id="tinfusion" value="240" min="0" step="0.1" inputmode="decimal" />
+            <input type="number" class="form-control" id="tinfusion" value="240" min="0" step="any" inputmode="decimal" />
           </div>
         </div>
       </div>
@@ -172,11 +172,14 @@
             <span class="badge bg-light text-dark">Infusion unit: <span id="scheduleInfusionUnitBadge">mg/kg/min</span></span>
           </div>
 
+          <details class="schedule-tools">
+          <summary>Import, simplify &amp; schedule options</summary>
           <div class="small text-muted mb-3">
             Times are minutes from t=0. Bolus dose uses the current <b>Bolus</b> unit; infusion rate uses the current
             <b>Infusion</b> unit. A bolus with duration 0 is treated as instantaneous. Enabling a schedule replaces the basic dosing fields above.
           </div>
           <button class="btn btn-sm btn-outline-secondary mb-3" type="button" id="loadScheduleExampleBtn">Convert basic dosing to schedule</button>
+          <button class="btn btn-sm btn-outline-primary mb-3" type="button" data-open-schedule>Open larger editor</button>
           <button class="btn btn-sm btn-outline-primary mb-3" type="button" id="importTciScheduleBtn" data-import-tci-schedule>Import current TCI as schedule</button>
           <p class="small text-muted">TCI import copies each calculated rate interval into an editable, open-loop infusion schedule and turns TCI off. It preserves the current model and units, but later schedule edits will no longer track the concentration target. For simulation only—not a pump program.</p>
           <div class="tci-simplify-tools mb-3" id="tciSimplifyTools" hidden>
@@ -188,6 +191,7 @@
             </div>
             <p class="small text-muted mb-0 mt-2">These actions replace current schedule edits. The exact imported rates remain available until you switch drugs, load another strategy, or reset.</p>
           </div>
+          </details>
           <p class="schedule-warnings" id="scheduleWarnings" role="status" hidden></p>
 
           <div class="d-flex justify-content-between align-items-center mb-1">
@@ -265,7 +269,7 @@
           </div>
           <div class="param-row">
             <label id="tfinalhtml" class="label" for="tfinal"></label>
-            <input type="number" class="form-control" id="tfinal" value="240" min="0" max="1440" step="0.1" inputmode="decimal" aria-describedby="tfinalHelp" />
+            <input type="number" class="form-control" id="tfinal" value="240" min="0" max="1440" step="any" inputmode="decimal" aria-describedby="tfinalHelp" />
           </div>
           <div class="param-note" id="tfinalHelp">Maximum simulation duration: 1,440 minutes (24 hours), to keep the browser responsive.</div>
         </div>
@@ -368,30 +372,38 @@
           <p class="eyebrow">Current simulation</p>
           <h1 id="regimenHeading">Current regimen</h1>
         </div>
-        <div class="regimen-actions">
-          <button class="btn btn-outline-danger" type="button" id="mainResetBtn">Reset simulation</button>
-          <button class="btn btn-outline-secondary" type="button" id="exportPdfBtn">Export PDF</button>
-          <button class="btn btn-primary" type="button" id="summaryParamsBtn">Edit parameters</button>
-        </div>
       </div>
-      <div class="regimen-grid">
-        <div class="regimen-item"><span class="regimen-item__label">Drug</span><strong id="summaryDrug">Propofol</strong></div>
-        <div class="regimen-item"><span class="regimen-item__label">Patient weight</span><strong id="summaryWeight">70 kg</strong></div>
-        <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Dosing plan</span><strong id="summaryDose">—</strong></div>
-        <div class="regimen-item"><span class="regimen-item__label">PK input</span><strong id="summaryModel">Clearance &amp; volumes</strong></div>
-        <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Preset/model note</span><strong id="summarySource">—</strong><a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv">View preset parameter table</a></div>
+      <fieldset class="dosing-mode">
+        <legend>Dosing mode</legend>
+        <input type="radio" name="dosingMode" id="dosingModeBasic" value="basic" checked><label for="dosingModeBasic">Basic dosing</label>
+        <input type="radio" name="dosingMode" id="dosingModeTci" value="tci"><label for="dosingModeTci">TCI</label>
+        <input type="radio" name="dosingMode" id="dosingModeSchedule" value="schedule"><label for="dosingModeSchedule">Schedule</label>
+      </fieldset>
+      <div id="mainValidationSummary" class="validation-summary" hidden>
+        <p id="mainInputErrors" role="alert"></p>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="reviewInvalidInputsBtn">Review errors in settings</button>
+      </div>
+      <div class="quick-dose-editor__fields common-dose-fields">
+        <label for="mainWeight">Weight (kg)<input type="number" class="form-control form-control-sm" id="mainWeight" min="0" step="any" inputmode="decimal"></label>
+        <label for="mainFinalTime">Simulation end (min)<input type="number" class="form-control form-control-sm" id="mainFinalTime" min="0" max="1440" step="any" inputmode="decimal"></label>
       </div>
       <section class="quick-dose-editor" aria-labelledby="quickDoseEditorHeading">
         <div class="quick-dose-editor__heading">
           <span id="quickDoseEditorHeading">Quick dose adjustments</span>
           <small id="quickDoseEditorHint">Updates the current bolus and infusion.</small>
         </div>
-        <div class="quick-dose-editor__fields">
+        <div class="quick-dose-editor__fields" id="mainManualControls">
           <label for="mainBolusAmount"><span id="mainBolusLabel">Bolus</span> <span id="mainBolusUnit">mg/kg</span>
             <input type="number" class="form-control form-control-sm" id="mainBolusAmount" min="0" step="any" inputmode="decimal" />
           </label>
+          <label for="mainLoadingDuration" class="basic-only">Loading duration (min)
+            <input type="number" class="form-control form-control-sm" id="mainLoadingDuration" min="0" step="any" inputmode="decimal">
+          </label>
           <label for="mainInfusionRate"><span id="mainInfusionLabel">Infusion</span> <span id="mainInfusionUnit">mg/kg/min</span>
             <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="any" inputmode="decimal" />
+          </label>
+          <label for="mainInfusionDuration" class="basic-only">Infusion duration (min)
+            <input type="number" class="form-control form-control-sm" id="mainInfusionDuration" min="0" step="any" inputmode="decimal">
           </label>
         </div>
         <div class="quick-dose-editor__fields quick-dose-editor__fields--tci" id="mainTciControls" hidden>
@@ -412,8 +424,35 @@
           </label>
         </div>
         <button class="btn btn-sm btn-outline-primary" type="button" id="mainImportTciScheduleBtn" data-import-tci-schedule hidden>Convert TCI rates to editable schedule</button>
+        <div class="schedule-actions" id="mainScheduleControls" hidden>
+          <button type="button" class="btn btn-sm btn-primary" id="mainEditScheduleBtn">Edit schedule</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="mainConvertBasicBtn">Copy basic dosing</button>
+        </div>
       </section>
-      <p class="simulation-help">Start by selecting a drug, then set patient weight and dosing in <strong>Edit parameters</strong>. This educational PK simulation is not a dosing recommendation; verify any clinical decision against current guidance and patient-specific factors.</p>
+      <details class="regimen-more" id="regimenMore">
+        <summary>Summary, settings &amp; export</summary>
+        <div class="regimen-grid">
+          <div class="regimen-item regimen-item--identity"><span class="regimen-item__label">Drug</span><strong id="summaryDrug">Propofol</strong></div>
+          <div class="regimen-item regimen-item--identity"><span class="regimen-item__label">Patient weight</span><strong id="summaryWeight">70 kg</strong></div>
+          <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Dosing plan</span><strong id="summaryDose">—</strong></div>
+        </div>
+        <details class="regimen-model-details">
+          <summary>Model &amp; source details</summary>
+          <p>PK input: <strong id="summaryModel">Clearance &amp; volumes</strong></p>
+          <p id="summarySource">—</p>
+          <a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv">View preset parameter table</a>
+          <p class="simulation-help">Educational PK simulation only. Verify clinical decisions against current guidance and patient-specific factors.</p>
+        </details>
+        <div class="regimen-actions">
+          <button class="btn btn-sm btn-outline-danger" type="button" id="mainResetBtn">Reset</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="exportPdfBtn">Export PDF</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" id="saveRegimenBtn">Save regimen</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" id="loadRegimenBtn">Load regimen</button>
+          <input type="file" id="regimenFileInput" accept=".json,application/json" hidden>
+          <button class="btn btn-sm btn-outline-primary" type="button" id="summaryParamsBtn">Advanced settings</button>
+        </div>
+        <p id="regimenFileStatus" class="small" role="status"></p>
+      </details>
     </section>
 
     <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">
@@ -432,7 +471,16 @@
 
       <div class="card shadow-sm primary-plot-card">
         <div class="card-body">
+          <div class="chart-toolbar" id="chartToolbar">
+            <div class="chart-window-buttons" role="group" aria-label="Chart time window">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-window="10">First 10 min</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-window="60">First hour</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-window="full">Full simulation</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadChartBtn">Save chart PNG</button>
+          </div>
           <div id="myDiv1" class="plot plot--primary"></div>
+          <div id="therapeuticRangeKey" class="range-key" aria-label="Therapeutic range references" hidden></div>
           <div class="tci-rate-panel" id="tciRatePanel" hidden>
             <div class="tci-rate-panel__heading"><span id="deliveryRateHeading">Educational TCI calculated infusion rate</span> <span id="tciRateUnit">mg/kg/min</span></div>
             <div id="tciRatePlot" class="plot plot--tci-rate"></div>
@@ -562,7 +610,21 @@
     <div class="copyright-badge">Copyright © <script>document.write(new Date().getFullYear())</script> Julian W. Landaw, MD, PhD.</div>
   </main>
 
+  <dialog id="scheduleEditor" class="schedule-editor" aria-labelledby="scheduleEditorTitle">
+    <div class="schedule-editor__header"><h2 id="scheduleEditorTitle">Dosing schedule</h2><button type="button" class="btn btn-outline-secondary" id="closeScheduleEditorBtn">Done</button></div>
+    <div class="schedule-navigation">
+      <label for="scheduleJumpTime">Jump to time (min)<input id="scheduleJumpTime" type="number" min="0" step="any" value="0"></label>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="scheduleJumpBtn">Go</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="schedulePreviousBtn">Previous</button>
+      <span id="schedulePageStatus" role="status"></span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="scheduleNextBtn">Next</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="scheduleCsvBtn">Export schedule CSV</button>
+    </div>
+    <p id="scheduleEditorErrors" class="validation-summary" role="status" hidden></p>
+    <div id="scheduleEditorBody"></div>
+  </dialog>
   <!-- App script -->
+  <script src="../assets/js/threecompartmentmodel_files.js"></script>
   <script src="../assets/js/threecompartmentmodel.js"></script>
 </body>
 </html>

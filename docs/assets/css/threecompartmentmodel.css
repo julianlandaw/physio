@@ -8750,6 +8750,126 @@ body.dark-mode .simulation-status[data-state="error"] {
   .quick-dose-editor__heading small { text-align: left; }
 }
 
+/* Main dosing workspace */
+body.drawer-open { overflow: hidden; }
+.drawer { height: 100dvh; }
+.drawer__body { overscroll-behavior: contain; }
+.dosing-mode {
+  border: 0;
+  display: grid;
+  grid-template-columns: 1.25fr .8fr 1fr;
+  margin: 0;
+  padding: 0;
+  gap: 4px;
+  min-width: 0;
+}
+.dosing-mode legend {
+  margin-bottom: 7px;
+  font-size: .8rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+.dosing-mode input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.dosing-mode label {
+  margin: 0;
+  padding: 8px 4px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  background: var(--panel-2);
+  font-size: .85rem;
+}
+.dosing-mode input:checked + label {
+  color: var(--text);
+  background: var(--panel);
+  border-color: #ff7a57;
+  box-shadow: inset 0 -3px #ff7a57;
+  font-weight: 700;
+}
+.dosing-mode input:focus-visible + label { outline: 3px solid #2879c9; outline-offset: 2px; }
+.field-error { display: block; margin-top: 4px; color: #b02a37; font-size: .75rem; }
+body.dark-mode .field-error { color: #f5aeb7; }
+#mainValidationSummary { margin-top: 12px; }
+#mainInputErrors { margin-bottom: 8px; }
+.regimen-overview .regimen-grid { margin-top: 14px; }
+.regimen-more { margin-top: 12px; }
+.regimen-more > summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 5px 0; }
+.regimen-item strong { white-space: normal; overflow: visible; text-overflow: clip; }
+.regimen-model-details { margin: 12px 0; font-size: .84rem; }
+.regimen-model-details summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+.regimen-model-details p { margin: 8px 0 0; }
+.regimen-model-details .simulation-help { padding-top: 8px; }
+.regimen-actions { margin-top: 12px; }
+.regimen-overview .regimen-actions .btn { flex: 1 1 auto; padding: 7px 6px; font-size: .78rem; white-space: nowrap; }
+.quick-dose-editor__heading { flex-direction: column; align-items: flex-start; gap: 3px; }
+.quick-dose-editor__heading small { text-align: left; }
+.quick-dose-editor__fields--tci { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.schedule-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+#mainImportTciScheduleBtn { margin-top: 10px; }
+
+@media (max-width: 991px) {
+  .regimen-overview { max-width: 680px; margin: 0 auto 16px; }
+}
+@media (max-width: 690px) {
+  .app-content { padding: 12px 10px 24px; }
+  .regimen-overview { padding: 12px; }
+  .regimen-overview__heading { margin-bottom: 10px; }
+  .regimen-overview__heading .eyebrow { display: none; }
+  .regimen-overview h1 { font-size: 1.2rem; }
+  .regimen-item--identity { display: none; }
+  .regimen-overview .regimen-grid { display: block; margin-top: 10px; }
+  .regimen-overview .regimen-item { padding: 8px; }
+  .regimen-item strong { font-size: .8rem; }
+  .regimen-item__label { margin-bottom: 2px; font-size: .65rem; }
+  .regimen-overview .quick-dose-editor { margin-top: 10px; padding-top: 10px; }
+  .quick-dose-editor__heading small { display: none; }
+  .quick-dose-editor__fields { gap: 8px; margin-top: 8px; }
+  .quick-dose-editor__fields--tci { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .regimen-actions { gap: 6px; margin-top: 10px; }
+  .regimen-actions .btn { padding: 7px 4px; font-size: .75rem; white-space: nowrap; }
+  .regimen-model-details { margin: 6px 0; }
+  .content-header { gap: 4px; }
+  .content-header h2 { font-size: 1.2rem; }
+  .content-header .eyebrow { display: none; }
+  .primary-plot-card .card-body { padding: 10px; }
+  .simulation-status { margin: 0 0 12px; }
+}
+
+.chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.chart-window-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.chart-toolbar .btn { font-size: .75rem; padding: 6px 8px; }
+#therapeuticToggleContainer { font-size: .8rem; }
+#therapeuticToggleContainer label { margin: 0; }
+.range-key { display: flex; flex-wrap: wrap; gap: 5px 18px; margin: 0 30px 12px 60px; font-size: .74rem; color: var(--muted); }
+.range-key i { display: inline-block; width: 14px; height: 6px; margin-right: 6px; vertical-align: middle; }
+body.schedule-editor-open { overflow: hidden; }
+.schedule-editor { width: calc(100vw - 32px); max-width: 1180px; height: min(900px, 92dvh); max-height: 92dvh; margin: auto; padding: 0; color: var(--text); background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px; }
+.schedule-editor[open] { display: flex; flex-direction: column; }
+.schedule-editor::backdrop { background: rgba(0,0,0,.5); }
+.schedule-editor__header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.schedule-editor__header h2 { margin: 0; font-size: 1.25rem; }
+.schedule-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 18px; background: var(--panel); }
+.schedule-navigation label { margin: 0; font-size: .8rem; }
+.schedule-navigation input { width: 95px; margin-left: 8px; padding: 5px; border: 1px solid var(--border); border-radius: 4px; }
+#schedulePageStatus { font-size: .8rem; }
+#scheduleEditorErrors { margin: 8px 18px; }
+#scheduleEditorBody { overflow: auto; overscroll-behavior: contain; flex: 1; min-height: 0; }
+.schedule-editor #scheduleCard { border: 0; box-shadow: none !important; margin: 0 !important; }
+.schedule-editor #scheduleCard > .card-header,
+.schedule-editor [data-open-schedule] { display: none; }
+.schedule-editor .schedule-infusion-scroll { max-height: none; }
+.schedule-tools { margin-bottom: 14px; }
+.schedule-tools > summary { cursor: pointer; color: var(--muted); font-size: .85rem; padding: 8px 0; }
+.dose-timeline__header > span:first-child { min-width: 0; }
+#doseTimelineText { flex-shrink: 0; white-space: nowrap; }
+@media (max-width: 690px) {
+  .range-key { margin: 0 6px 12px; }
+  .schedule-editor { width: calc(100vw - 12px); height: 96dvh; max-height: 96dvh; }
+  .schedule-editor__header, .schedule-navigation { padding: 10px; }
+  .schedule-editor .card-body { padding: 10px; }
+}
+
 @media print {
   @page { size: auto; margin: 12mm; }
 
@@ -8769,6 +8889,11 @@ body.dark-mode .simulation-status[data-state="error"] {
   .drawer-backdrop,
   .regimen-actions,
   .quick-dose-editor,
+  .common-dose-fields,
+  .dosing-mode,
+  #mainValidationSummary,
+  .chart-toolbar,
+  .schedule-editor,
   .simulation-help,
   .simulation-status,
   .timeline-event-editor,
@@ -8872,7 +8997,9 @@ body.dark-mode .simulation-status[data-state="error"] {
     page-break-before: always;
   }
   .distribution-details summary,
-  .model-details summary { display: none; }
+  .model-details summary,
+  .regimen-more > summary,
+  .regimen-model-details summary { display: none; }
   .distribution-details,
   .model-details { border-top: 0; }
   .result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }

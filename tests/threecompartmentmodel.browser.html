@@ -18,7 +18,7 @@
       if (!condition) throw new Error(name);
     }
 
-    document.getElementById('app').addEventListener('load', () => {
+    document.getElementById('app').addEventListener('load', async () => {
       const app = document.getElementById('app').contentWindow;
       const input = id => app.document.getElementById(id);
       const unit = { factor: 1, perKg: true };
@@ -61,6 +61,50 @@
         });
         check('absolute bolus uses patient weight', approx(run(absolute).totalDoseMgKg, 1));
 
+        const change = (id, value) => {
+          input(id).value = value;
+          input(id).dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        const lastValidPlot = input('myDiv1').data;
+        change('mainBolusAmount', '');
+        check('empty main dose stays incomplete and leaves results unchanged', input('b').value === '' && input('myDiv1').data === lastValidPlot && !input('mainBolusAmountError').hidden);
+        input('darkModeBtnTop').click();
+        check('invalid dose survives display changes', input('mainBolusAmount').value === '' && input('simulationStatus').dataset.state === 'error');
+        input('darkModeBtnTop').click();
+        input('dosingModeTci').click();
+        input('dosingModeBasic').click();
+        check('incomplete basic entries remain editable after switching modes', !input('mainBolusAmount').disabled && input('mainBolusAmount').value === '');
+        change('mainBolusAmount', '0');
+        check('explicit zero dose is accepted', input('b').value === '0' && input('mainValidationSummary').hidden && !input('mainBolusAmount').hasAttribute('aria-invalid'));
+        change('mainWeight', '75');
+        change('mainLoadingDuration', '0.25');
+        change('mainInfusionDuration', '30');
+        change('mainFinalTime', '60');
+        check('main timing and patient fields update model inputs', input('weight').value === '75' && input('tbolus').value === '0.25' && input('tinfusion').value === '30' && input('tfinal').value === '60');
+        input('dosingModeTci').click();
+        check('main mode selector enables TCI and shows its settings', input('tciEnabled').checked && !input('useSchedule').checked && !input('mainTciControls').hidden && input('mainManualControls').hidden);
+        check('TCI summary includes the maximum rate value', input('summaryDose').textContent.includes('maximum 200'));
+        input('dosingModeSchedule').click();
+        check('main schedule mode is exclusive and exposes editing actions', input('useSchedule').checked && !input('tciEnabled').checked && !input('mainScheduleControls').hidden);
+        input('dosingModeBasic').click();
+        check('returning to basic mode restores timing controls', !input('useSchedule').checked && !input('tciEnabled').checked && !input('mainLoadingDuration').closest('label').hidden);
+        change('Vd1', '0');
+        check('advanced errors appear on the main workspace', !input('mainValidationSummary').hidden && input('mainInputErrors').textContent.includes('V1'));
+        input('reviewInvalidInputsBtn').click();
+        check('review errors opens the relevant settings section', !input('paramsDrawer').inert && input('volumeCardBody').style.display === 'block');
+        input('drawerCloseBtn').click();
+        check('closed settings drawer becomes inert', input('paramsDrawer').inert);
+        app.reset();
+
+        await app.Plotly.relayout('myDiv1', { 'xaxis.range': [0, 10], 'xaxis.autorange': false });
+        change('mainBolusAmount', '1.5');
+        check('dose edits preserve the chart time window', approx(input('myDiv1')._fullLayout.xaxis.range[0], 0) && approx(input('myDiv1')._fullLayout.xaxis.range[1], 10));
+        app.setChartWindow('60');
+        check('quick chart windows update the time axis', approx(input('myDiv1')._fullLayout.xaxis.range[1], 60));
+        app.reset();
+        check('reset clears a previous chart zoom', input('myDiv1')._fullLayout.xaxis.range[1] > 60);
+        check('therapeutic references have a separate readable key', !input('therapeuticRangeKey').hidden && input('myDiv1').data.length === 2);
+
         input('darkModeBtnTop').click();
         check('dark mode themes the concentration plots', input('myDiv1')._fullLayout.paper_bgcolor === '#121212' && input('myDiv2')._fullLayout.plot_bgcolor === '#1e1e1e');
         input('darkModeBtnTop').click();
@@ -71,9 +115,9 @@
         input('scaleToggleBtnTop').click();
         check('linear axis can be restored', input('myDiv1')._fullLayout.yaxis.type === 'linear');
 
-        const originalNewPlot = app.Plotly.newPlot;
+        const originalNewPlot = app.Plotly.react;
         let plotCalls = 0;
-        app.Plotly.newPlot = function (...args) { plotCalls++; return originalNewPlot.apply(this, args); };
+        app.Plotly.react = function (...args) { plotCalls++; return originalNewPlot.apply(this, args); };
         app.reset();
         check('reset renders once after loading the preset', plotCalls === 3);
         plotCalls = 0;
@@ -86,15 +130,16 @@
         input('tciEnabled').checked = true;
         app.applyDrugById('fentanyl');
         check('drug switch renders once after loading the example', plotCalls === 3);
-        app.Plotly.newPlot = originalNewPlot;
+        app.Plotly.react = originalNewPlot;
         check('drug switch replaces prior dose with fentanyl example', input('b').value === '1' && input('infusion').value === '1' && input('initialp').value === '0');
         check('drug switch permits manual TCI without a starting profile', !input('tciEnabled').checked && !input('tciEnabled').disabled);
         check('uncurated TCI target and rate are blank', input('tciTarget').value === '' && input('tciMaxRate').value === '' && input('tciTargetType').value === 'cp');
         input('tciEnabled').checked = true;
         input('tciEnabled').dispatchEvent(new Event('change', { bubbles: true }));
         check('manual TCI requires both inputs', !app.validateSimulationInputs() && input('tciTarget').classList.contains('is-invalid') && input('tciMaxRate').classList.contains('is-invalid'));
-        input('tciTarget').value = 2;
-        input('tciMaxRate').value = 1;
+        check('TCI input errors are visible beside main controls', !input('mainTciControls').hidden && input('dosingModeTci').checked && input('mainTciTarget').getAttribute('aria-invalid') === 'true');
+        change('mainTciTarget', '2');
+        change('mainTciMaxRate', '1');
         check('manual TCI runs after both inputs are supplied', app.validateSimulationInputs() && app.simulateStrategy(app.getCurrentState()).totalDoseMgKg > 0);
         app.dfsolve();
         input('darkModeBtnTop').click();
@@ -104,9 +149,9 @@
         const manualTciId = app.eval('strategies.at(-1).id');
         app.applyDrugById('propofol');
         let restoredPlotCalls = 0;
-        app.Plotly.newPlot = function (...args) { restoredPlotCalls++; return originalNewPlot.apply(this, args); };
+        app.Plotly.react = function (...args) { restoredPlotCalls++; return originalNewPlot.apply(this, args); };
         app.loadStrategyToInputs(manualTciId);
-        app.Plotly.newPlot = originalNewPlot;
+        app.Plotly.react = originalNewPlot;
         check('restoring a TCI strategy renders once', restoredPlotCalls === 4);
         check('manual TCI strategy restores entered settings', input('tciEnabled').checked && input('tciTarget').value === '2' && input('tciMaxRate').value === '1');
         input('scaleToggleBtnTop').click();
@@ -169,6 +214,7 @@
         const importedSchedule = app.getScheduleFromDOM();
         const replay = app.simulateStrategy(app.getCurrentState());
         check('TCI import activates an editable schedule and turns TCI off', importedSchedule.enabled && !input('tciEnabled').checked && input('b').disabled && input('mainImportTciScheduleBtn').hidden);
+        check('TCI import updates the main mode selector', input('dosingModeSchedule').checked);
         check('imported schedule keeps its rate chart visible', !input('tciRatePanel').hidden && input('deliveryRateHeading').textContent.includes('Scheduled'));
         check('TCI import preserves the stop boundary without adding a bolus', importedSchedule.boluses.length === 0 && importedSchedule.infusions.length > 0 && approx(importedSchedule.infusions.at(-1).end, 1.35));
         check('TCI schedule reproduces total dose', approx(replay.totalDoseMgKg, sourceTci.totalDoseMgKg));
@@ -189,6 +235,10 @@
         check('simplified replay reports model deviation', input('tciReplayMetrics').textContent.includes('Ce') && input('tciReplayMetrics').textContent.includes('dose difference'));
         input('restoreExactTciScheduleBtn').click();
         check('exact original schedule can be restored', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(importedSchedule));
+        change('mainInfusionRate', '');
+        check('scheduled quick edits also reject blank rates', !input('mainInfusionRateError').hidden && !input('mainValidationSummary').hidden);
+        change('mainInfusionRate', String(importedSchedule.infusions[0].rate));
+        check('corrected quick schedule edits preserve original regimen', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(importedSchedule));
         input('importTciScheduleBtn').click();
         check('TCI import requires active TCI', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(importedSchedule));
         const firstRateInput = input('infusionEventsTable').querySelector('input[data-field="rate"]');
@@ -288,6 +338,56 @@
         app.renderStrategyList();
         check('strategy name is rendered as text', !input('strategyList').querySelector('img'));
 
+        app.applyDrugById('propofol');
+        change('mainWeight', '82');
+        change('mainFinalTime', '8');
+        input('pkInputMode').value = 'microconstants';
+        input('pkInputMode').dispatchEvent(new Event('change', { bubbles: true }));
+        app.setScheduleToDOM({ enabled: true, boluses: [{ time: 0.025, dose: 0.5, duration: 0.2 }], infusions: [{ start: 0.3, end: 3.75, rate: 80 }] });
+        app.disableLegacyBolusInfusionInputs(true);
+        app.dfsolve();
+        app.setBolusUnit('mg');
+        app.setInfusionUnit('mg/hr');
+        app.dfsolve();
+        app.captureCurrentStrategy();
+        const fileState = app.getCurrentState();
+        const predictionBefore = app.simulateStrategy(fileState);
+        let savedText = '';
+        const originalDownload = app.downloadText;
+        app.downloadText = (filename, text) => { savedText = text; };
+        input('saveRegimenBtn').click();
+        app.downloadText = originalDownload;
+        check('save button produces a versioned regimen file', JSON.parse(savedText).format === 'physio-regimen' && JSON.parse(savedText).version === 1);
+        app.applyDrugById('fentanyl');
+        app.loadRegimenDocument(savedText);
+        const restoredState = app.getCurrentState();
+        check('regimen files restore units, patient, microconstants, and schedule', JSON.stringify(restoredState.units) === JSON.stringify(fileState.units) && JSON.stringify(restoredState.pk) === JSON.stringify(fileState.pk) && JSON.stringify(restoredState.schedule) === JSON.stringify(fileState.schedule) && restoredState.patient.weightKg === 82);
+        check('loaded regimens reproduce the model predictions', approx(app.simulateStrategy(restoredState).cp.at(-1), predictionBefore.cp.at(-1)));
+        check('comparison strategies survive saving and loading', app.eval('strategies.length') === JSON.parse(savedText).strategies.length);
+        const beforeBadLoad = JSON.stringify(app.getCurrentState());
+        const corruptFile = JSON.parse(savedText);
+        corruptFile.current.schedule.infusions[0].rate = '<img src=x onerror=alert(1)>';
+        let rejected = false;
+        try { app.loadRegimenDocument(JSON.stringify(corruptFile)); } catch (error) { rejected = true; }
+        check('invalid regimen files leave current inputs intact', rejected && JSON.stringify(app.getCurrentState()) === beforeBadLoad);
+        const futureFile = JSON.parse(savedText);
+        futureFile.version = 99;
+        rejected = false;
+        try { app.loadRegimenDocument(JSON.stringify(futureFile)); } catch (error) { rejected = true; }
+        check('unsupported regimen versions are rejected without changes', rejected && JSON.stringify(app.getCurrentState()) === beforeBadLoad);
+        app.setDosingMode('basic');
+        const inactiveFile = JSON.stringify(app.buildRegimenDocument());
+        app.applyDrugById('fentanyl');
+        app.loadRegimenDocument(inactiveFile);
+        app.setDosingMode('schedule');
+        check('regimen files preserve inactive schedule drafts', JSON.stringify(app.getScheduleFromDOM()) === JSON.stringify(fileState.schedule));
+        const transfer = new app.DataTransfer();
+        transfer.items.add(new app.File([savedText], 'roundtrip.json', { type: 'application/json' }));
+        input('regimenFileInput').files = transfer.files;
+        input('regimenFileInput').dispatchEvent(new Event('change', { bubbles: true }));
+        for (let tries = 0; tries < 50 && !input('regimenFileStatus').textContent.includes('Loaded roundtrip.json'); tries++) await new Promise(resolve => setTimeout(resolve, 20));
+        check('regimen upload uses the validated restore workflow', input('regimenFileStatus').textContent.includes('Loaded roundtrip.json'));
+
         if (new URLSearchParams(location.search).has('long')) {
           app.applyDrugById('propofol');
           input('tciEnabled').checked = true;
@@ -300,11 +400,38 @@
           check('full-length imported schedule reproduces the TCI curve',
             approx(longReplay.totalDoseMgKg, longSource.totalDoseMgKg) &&
             longReplay.cp.every((value, index) => approx(value, longSource.cp[index], 1e-6)));
+          input('mainEditScheduleBtn').click();
+          check('large schedules open in a wider editor with paged infusion rows', input('scheduleEditor').open && input('infusionEventsTable').querySelectorAll('tbody tr:not([hidden])').length === 50);
+          input('scheduleNextBtn').click();
+          check('schedule pages retain the full dosing regimen', !input('infusionEventsTable').tBodies[0].rows[50].hidden && app.getScheduleFromDOM().infusions.length === originalLongCount);
+          input('scheduleJumpTime').value = String(app.getScheduleFromDOM().infusions[200].start);
+          input('scheduleJumpBtn').click();
+          check('jump to time reveals the matching infusion', !input('infusionEventsTable').tBodies[0].rows[200].hidden);
+          let csv = '';
+          app.downloadText = (filename, text) => { csv = text; };
+          input('scheduleCsvBtn').click();
+          app.downloadText = originalDownload;
+          check('schedule CSV includes every infusion, not just the visible page', csv.split('\r\n').length === originalLongCount + 1 && csv.includes('weight_kg'));
+          input('closeScheduleEditorBtn').click();
+          check('closing the schedule editor preserves the drawer controls', !input('scheduleEditor').open && input('paramsDrawer').contains(input('scheduleCard')) && input('infusionEventsTable').querySelectorAll('tbody tr[hidden]').length === 0);
+          const importedFile = JSON.stringify(app.buildRegimenDocument());
+          app.reset();
+          app.loadRegimenDocument(importedFile);
+          check('saved imported schedules retain their original TCI comparison', !input('tciReplayComparison').hidden && input('myDiv1').data.some(trace => trace.name === 'Original TCI Cp (model)'));
           input('tciSimplifyLimit').value = '120';
           input('simplifyTciScheduleBtn').click();
           check('full-length TCI schedule can be simplified', app.getScheduleFromDOM().infusions.length <= 120 && app.getScheduleFromDOM().infusions.length < originalLongCount);
         }
 
+        app.reset();
+        const frame = document.getElementById('app');
+        frame.hidden = false;
+        frame.style.cssText = 'width:390px;height:844px;position:absolute;left:-2000px';
+        frame.getBoundingClientRect();
+        check('mobile controls and chart are near the top', input('mainBolusAmount').getBoundingClientRect().top < 400 && input('myDiv1').getBoundingClientRect().top < 850);
+        input('scaleToggleBtnTop').focus();
+        input('drawerCloseBtn').focus();
+        check('closed drawer cannot receive keyboard focus', app.document.activeElement.id === 'scaleToggleBtnTop');
         document.body.dataset.result = 'passed';
       } catch (error) {
         checks.push({ name: error.message, passed: false });

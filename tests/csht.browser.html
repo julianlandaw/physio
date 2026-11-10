@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Context-sensitive simulator browser checks</title></head>
+<body data-result="running"><h1>Context-sensitive simulator checks</h1><pre id="results">Running…</pre>
+<iframe id="app" title="Simulator under test" style="width:390px;height:844px;position:absolute;left:-2000px" src="../docs/Pharmacology/csht_three_compartment_web_simulator.html"></iframe>
+<script>
+const checks=[];
+const check=(name,value)=>{checks.push(`${value?'PASS':'FAIL'} ${name}`);if(!value)throw Error(name)};
+document.getElementById('app').addEventListener('load',async()=>{
+ const frame=document.getElementById('app'),app=frame.contentWindow,d=app.document,input=id=>d.getElementById(id);
+ try{
+  check('mobile charts stack below the controls',d.querySelector('.plots').getBoundingClientRect().top>d.querySelector('.controls').getBoundingClientRect().bottom-1);
+  check('mobile page scrolls without squeezing charts',d.documentElement.scrollHeight>app.innerHeight&&input('heatmap').clientWidth>250&&d.documentElement.scrollWidth<=app.innerWidth);
+  check('input labels name their controls',d.querySelector('label[for="k10"]')!==null);
+  input('npoints').value='10';input('taupoints').value='10';input('lossstep').value='25';input('maxloss').value='50';
+  input('runBtn').click();
+  for(let tries=0;tries<200&&input('status').textContent!=='Done.';tries++)await new Promise(resolve=>setTimeout(resolve,20));
+  check('simulator computes successfully on mobile',input('status').textContent==='Done.');
+  const results=JSON.stringify(app.eval('lastResult.lossTimes'));
+  check('mobile canvas is sized to the visible chart',Math.abs(input('heatmap').width-input('heatmap').clientWidth*app.devicePixelRatio)<=1);
+  check('computed charts contain rendered pixels',input('heatmap').getContext('2d').getImageData(0,0,input('heatmap').width,input('heatmap').height).data.some((value,index)=>index%4===3&&value>0));
+  input('showTable').click();
+  check('mobile table opens as an accessible scrollable region',input('tableBox').classList.contains('show')&&input('tableWrap').querySelectorAll('tbody tr').length===10);
+  d.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  check('Escape closes the results table',!input('tableBox').classList.contains('show'));
+  frame.style.width='1200px';
+  await new Promise(resolve=>setTimeout(resolve,100));
+  check('desktop layout restores columns',d.querySelector('.plots').getBoundingClientRect().left>d.querySelector('.controls').getBoundingClientRect().left);
+  check('resizing charts leaves predictions unchanged',JSON.stringify(app.eval('lastResult.lossTimes'))===results);
+  document.body.dataset.result='passed';
+ }catch(error){checks.push(`FAIL ${error.message}`);document.body.dataset.result='failed'}
+ document.getElementById('results').textContent=checks.join('\n');
+});
+</script></body></html>
