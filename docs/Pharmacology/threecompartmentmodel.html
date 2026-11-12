@@ -4,627 +4,1463 @@
 -->
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Three Compartment Pharmacokinetic Model" />
-  <meta name="author" content="Julian Landaw" />
-  <title>Three Compartment Model</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Three Compartment Pharmacokinetic Model" />
+    <meta name="author" content="Julian Landaw" />
+    <title>Three Compartment Model</title>
 
-  <!-- New app-specific styles -->
-  <link rel="stylesheet" href="../assets/css/threecompartmentmodel.css" />
+    <link rel="stylesheet" href="../assets/css/threecompartmentmodel.css" />
 
-  <!-- Math + Plotly (as in your current site) -->
-  <script src="../assets/js/math.js" type="text/javascript"></script>
-  <script src="../assets/js/plotly.js"></script>
-</head>
+    <script src="../assets/js/math.js" type="text/javascript"></script>
+    <script src="../assets/js/plotly.js"></script>
+  </head>
 
-<body>
-  <!-- Sticky app bar -->
-  <header class="appbar" id="appHeader" role="banner">
-    <div class="appbar__left">
-      <div class="brand">
-        <div class="brand__title">Three Compartment Model</div>
-        <div class="brand__subtitle" id="currentDrugLabel">No drug selected</div>
-      </div>
+  <body>
+    <!-- Sticky app bar -->
+    <header class="appbar" id="appHeader" role="banner">
+      <div class="appbar__left">
+        <div class="brand">
+          <div class="brand__title">Three Compartment Model</div>
+          <div class="brand__subtitle" id="currentDrugLabel">No drug selected</div>
+        </div>
 
-      
-      <div class="drugsearch">
-        <label class="sr-only" for="drugPicker">Drug preset library</label>
-        <select id="drugPicker" class="form-control form-control-sm" aria-describedby="drugPickerHelp"></select>
-        <span class="sr-only" id="drugPickerHelp">Drug presets are grouped by clinical class. Choose Custom model to keep and edit the current parameters.</span>
-      </div>
-
-    </div>
-
-    <div class="appbar__right">
-      <div class="btn-group btn-group-sm" role="group" aria-label="Display controls">
-        <button class="btn btn-outline-secondary" type="button" id="scaleToggleBtnTop" aria-pressed="false" title="Toggle logarithmic concentration (Y) axis">Log Y-axis</button>
-        <button class="btn btn-outline-secondary" type="button" id="darkModeBtnTop" aria-pressed="false">Dark mode</button>
-      </div>
-
-      <button class="btn btn-sm btn-primary" type="button" id="paramsBtn" aria-controls="paramsDrawer" aria-expanded="false">
-        Parameters
-      </button>
-    </div>
-  </header>
-
-  <!-- Drawer backdrop -->
-  <div class="drawer-backdrop" id="drawerBackdrop" tabindex="-1" aria-hidden="true"></div>
-
-  <!-- Right parameters drawer -->
-  <aside class="drawer" id="paramsDrawer" role="dialog" aria-modal="true" aria-labelledby="paramsDrawerTitle" aria-hidden="true" inert>
-    <div class="drawer__header">
-      <div>
-        <div class="drawer__title" id="paramsDrawerTitle">Parameters</div>
-        <div class="drawer__hint">Adjust dosing, PK, and simulation settings</div>
-      </div>
-      <button class="btn btn-sm btn-outline-secondary" id="drawerCloseBtn" type="button" aria-label="Close parameters">
-        ✕
-      </button>
-    </div>
-
-    <div class="drawer__body">
-      <div id="validationSummary" class="validation-summary" role="alert" aria-live="assertive" hidden></div>
-      <!-- ====== Parameter cards (mostly your existing markup, moved into the drawer) ====== -->
-
-      <!-- Bolus and Infusion Parameters -->
-      <div class="card shadow-sm mb-3" id="parameterCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="parameterCardBody" aria-expanded="false">Quick setup: patient &amp; dosing <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="parameterCardBody">
-          <div class="param-row">
-            <label class="label" for="drawerDrugPicker">Drug preset</label>
-            <select id="drawerDrugPicker" class="form-control" aria-describedby="drawerDrugPickerHelp"></select>
-            <span class="sr-only" id="drawerDrugPickerHelp">Drug presets are grouped by clinical class. Choose Custom model to keep and edit the current parameters.</span>
-          </div>
-          <p class="param-note">Selecting a drug loads an illustrative adult IV dose for graph exploration, not a clinical recommendation. Bupivacaine and vasopressin remain at zero because this model has no suitable IV mass-dose example for them.</p>
-          <div class="param-row">
-            <label id="weighthtml" class="label" for="weight">Patient weight (kg)</label>
-            <input type="number" class="form-control" id="weight" value="70" min="0" step="any" inputmode="decimal" />
-          </div>
-          <div class="param-row">
-            <label class="label" for="bolusUnitSelect">Bolus unit</label>
-            <select class="form-control" id="bolusUnitSelect" aria-label="Bolus unit"></select>
-          </div>
-          <div class="param-row">
-            <label class="label" for="infusionUnitSelect">Infusion unit</label>
-            <select class="form-control" id="infusionUnitSelect" aria-label="Infusion unit"></select>
-          </div>
-          <div class="param-note" id="doseUnitsHelp">Use per-kg dosing (mg/kg, µg/kg/min) or absolute dosing (mg, mg/min, mg/hr). Absolute units are converted internally using patient weight.</div>
-          <div class="param-row">
-            <label id="bhtml" class="label" for="b"></label>
-            <input type="number" class="form-control" id="b" value="0.1" min="0" step="any" inputmode="decimal" aria-describedby="doseUnitsHelp" />
-          </div>
-          <div class="param-row">
-            <label id="tbolushtml" class="label" for="tbolus"></label>
-            <input type="number" class="form-control" id="tbolus" value="0.1" min="0" step="any" inputmode="decimal" />
-          </div>
-          <div class="param-row">
-            <label id="infusionhtml" class="label" for="infusion"></label>
-            <input type="number" class="form-control" id="infusion" value="0" min="0" step="any" inputmode="decimal" aria-describedby="doseUnitsHelp" />
-          </div>
-          <div class="param-row">
-            <label id="tinfusionhtml" class="label" for="tinfusion"></label>
-            <input type="number" class="form-control" id="tinfusion" value="240" min="0" step="any" inputmode="decimal" />
-          </div>
+        <div class="drugsearch">
+          <label class="sr-only" for="drugPicker">Drug preset library</label>
+          <select
+            id="drugPicker"
+            class="form-control form-control-sm"
+            aria-describedby="drugPickerHelp"
+          ></select>
+          <span class="sr-only" id="drugPickerHelp"
+            >Drug presets are grouped by clinical class. Choose Custom model to keep and edit the
+            current parameters.</span
+          >
         </div>
       </div>
 
-      <div class="card shadow-sm mb-3" id="tciCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="tciCardBody" aria-expanded="false">Target-controlled infusion <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="tciCardBody">
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="tciEnabled" />
-            <label class="form-check-label" for="tciEnabled">Use educational TCI mode</label>
-          </div>
-          <p class="param-note">This model calculates a variable infusion rate to approach a selected predicted concentration. For drugs without a TCI starting profile, you must enter both the target and maximum rate yourself. It is for learning only—not infusion-pump control or a dosing recommendation.</p>
-          <p class="param-note" id="tciPresetNote" role="status">Drug-specific educational starting values are loaded when available.</p>
-          <div class="param-row">
-            <label class="label" for="tciTargetType">Target compartment</label>
-            <select class="form-control" id="tciTargetType">
-              <option value="cp">Plasma concentration (Cp)</option>
-              <option value="ce">Effect-site concentration (Ce)</option>
-            </select>
-          </div>
-          <div class="param-row">
-            <label class="label" for="tciTarget">Target <span id="tciTargetUnit">mg/mL</span></label>
-            <input class="form-control" id="tciTarget" type="number" value="0.003" min="0" step="any" inputmode="decimal" aria-describedby="tciPresetNote" />
-          </div>
-          <div class="param-row">
-            <label class="label" for="tciMaxRate">Maximum rate <span id="tciMaxRateUnit">mg/kg/min</span></label>
-            <input class="form-control" id="tciMaxRate" type="number" value="0.2" min="0" step="any" inputmode="decimal" aria-describedby="tciPresetNote" />
-          </div>
-          <div class="param-row">
-            <label class="label" for="tciStopTime">Stop infusion at (min)</label>
-            <input class="form-control" id="tciStopTime" type="number" value="255" min="0" step="any" inputmode="decimal" />
-          </div>
+      <div class="appbar__right">
+        <div class="btn-group btn-group-sm" role="group" aria-label="Display controls">
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            id="scaleToggleBtnTop"
+            aria-pressed="false"
+            title="Toggle logarithmic concentration (Y) axis"
+          >
+            Log Y-axis
+          </button>
+          <button
+            class="btn btn-outline-secondary"
+            type="button"
+            id="darkModeBtnTop"
+            aria-pressed="false"
+          >
+            Dark mode
+          </button>
         </div>
+
+        <button
+          class="btn btn-sm btn-primary"
+          type="button"
+          id="paramsBtn"
+          aria-controls="paramsDrawer"
+          aria-expanded="false"
+        >
+          Parameters
+        </button>
       </div>
-
-      <div class="card shadow-sm mb-3" id="testRegimenCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="testRegimenCardBody" aria-expanded="false">Model-derived test regimen <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="testRegimenCardBody">
-          <p class="param-note">For simulation exploration only. This calculator estimates a central-compartment loading dose as <i>V</i><sub>1</sub> × C<sub>target</sub> and a maintenance rate as <i>Cl</i> × C<sub>target</sub>; it is not a clinical dosing recommendation.</p>
-          <div class="param-row">
-            <label class="label" for="testRegimenTarget">Predicted plasma target <span id="testRegimenTargetUnit">mg/mL</span></label>
-            <input class="form-control" id="testRegimenTarget" type="number" min="0" step="0.001" inputmode="decimal" placeholder="Enter a target" />
-          </div>
-          <div class="param-row">
-            <label class="label" for="testRegimenLoadingDuration">Loading-dose duration (min)</label>
-            <input class="form-control" id="testRegimenLoadingDuration" type="number" value="1" min="0" step="0.1" inputmode="decimal" />
-          </div>
-          <button class="btn btn-sm btn-outline-primary" type="button" id="generateTestRegimenBtn">Generate test regimen</button>
-        </div>
-      </div>
-
-
-      <!-- Dosing Schedule (advanced) -->
-      <div class="card shadow-sm mb-3" id="scheduleCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="scheduleCardBody" aria-expanded="false">Dosing Schedule (advanced) <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="scheduleCardBody">
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="useSchedule" />
-            <label class="form-check-label" for="useSchedule">Use schedule (multiple boluses + variable infusions)</label>
-          </div>
-
-          <div class="small mb-2" id="scheduleUnitsBadge">
-            <span class="badge bg-light text-dark me-1">Bolus unit: <span id="scheduleBolusUnitBadge">mg/kg</span></span>
-            <span class="badge bg-light text-dark">Infusion unit: <span id="scheduleInfusionUnitBadge">mg/kg/min</span></span>
-          </div>
-
-          <details class="schedule-tools">
-          <summary>Import, simplify &amp; schedule options</summary>
-          <div class="small text-muted mb-3">
-            Times are minutes from t=0. Bolus dose uses the current <b>Bolus</b> unit; infusion rate uses the current
-            <b>Infusion</b> unit. A bolus with duration 0 is treated as instantaneous. Enabling a schedule replaces the basic dosing fields above.
-          </div>
-          <button class="btn btn-sm btn-outline-secondary mb-3" type="button" id="loadScheduleExampleBtn">Convert basic dosing to schedule</button>
-          <button class="btn btn-sm btn-outline-primary mb-3" type="button" data-open-schedule>Open larger editor</button>
-          <button class="btn btn-sm btn-outline-primary mb-3" type="button" id="importTciScheduleBtn" data-import-tci-schedule>Import current TCI as schedule</button>
-          <p class="small text-muted">TCI import copies each calculated rate interval into an editable, open-loop infusion schedule and turns TCI off. It preserves the current model and units, but later schedule edits will no longer track the concentration target. For simulation only—not a pump program.</p>
-          <div class="tci-simplify-tools mb-3" id="tciSimplifyTools" hidden>
-            <label for="tciSimplifyLimit">Optional simplified copy: at most this many infusion segments</label>
-            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-              <input class="form-control form-control-sm" id="tciSimplifyLimit" type="number" min="1" step="1" value="120" inputmode="numeric" />
-              <button class="btn btn-sm btn-outline-primary" type="button" id="simplifyTciScheduleBtn">Replace with simplified original</button>
-              <button class="btn btn-sm btn-outline-secondary" type="button" id="restoreExactTciScheduleBtn">Restore exact original</button>
-            </div>
-            <p class="small text-muted mb-0 mt-2">These actions replace current schedule edits. The exact imported rates remain available until you switch drugs, load another strategy, or reset.</p>
-          </div>
-          </details>
-          <p class="schedule-warnings" id="scheduleWarnings" role="status" hidden></p>
-
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <strong>Boluses</strong>
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-primary" type="button" id="addBolusEventBtn">Add bolus</button>
-              <button class="btn btn-outline-secondary" type="button" id="clearBolusEventsBtn">Clear</button>
-            </div>
-          </div>
-
-          <div class="table-responsive mb-3">
-            <table class="table table-sm table-bordered text-center align-middle" id="bolusEventsTable">
-              <thead class="table-light">
-                <tr>
-                  <th style="min-width:90px;">Time (min)</th>
-                  <th style="min-width:110px;">Dose <span class="text-muted" id="scheduleBolusUnit">(mg/kg)</span></th>
-                  <th style="min-width:110px;">Duration (min)</th>
-                  <th style="width:50px;"></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <strong>Infusions</strong>
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-primary" type="button" id="addInfusionEventBtn">Add infusion segment</button>
-              <button class="btn btn-outline-secondary" type="button" id="clearInfusionEventsBtn">Clear</button>
-            </div>
-          </div>
-
-          <div class="table-responsive schedule-infusion-scroll">
-            <table class="table table-sm table-bordered text-center align-middle" id="infusionEventsTable">
-              <thead class="table-light">
-                <tr>
-                  <th style="min-width:90px;">Start (min)</th>
-                  <th style="min-width:90px;">End (min)</th>
-                  <th style="min-width:130px;">Rate <span class="text-muted" id="scheduleInfusionUnit">(mg/kg/min)</span></th>
-                  <th style="width:50px;"></th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Compare strategies -->
-      <div class="card shadow-sm mb-3" id="compareCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="compareCardBody" aria-expanded="false">Compare Strategies <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="compareCardBody">
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="compareMode" />
-            <label class="form-check-label" for="compareMode">Enable comparison overlay</label>
-          </div>
-          <div class="d-flex gap-2 mb-2">
-            <button class="btn btn-sm btn-primary" type="button" id="addStrategyBtn">Save current regimen</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" id="clearStrategiesBtn">Clear</button>
-          </div>
-          <div class="small text-muted mb-2">
-            Save a baseline, adjust dosing or PK parameters, then save another regimen to compare. The active regimen is always shown on the plot.
-          </div>
-          <div id="strategyList" class="list-group"></div>
-        </div>
-      </div>
-
-      <!-- Simulation Parameters -->
-      <div class="card shadow-sm mb-3" id="simulationCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="simulationCardBody" aria-expanded="false">Simulation <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="simulationCardBody">
-          <div class="param-row">
-            <label id="initialphtml" class="label" for="initialp"></label>
-            <input type="number" class="form-control" id="initialp" value="0" />
-          </div>
-          <div class="param-row">
-            <label id="tfinalhtml" class="label" for="tfinal"></label>
-            <input type="number" class="form-control" id="tfinal" value="240" min="0" max="1440" step="any" inputmode="decimal" aria-describedby="tfinalHelp" />
-          </div>
-          <div class="param-note" id="tfinalHelp">Maximum simulation duration: 1,440 minutes (24 hours), to keep the browser responsive.</div>
-        </div>
-      </div>
-
-
-      <!-- Volumes -->
-      <div class="card shadow-sm mb-3" id="volumeCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="volumeCardBody" aria-expanded="false">Volumes <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="volumeCardBody">
-          <div class="param-row">
-            <label id="Vd1html" class="label" for="Vd1" title="Central-compartment volume"></label>
-            <input type="number" class="form-control" id="Vd1" value="70" />
-          </div>
-          <div class="param-row pk-clearance-volume-row">
-            <label id="Vd2html" class="label" for="Vd2" title="Rapid peripheral-compartment volume"></label>
-            <input type="number" class="form-control" id="Vd2" value="60" />
-          </div>
-          <div class="param-row pk-clearance-volume-row">
-            <label id="Vd3html" class="label" for="Vd3" title="Slow peripheral-compartment volume"></label>
-            <input type="number" class="form-control" id="Vd3" value="60" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Pharmacokinetics -->
-      <div class="card shadow-sm mb-3" id="pharmCard">
-        <button class="card-header" type="button" data-collapse="true" aria-controls="pharmCardBody" aria-expanded="false">Pharmacokinetics <span class="toggle-icon">▼</span></button>
-        <div class="card-body" id="pharmCardBody">
-          <div class="param-row">
-            <label class="label" for="pkInputMode">PK input mode</label>
-            <select class="form-control" id="pkInputMode">
-              <option value="clearance" selected>V1, V2, V3, Cl, Q2, Q3</option>
-              <option value="microconstants">V1, k10, k12, k21, k13, k31</option>
-            </select>
-          </div>
-
-          <div class="param-row pk-clearance-row">
-            <label id="Clhtml" class="label" for="Cl" title="Systemic clearance"></label>
-            <input type="number" class="form-control" id="Cl" value="50" />
-          </div>
-          <div class="param-row pk-clearance-row">
-            <label id="Q2html" class="label" for="Q2" title="Intercompartmental clearance between V1 and V2"></label>
-            <input type="number" class="form-control" id="Q2" value="0.2" />
-          </div>
-          <div class="param-row pk-clearance-row">
-            <label id="Q3html" class="label" for="Q3" title="Intercompartmental clearance between V1 and V3"></label>
-            <input type="number" class="form-control" id="Q3" value="0.2" />
-          </div>
-
-          <div class="param-row pk-micro-row" style="display:none;">
-            <label id="k10inputhtml" class="label" for="k10input" title="Elimination rate constant"></label>
-            <input type="number" class="form-control" id="k10input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <label id="k12inputhtml" class="label" for="k12input"></label>
-            <input type="number" class="form-control" id="k12input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <label id="k21inputhtml" class="label" for="k21input"></label>
-            <input type="number" class="form-control" id="k21input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <label id="k13inputhtml" class="label" for="k13input"></label>
-            <input type="number" class="form-control" id="k13input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-          <div class="param-row pk-micro-row" style="display:none;">
-            <label id="k31inputhtml" class="label" for="k31input"></label>
-            <input type="number" class="form-control" id="k31input" value="0.1" min="0" step="0.001" inputmode="decimal" />
-          </div>
-
-          <div class="param-row">
-            <label id="ke0html" class="label" for="ke0" title="Effect-site equilibration rate constant"></label>
-            <input type="number" class="form-control" id="ke0" value="0.2" />
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-outline-danger" type="button" id="resetBtn">Load example</button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" id="oneCompBtn">One Compartment</button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main content -->
-  <main class="app-content" id="appContent" role="main">
-    <header class="pdf-report-header" id="pdfReportHeader">
-      <p>Three Compartment Pharmacokinetic Model</p>
-      <h1>Simulation report</h1>
-      <span id="pdfGeneratedAt"></span>
-      <div class="pdf-report-meta" id="pdfReportMeta"></div>
-      <p class="pdf-report-disclaimer">Educational pharmacokinetic/pharmacodynamic simulation only. This report is not a prescription, pump program, or substitute for clinical judgment.</p>
     </header>
-    <section class="regimen-overview" aria-labelledby="regimenHeading">
-      <div class="regimen-overview__heading">
+
+    <!-- Drawer backdrop -->
+    <div class="drawer-backdrop" id="drawerBackdrop" tabindex="-1" aria-hidden="true"></div>
+
+    <!-- Right parameters drawer -->
+    <aside
+      class="drawer"
+      id="paramsDrawer"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="paramsDrawerTitle"
+      aria-hidden="true"
+      inert
+    >
+      <div class="drawer__header">
         <div>
-          <p class="eyebrow">Current simulation</p>
-          <h1 id="regimenHeading">Current regimen</h1>
+          <div class="drawer__title" id="paramsDrawerTitle">Parameters</div>
+          <div class="drawer__hint">Adjust dosing, PK, and simulation settings</div>
+        </div>
+        <button
+          class="btn btn-sm btn-outline-secondary"
+          id="drawerCloseBtn"
+          type="button"
+          aria-label="Close parameters"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="drawer__body">
+        <div
+          id="validationSummary"
+          class="validation-summary"
+          role="alert"
+          aria-live="assertive"
+          hidden
+        ></div>
+
+        <!-- Bolus and Infusion Parameters -->
+        <div class="card shadow-sm mb-3" id="parameterCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="parameterCardBody"
+            aria-expanded="false"
+          >
+            Quick setup: patient &amp; dosing <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="parameterCardBody">
+            <div class="param-row">
+              <label class="label" for="drawerDrugPicker">Drug preset</label>
+              <select
+                id="drawerDrugPicker"
+                class="form-control"
+                aria-describedby="drawerDrugPickerHelp"
+              ></select>
+              <span class="sr-only" id="drawerDrugPickerHelp"
+                >Drug presets are grouped by clinical class. Choose Custom model to keep and edit
+                the current parameters.</span
+              >
+            </div>
+            <p class="param-note">
+              Selecting a drug loads an illustrative adult IV dose for graph exploration, not a
+              clinical recommendation. Bupivacaine and vasopressin remain at zero because this model
+              has no suitable IV mass-dose example for them.
+            </p>
+            <div class="param-row">
+              <label id="weighthtml" class="label" for="weight">Patient weight (kg)</label>
+              <input
+                type="number"
+                class="form-control"
+                id="weight"
+                value="70"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="param-row">
+              <label class="label" for="bolusUnitSelect">Bolus unit</label>
+              <select class="form-control" id="bolusUnitSelect" aria-label="Bolus unit"></select>
+            </div>
+            <div class="param-row">
+              <label class="label" for="infusionUnitSelect">Infusion unit</label>
+              <select
+                class="form-control"
+                id="infusionUnitSelect"
+                aria-label="Infusion unit"
+              ></select>
+            </div>
+            <div class="param-note" id="doseUnitsHelp">
+              Use per-kg dosing (mg/kg, µg/kg/min) or absolute dosing (mg, mg/min, mg/hr). Absolute
+              units are converted internally using patient weight.
+            </div>
+            <div class="param-row">
+              <label id="bhtml" class="label" for="b"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="b"
+                value="0.1"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                aria-describedby="doseUnitsHelp"
+              />
+            </div>
+            <div class="param-row">
+              <label id="tbolushtml" class="label" for="tbolus"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="tbolus"
+                value="0.1"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="param-row">
+              <label id="infusionhtml" class="label" for="infusion"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="infusion"
+                value="0"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                aria-describedby="doseUnitsHelp"
+              />
+            </div>
+            <div class="param-row">
+              <label id="tinfusionhtml" class="label" for="tinfusion"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="tinfusion"
+                value="240"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-3" id="tciCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="tciCardBody"
+            aria-expanded="false"
+          >
+            Target-controlled infusion <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="tciCardBody">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="tciEnabled" />
+              <label class="form-check-label" for="tciEnabled">Use educational TCI mode</label>
+            </div>
+            <p class="param-note">
+              This model calculates a variable infusion rate to approach a selected predicted
+              concentration. For drugs without a TCI starting profile, you must enter both the
+              target and maximum rate yourself. It is for learning only—not infusion-pump control or
+              a dosing recommendation.
+            </p>
+            <p class="param-note" id="tciPresetNote" role="status">
+              Drug-specific educational starting values are loaded when available.
+            </p>
+            <div class="param-row">
+              <label class="label" for="tciTargetType">Target compartment</label>
+              <select class="form-control" id="tciTargetType">
+                <option value="cp">Plasma concentration (Cp)</option>
+                <option value="ce">Effect-site concentration (Ce)</option>
+              </select>
+            </div>
+            <div class="param-row">
+              <label class="label" for="tciTarget"
+                >Target <span id="tciTargetUnit">mg/mL</span></label
+              >
+              <input
+                class="form-control"
+                id="tciTarget"
+                type="number"
+                value="0.003"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                aria-describedby="tciPresetNote"
+              />
+            </div>
+            <div class="param-row">
+              <label class="label" for="tciMaxRate"
+                >Maximum rate <span id="tciMaxRateUnit">mg/kg/min</span></label
+              >
+              <input
+                class="form-control"
+                id="tciMaxRate"
+                type="number"
+                value="0.2"
+                min="0"
+                step="any"
+                inputmode="decimal"
+                aria-describedby="tciPresetNote"
+              />
+            </div>
+            <div class="param-row">
+              <label class="label" for="tciStopTime">Stop infusion at (min)</label>
+              <input
+                class="form-control"
+                id="tciStopTime"
+                type="number"
+                value="255"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-3" id="testRegimenCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="testRegimenCardBody"
+            aria-expanded="false"
+          >
+            Model-derived test regimen <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="testRegimenCardBody">
+            <p class="param-note">
+              For simulation exploration only. This calculator estimates a central-compartment
+              loading dose as <i>V</i><sub>1</sub> × C<sub>target</sub> and a maintenance rate as
+              <i>Cl</i> × C<sub>target</sub>; it is not a clinical dosing recommendation.
+            </p>
+            <div class="param-row">
+              <label class="label" for="testRegimenTarget"
+                >Predicted plasma target <span id="testRegimenTargetUnit">mg/mL</span></label
+              >
+              <input
+                class="form-control"
+                id="testRegimenTarget"
+                type="number"
+                min="0"
+                step="0.001"
+                inputmode="decimal"
+                placeholder="Enter a target"
+              />
+            </div>
+            <div class="param-row">
+              <label class="label" for="testRegimenLoadingDuration"
+                >Loading-dose duration (min)</label
+              >
+              <input
+                class="form-control"
+                id="testRegimenLoadingDuration"
+                type="number"
+                value="1"
+                min="0"
+                step="0.1"
+                inputmode="decimal"
+              />
+            </div>
+            <button
+              class="btn btn-sm btn-outline-primary"
+              type="button"
+              id="generateTestRegimenBtn"
+            >
+              Generate test regimen
+            </button>
+          </div>
+        </div>
+
+        <!-- Dosing Schedule (advanced) -->
+        <div class="card shadow-sm mb-3" id="scheduleCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="scheduleCardBody"
+            aria-expanded="false"
+          >
+            Dosing Schedule (advanced) <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="scheduleCardBody">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="useSchedule" />
+              <label class="form-check-label" for="useSchedule"
+                >Use schedule (multiple boluses + variable infusions)</label
+              >
+            </div>
+
+            <div class="small mb-2" id="scheduleUnitsBadge">
+              <span class="badge bg-light text-dark me-1"
+                >Bolus unit: <span id="scheduleBolusUnitBadge">mg/kg</span></span
+              >
+              <span class="badge bg-light text-dark"
+                >Infusion unit: <span id="scheduleInfusionUnitBadge">mg/kg/min</span></span
+              >
+            </div>
+
+            <div class="schedule-inline-navigation" id="scheduleInlineNavigation">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                data-schedule-page="-1"
+              >
+                Previous
+              </button>
+              <span id="scheduleInlineStatus" role="status"></span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-schedule-page="1">
+                Next
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary" data-open-schedule>
+                Open larger editor
+              </button>
+            </div>
+            <details class="schedule-tools">
+              <summary>Import, simplify &amp; schedule options</summary>
+              <div class="small text-muted mb-3">
+                Times are minutes from t=0. Bolus dose uses the current <b>Bolus</b> unit; infusion
+                rate uses the current <b>Infusion</b> unit. A bolus with duration 0 is treated as
+                instantaneous. Enabling a schedule replaces the basic dosing fields above.
+              </div>
+              <button
+                class="btn btn-sm btn-outline-secondary mb-3"
+                type="button"
+                id="loadScheduleExampleBtn"
+              >
+                Convert basic dosing to schedule
+              </button>
+              <button class="btn btn-sm btn-outline-primary mb-3" type="button" data-open-schedule>
+                Open larger editor
+              </button>
+              <button
+                class="btn btn-sm btn-outline-primary mb-3"
+                type="button"
+                id="importTciScheduleBtn"
+                data-import-tci-schedule
+              >
+                Import current TCI as schedule
+              </button>
+              <p class="small text-muted">
+                TCI import copies each calculated rate interval into an editable, open-loop infusion
+                schedule and turns TCI off. It preserves the current model and units, but later
+                schedule edits will no longer track the concentration target. For simulation
+                only—not a pump program.
+              </p>
+              <div class="tci-simplify-tools mb-3" id="tciSimplifyTools" hidden>
+                <label for="tciSimplifyLimit"
+                  >Optional simplified copy: at most this many infusion segments</label
+                >
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                  <input
+                    class="form-control form-control-sm"
+                    id="tciSimplifyLimit"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="120"
+                    inputmode="numeric"
+                  />
+                  <button
+                    class="btn btn-sm btn-outline-primary"
+                    type="button"
+                    id="simplifyTciScheduleBtn"
+                  >
+                    Replace with simplified original
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    id="restoreExactTciScheduleBtn"
+                  >
+                    Restore exact original
+                  </button>
+                </div>
+                <p class="small text-muted mb-0 mt-2">
+                  These actions replace current schedule edits. The exact imported rates remain
+                  available until you switch drugs, load another strategy, or reset.
+                </p>
+              </div>
+            </details>
+            <p class="schedule-warnings" id="scheduleWarnings" role="status" hidden></p>
+
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong>Boluses</strong>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" type="button" id="addBolusEventBtn">
+                  Add bolus
+                </button>
+                <button class="btn btn-outline-secondary" type="button" id="clearBolusEventsBtn">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive mb-3">
+              <table
+                class="table table-sm table-bordered text-center align-middle"
+                id="bolusEventsTable"
+              >
+                <thead class="table-light">
+                  <tr>
+                    <th style="min-width: 90px">Time (min)</th>
+                    <th style="min-width: 110px">
+                      Dose <span class="text-muted" id="scheduleBolusUnit">(mg/kg)</span>
+                    </th>
+                    <th style="min-width: 110px">Duration (min)</th>
+                    <th style="width: 50px"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <strong>Infusions</strong>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary" type="button" id="addInfusionEventBtn">
+                  Add infusion segment
+                </button>
+                <button class="btn btn-outline-secondary" type="button" id="clearInfusionEventsBtn">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive schedule-infusion-scroll">
+              <table
+                class="table table-sm table-bordered text-center align-middle"
+                id="infusionEventsTable"
+              >
+                <thead class="table-light">
+                  <tr>
+                    <th style="min-width: 90px">Start (min)</th>
+                    <th style="min-width: 90px">End (min)</th>
+                    <th style="min-width: 130px">
+                      Rate <span class="text-muted" id="scheduleInfusionUnit">(mg/kg/min)</span>
+                    </th>
+                    <th style="width: 50px"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compare strategies -->
+        <div class="card shadow-sm mb-3" id="compareCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="compareCardBody"
+            aria-expanded="false"
+          >
+            Compare Strategies <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="compareCardBody">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="compareMode" />
+              <label class="form-check-label" for="compareMode">Enable comparison overlay</label>
+            </div>
+            <div class="d-flex gap-2 mb-2">
+              <button class="btn btn-sm btn-primary" type="button" id="addStrategyBtn">
+                Save current regimen
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                type="button"
+                id="clearStrategiesBtn"
+              >
+                Clear
+              </button>
+            </div>
+            <div class="small text-muted mb-2">
+              Save a baseline, adjust dosing or PK parameters, then save another regimen to compare.
+              The active regimen is always shown on the plot.
+            </div>
+            <div id="strategyList" class="list-group"></div>
+          </div>
+        </div>
+
+        <!-- Simulation Parameters -->
+        <div class="card shadow-sm mb-3" id="simulationCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="simulationCardBody"
+            aria-expanded="false"
+          >
+            Simulation <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="simulationCardBody">
+            <div class="param-row">
+              <label id="initialphtml" class="label" for="initialp"></label>
+              <input type="number" class="form-control" id="initialp" value="0" />
+            </div>
+            <div class="param-row">
+              <label id="tfinalhtml" class="label" for="tfinal"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="tfinal"
+                value="240"
+                min="0"
+                max="1440"
+                step="any"
+                inputmode="decimal"
+                aria-describedby="tfinalHelp"
+              />
+            </div>
+            <div class="param-note" id="tfinalHelp">
+              Maximum simulation duration: 1,440 minutes (24 hours), to keep the browser responsive.
+            </div>
+          </div>
+        </div>
+
+        <!-- Volumes -->
+        <div class="card shadow-sm mb-3" id="volumeCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="volumeCardBody"
+            aria-expanded="false"
+          >
+            Volumes <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="volumeCardBody">
+            <div class="param-row">
+              <label
+                id="Vd1html"
+                class="label"
+                for="Vd1"
+                title="Central-compartment volume"
+              ></label>
+              <input type="number" class="form-control" id="Vd1" value="70" />
+            </div>
+            <div class="param-row pk-clearance-volume-row">
+              <label
+                id="Vd2html"
+                class="label"
+                for="Vd2"
+                title="Rapid peripheral-compartment volume"
+              ></label>
+              <input type="number" class="form-control" id="Vd2" value="60" />
+            </div>
+            <div class="param-row pk-clearance-volume-row">
+              <label
+                id="Vd3html"
+                class="label"
+                for="Vd3"
+                title="Slow peripheral-compartment volume"
+              ></label>
+              <input type="number" class="form-control" id="Vd3" value="60" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Pharmacokinetics -->
+        <div class="card shadow-sm mb-3" id="pharmCard">
+          <button
+            class="card-header"
+            type="button"
+            data-collapse="true"
+            aria-controls="pharmCardBody"
+            aria-expanded="false"
+          >
+            Pharmacokinetics <span class="toggle-icon">▼</span>
+          </button>
+          <div class="card-body" id="pharmCardBody">
+            <div class="param-row">
+              <label class="label" for="pkInputMode">PK input mode</label>
+              <select class="form-control" id="pkInputMode">
+                <option value="clearance" selected>V1, V2, V3, Cl, Q2, Q3</option>
+                <option value="microconstants">V1, k10, k12, k21, k13, k31</option>
+              </select>
+            </div>
+
+            <div class="param-row pk-clearance-row">
+              <label id="Clhtml" class="label" for="Cl" title="Systemic clearance"></label>
+              <input type="number" class="form-control" id="Cl" value="50" />
+            </div>
+            <div class="param-row pk-clearance-row">
+              <label
+                id="Q2html"
+                class="label"
+                for="Q2"
+                title="Intercompartmental clearance between V1 and V2"
+              ></label>
+              <input type="number" class="form-control" id="Q2" value="0.2" />
+            </div>
+            <div class="param-row pk-clearance-row">
+              <label
+                id="Q3html"
+                class="label"
+                for="Q3"
+                title="Intercompartmental clearance between V1 and V3"
+              ></label>
+              <input type="number" class="form-control" id="Q3" value="0.2" />
+            </div>
+
+            <div class="param-row pk-micro-row" style="display: none">
+              <label
+                id="k10inputhtml"
+                class="label"
+                for="k10input"
+                title="Elimination rate constant"
+              ></label>
+              <input
+                type="number"
+                class="form-control"
+                id="k10input"
+                value="0.1"
+                min="0"
+                step="0.001"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="param-row pk-micro-row" style="display: none">
+              <label id="k12inputhtml" class="label" for="k12input"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="k12input"
+                value="0.1"
+                min="0"
+                step="0.001"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="param-row pk-micro-row" style="display: none">
+              <label id="k21inputhtml" class="label" for="k21input"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="k21input"
+                value="0.1"
+                min="0"
+                step="0.001"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="param-row pk-micro-row" style="display: none">
+              <label id="k13inputhtml" class="label" for="k13input"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="k13input"
+                value="0.1"
+                min="0"
+                step="0.001"
+                inputmode="decimal"
+              />
+            </div>
+            <div class="param-row pk-micro-row" style="display: none">
+              <label id="k31inputhtml" class="label" for="k31input"></label>
+              <input
+                type="number"
+                class="form-control"
+                id="k31input"
+                value="0.1"
+                min="0"
+                step="0.001"
+                inputmode="decimal"
+              />
+            </div>
+
+            <div class="param-row">
+              <label
+                id="ke0html"
+                class="label"
+                for="ke0"
+                title="Effect-site equilibration rate constant"
+              ></label>
+              <input type="number" class="form-control" id="ke0" value="0.2" />
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-danger" type="button" id="resetBtn">
+            Load example
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" id="oneCompBtn">
+            One Compartment
+          </button>
         </div>
       </div>
-      <fieldset class="dosing-mode">
-        <legend>Dosing mode</legend>
-        <input type="radio" name="dosingMode" id="dosingModeBasic" value="basic" checked><label for="dosingModeBasic">Basic dosing</label>
-        <input type="radio" name="dosingMode" id="dosingModeTci" value="tci"><label for="dosingModeTci">TCI</label>
-        <input type="radio" name="dosingMode" id="dosingModeSchedule" value="schedule"><label for="dosingModeSchedule">Schedule</label>
-      </fieldset>
-      <div id="mainValidationSummary" class="validation-summary" hidden>
-        <p id="mainInputErrors" role="alert"></p>
-        <button type="button" class="btn btn-sm btn-outline-danger" id="reviewInvalidInputsBtn">Review errors in settings</button>
+    </aside>
+
+    <!-- Main content -->
+    <main class="app-content" id="appContent" role="main">
+      <header class="pdf-report-header" id="pdfReportHeader">
+        <p>Three Compartment Pharmacokinetic Model</p>
+        <h1>Simulation report</h1>
+        <span id="pdfGeneratedAt"></span>
+        <div class="pdf-report-meta" id="pdfReportMeta"></div>
+        <p class="pdf-report-disclaimer">
+          Educational pharmacokinetic/pharmacodynamic simulation only. This report is not a
+          prescription, pump program, or substitute for clinical judgment.
+        </p>
+      </header>
+      <section class="regimen-overview" aria-labelledby="regimenHeading">
+        <div class="regimen-overview__heading">
+          <div>
+            <p class="eyebrow">Current simulation</p>
+            <h1 id="regimenHeading">Current regimen</h1>
+          </div>
+        </div>
+        <fieldset class="dosing-mode">
+          <legend>Dosing mode</legend>
+          <input type="radio" name="dosingMode" id="dosingModeBasic" value="basic" checked /><label
+            for="dosingModeBasic"
+            >Basic dosing</label
+          >
+          <input type="radio" name="dosingMode" id="dosingModeTci" value="tci" /><label
+            for="dosingModeTci"
+            >TCI</label
+          >
+          <input type="radio" name="dosingMode" id="dosingModeSchedule" value="schedule" /><label
+            for="dosingModeSchedule"
+            >Schedule</label
+          >
+        </fieldset>
+        <div id="mainValidationSummary" class="validation-summary" hidden>
+          <p id="mainInputErrors" role="alert"></p>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="reviewInvalidInputsBtn">
+            Review errors in settings
+          </button>
+        </div>
+        <div class="quick-dose-editor__fields common-dose-fields">
+          <label for="mainWeight"
+            >Weight (kg)<input
+              type="number"
+              class="form-control form-control-sm"
+              id="mainWeight"
+              min="0"
+              step="any"
+              inputmode="decimal"
+          /></label>
+          <label for="mainFinalTime"
+            >Simulation end (min)<input
+              type="number"
+              class="form-control form-control-sm"
+              id="mainFinalTime"
+              min="0"
+              max="1440"
+              step="any"
+              inputmode="decimal"
+          /></label>
+        </div>
+        <section class="quick-dose-editor" aria-labelledby="quickDoseEditorHeading">
+          <div class="quick-dose-editor__heading">
+            <span id="quickDoseEditorHeading">Quick dose adjustments</span>
+            <small id="quickDoseEditorHint">Updates the current bolus and infusion.</small>
+          </div>
+          <div class="quick-dose-editor__fields" id="mainManualControls">
+            <label for="mainBolusAmount"
+              ><span id="mainBolusLabel">Bolus</span> <span id="mainBolusUnit">mg/kg</span>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainBolusAmount"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+            <label for="mainLoadingDuration" class="basic-only"
+              >Loading duration (min)
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainLoadingDuration"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+            <label for="mainInfusionRate"
+              ><span id="mainInfusionLabel">Infusion</span>
+              <span id="mainInfusionUnit">mg/kg/min</span>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainInfusionRate"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+            <label for="mainInfusionDuration" class="basic-only"
+              >Infusion duration (min)
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainInfusionDuration"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+          </div>
+          <div
+            class="quick-dose-editor__fields quick-dose-editor__fields--tci"
+            id="mainTciControls"
+            hidden
+          >
+            <label for="mainTciTargetType"
+              >Target
+              <select class="form-control form-control-sm" id="mainTciTargetType">
+                <option value="cp">Plasma (Cp)</option>
+                <option value="ce">Effect site (Ce)</option>
+              </select>
+            </label>
+            <label for="mainTciTarget"
+              >Target <span id="mainTciTargetUnit">mg/mL</span>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainTciTarget"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+            <label for="mainTciMaxRate"
+              >Maximum rate <span id="mainTciMaxRateUnit">mg/kg/min</span>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainTciMaxRate"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+            <label for="mainTciStopTime"
+              >Stop at (min)
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                id="mainTciStopTime"
+                min="0"
+                step="any"
+                inputmode="decimal"
+              />
+            </label>
+          </div>
+          <details id="tciTargetScheduleEditor" class="tci-target-schedule" hidden>
+            <summary>Target changes over time</summary>
+            <p class="small">
+              The initial target applies from time 0. Add changes in increasing time order, before
+              TCI stops. All targets use <span id="tciChangeUnit"></span>.
+            </p>
+            <table id="tciTargetChanges" class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Time (min)</th>
+                  <th>New target</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <button type="button" id="addTciTargetChangeBtn" class="btn btn-sm btn-outline-primary">
+              Add target change
+            </button>
+          </details>
+          <button
+            class="btn btn-sm btn-outline-primary"
+            type="button"
+            id="mainImportTciScheduleBtn"
+            data-import-tci-schedule
+            hidden
+          >
+            Convert TCI rates to editable schedule
+          </button>
+          <div class="schedule-actions" id="mainScheduleControls" hidden>
+            <button type="button" class="btn btn-sm btn-primary" id="mainEditScheduleBtn">
+              Edit schedule
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="mainConvertBasicBtn">
+              Copy basic dosing
+            </button>
+          </div>
+        </section>
+        <details class="regimen-more" id="regimenMore">
+          <summary>Summary, settings &amp; export</summary>
+          <div class="regimen-grid">
+            <div class="regimen-item regimen-item--identity">
+              <span class="regimen-item__label">Drug</span
+              ><strong id="summaryDrug">Propofol</strong>
+            </div>
+            <div class="regimen-item regimen-item--identity">
+              <span class="regimen-item__label">Patient weight</span
+              ><strong id="summaryWeight">70 kg</strong>
+            </div>
+            <div class="regimen-item regimen-item--wide">
+              <span class="regimen-item__label">Dosing plan</span
+              ><strong id="summaryDose">—</strong>
+            </div>
+          </div>
+          <details class="regimen-model-details">
+            <summary>Model &amp; source details</summary>
+            <p>PK input: <strong id="summaryModel">Clearance &amp; volumes</strong></p>
+            <p id="summarySource">—</p>
+            <a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv"
+              >View preset parameter table</a
+            >
+            <p class="simulation-help">
+              Educational PK simulation only. Verify clinical decisions against current guidance and
+              patient-specific factors.
+            </p>
+          </details>
+          <div class="regimen-actions">
+            <button class="btn btn-sm btn-outline-danger" type="button" id="mainResetBtn">
+              Reset
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" id="exportPdfBtn">
+              Export PDF
+            </button>
+            <button class="btn btn-sm btn-outline-primary" type="button" id="saveRegimenBtn">
+              Save regimen
+            </button>
+            <button class="btn btn-sm btn-outline-primary" type="button" id="loadRegimenBtn">
+              Load regimen
+            </button>
+            <input type="file" id="regimenFileInput" accept=".json,application/json" hidden />
+            <button class="btn btn-sm btn-outline-primary" type="button" id="summaryParamsBtn">
+              Advanced settings
+            </button>
+          </div>
+          <p id="regimenFileStatus" class="small" role="status"></p>
+          <div class="draft-tools">
+            <label
+              ><input type="checkbox" id="draftRecoveryEnabled" checked /> Recover my last valid
+              regimen on this browser</label
+            >
+            <button type="button" id="forgetDraftBtn" class="btn btn-sm btn-outline-secondary">
+              Forget saved draft
+            </button>
+            <p id="draftStatus" class="small" role="status"></p>
+          </div>
+        </details>
+      </section>
+
+      <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">
+        <span id="simulationStatusText">Simulation is up to date.</span>
+        <button
+          class="btn btn-sm btn-outline-secondary simulation-status__undo"
+          type="button"
+          id="undoTimelineBtn"
+          hidden
+        >
+          Undo
+        </button>
       </div>
-      <div class="quick-dose-editor__fields common-dose-fields">
-        <label for="mainWeight">Weight (kg)<input type="number" class="form-control form-control-sm" id="mainWeight" min="0" step="any" inputmode="decimal"></label>
-        <label for="mainFinalTime">Simulation end (min)<input type="number" class="form-control form-control-sm" id="mainFinalTime" min="0" max="1440" step="any" inputmode="decimal"></label>
-      </div>
-      <section class="quick-dose-editor" aria-labelledby="quickDoseEditorHeading">
-        <div class="quick-dose-editor__heading">
-          <span id="quickDoseEditorHeading">Quick dose adjustments</span>
-          <small id="quickDoseEditorHint">Updates the current bolus and infusion.</small>
+
+      <section class="content-section content-section--plot">
+        <div class="content-header">
+          <div>
+            <p class="eyebrow">Primary view</p>
+            <h2 class="h4 m-0">Concentration over time</h2>
+          </div>
+          <div class="text-muted small" id="primaryPlotCaption">
+            Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks
+            infusion delivery.
+          </div>
         </div>
-        <div class="quick-dose-editor__fields" id="mainManualControls">
-          <label for="mainBolusAmount"><span id="mainBolusLabel">Bolus</span> <span id="mainBolusUnit">mg/kg</span>
-            <input type="number" class="form-control form-control-sm" id="mainBolusAmount" min="0" step="any" inputmode="decimal" />
-          </label>
-          <label for="mainLoadingDuration" class="basic-only">Loading duration (min)
-            <input type="number" class="form-control form-control-sm" id="mainLoadingDuration" min="0" step="any" inputmode="decimal">
-          </label>
-          <label for="mainInfusionRate"><span id="mainInfusionLabel">Infusion</span> <span id="mainInfusionUnit">mg/kg/min</span>
-            <input type="number" class="form-control form-control-sm" id="mainInfusionRate" min="0" step="any" inputmode="decimal" />
-          </label>
-          <label for="mainInfusionDuration" class="basic-only">Infusion duration (min)
-            <input type="number" class="form-control form-control-sm" id="mainInfusionDuration" min="0" step="any" inputmode="decimal">
-          </label>
-        </div>
-        <div class="quick-dose-editor__fields quick-dose-editor__fields--tci" id="mainTciControls" hidden>
-          <label for="mainTciTargetType">Target
-            <select class="form-control form-control-sm" id="mainTciTargetType">
-              <option value="cp">Plasma (Cp)</option>
-              <option value="ce">Effect site (Ce)</option>
-            </select>
-          </label>
-          <label for="mainTciTarget">Target <span id="mainTciTargetUnit">mg/mL</span>
-            <input type="number" class="form-control form-control-sm" id="mainTciTarget" min="0" step="any" inputmode="decimal" />
-          </label>
-          <label for="mainTciMaxRate">Maximum rate <span id="mainTciMaxRateUnit">mg/kg/min</span>
-            <input type="number" class="form-control form-control-sm" id="mainTciMaxRate" min="0" step="any" inputmode="decimal" />
-          </label>
-          <label for="mainTciStopTime">Stop at (min)
-            <input type="number" class="form-control form-control-sm" id="mainTciStopTime" min="0" step="any" inputmode="decimal" />
-          </label>
-        </div>
-        <button class="btn btn-sm btn-outline-primary" type="button" id="mainImportTciScheduleBtn" data-import-tci-schedule hidden>Convert TCI rates to editable schedule</button>
-        <div class="schedule-actions" id="mainScheduleControls" hidden>
-          <button type="button" class="btn btn-sm btn-primary" id="mainEditScheduleBtn">Edit schedule</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="mainConvertBasicBtn">Copy basic dosing</button>
+
+        <div class="card shadow-sm primary-plot-card">
+          <div class="card-body">
+            <div class="chart-toolbar" id="chartToolbar">
+              <div class="chart-window-buttons" role="group" aria-label="Chart time window">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-chart-window="10"
+                >
+                  First 10 min
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-chart-window="60"
+                >
+                  First hour
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-chart-window="full"
+                >
+                  Full simulation
+                </button>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadChartBtn">
+                Save chart PNG
+              </button>
+            </div>
+            <div id="myDiv1" class="plot plot--primary"></div>
+            <div
+              id="therapeuticRangeKey"
+              class="range-key"
+              aria-label="Therapeutic range references"
+              hidden
+            ></div>
+            <div class="tci-rate-panel" id="tciRatePanel" hidden>
+              <div class="tci-rate-panel__heading">
+                <span id="deliveryRateHeading">Educational TCI calculated infusion rate</span>
+                <span id="tciRateUnit">mg/kg/min</span>
+              </div>
+              <div id="tciRatePlot" class="plot plot--tci-rate"></div>
+            </div>
+            <section
+              class="tci-replay-comparison"
+              id="tciReplayComparison"
+              aria-label="Original TCI comparison"
+              hidden
+            >
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <strong>Against original TCI (model replay)</strong>
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  type="button"
+                  id="undoTciImportBtn"
+                >
+                  Undo import—restore TCI
+                </button>
+              </div>
+              <p class="small mb-1" id="tciSourceDescription"></p>
+              <p class="small mb-1" id="tciReplayMetrics"></p>
+              <p class="small mb-1" id="tciReplayWarning"></p>
+              <label class="small"
+                ><input type="checkbox" id="showTciReference" checked /> Show original TCI Cp/Ce on
+                the plot</label
+              >
+              <p class="small text-muted mb-0">
+                This compares predictions within the selected model; it does not validate
+                concentrations in a patient or define a pump program.
+              </p>
+            </section>
+            <div class="dose-timeline" aria-live="polite">
+              <div class="dose-timeline__header">
+                <span
+                  >Dosing timeline
+                  <small class="dose-timeline__help"
+                    >Click to add a bolus · drag to add an infusion · click a dose to edit it</small
+                  ></span
+                ><span id="doseTimelineText">—</span>
+              </div>
+              <div
+                class="dose-timeline__track"
+                id="doseTimelineTrack"
+                aria-label="Editable dosing timeline"
+              ></div>
+              <section
+                class="timeline-event-editor"
+                id="timelineEventEditor"
+                aria-labelledby="timelineEventEditorHeading"
+                hidden
+              >
+                <div class="timeline-event-editor__heading">
+                  <div>
+                    <p class="eyebrow">Selected dose</p>
+                    <h3 id="timelineEventEditorHeading">Edit timeline event</h3>
+                  </div>
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    type="button"
+                    id="timelineEventDuplicateBtn"
+                  >
+                    Duplicate
+                  </button>
+                </div>
+                <div class="timeline-event-editor__fields" id="timelineEventEditorFields">
+                  <label id="timelineBolusTimeField" for="timelineEventTime"
+                    >Time (min)
+                    <input
+                      class="form-control form-control-sm"
+                      id="timelineEventTime"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputmode="decimal"
+                    />
+                  </label>
+                  <label id="timelineInfusionStartField" for="timelineEventStart"
+                    >Start (min)
+                    <input
+                      class="form-control form-control-sm"
+                      id="timelineEventStart"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputmode="decimal"
+                    />
+                  </label>
+                  <label id="timelineInfusionEndField" for="timelineEventEnd"
+                    >End (min)
+                    <input
+                      class="form-control form-control-sm"
+                      id="timelineEventEnd"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputmode="decimal"
+                    />
+                  </label>
+                  <label id="timelineBolusDoseField" for="timelineEventDose"
+                    >Dose <span id="timelineEventDoseUnit">mg/kg</span>
+                    <input
+                      class="form-control form-control-sm"
+                      id="timelineEventDose"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputmode="decimal"
+                    />
+                  </label>
+                  <label id="timelineBolusDurationField" for="timelineEventDuration"
+                    >Duration (min)
+                    <input
+                      class="form-control form-control-sm"
+                      id="timelineEventDuration"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputmode="decimal"
+                    />
+                  </label>
+                  <label id="timelineInfusionRateField" for="timelineEventRate"
+                    >Rate <span id="timelineEventRateUnit">mg/kg/min</span>
+                    <input
+                      class="form-control form-control-sm"
+                      id="timelineEventRate"
+                      type="number"
+                      min="0"
+                      step="any"
+                      inputmode="decimal"
+                    />
+                  </label>
+                </div>
+                <div class="timeline-event-editor__actions">
+                  <button class="btn btn-sm btn-primary" type="button" id="timelineEventSaveBtn">
+                    Update dose
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    type="button"
+                    id="timelineEventDeleteBtn"
+                  >
+                    Delete dose
+                  </button>
+                </div>
+              </section>
+            </div>
+            <section class="pdf-dose-details" aria-labelledby="pdfDoseDetailsHeading">
+              <h3 id="pdfDoseDetailsHeading">Dosing protocol</h3>
+              <div id="pdfDoseProtocol"></div>
+            </section>
+            <details class="distribution-details" id="distributionDetails">
+              <summary>Show distribution compartments</summary>
+              <div class="row mt-3">
+                <div class="col-lg-6 mb-3"><div id="myDiv2" class="plot plot--small"></div></div>
+                <div class="col-lg-6 mb-3"><div id="myDiv3" class="plot plot--small"></div></div>
+              </div>
+            </details>
+          </div>
         </div>
       </section>
-      <details class="regimen-more" id="regimenMore">
-        <summary>Summary, settings &amp; export</summary>
-        <div class="regimen-grid">
-          <div class="regimen-item regimen-item--identity"><span class="regimen-item__label">Drug</span><strong id="summaryDrug">Propofol</strong></div>
-          <div class="regimen-item regimen-item--identity"><span class="regimen-item__label">Patient weight</span><strong id="summaryWeight">70 kg</strong></div>
-          <div class="regimen-item regimen-item--wide"><span class="regimen-item__label">Dosing plan</span><strong id="summaryDose">—</strong></div>
-        </div>
-        <details class="regimen-model-details">
-          <summary>Model &amp; source details</summary>
-          <p>PK input: <strong id="summaryModel">Clearance &amp; volumes</strong></p>
-          <p id="summarySource">—</p>
-          <a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv">View preset parameter table</a>
-          <p class="simulation-help">Educational PK simulation only. Verify clinical decisions against current guidance and patient-specific factors.</p>
-        </details>
-        <div class="regimen-actions">
-          <button class="btn btn-sm btn-outline-danger" type="button" id="mainResetBtn">Reset</button>
-          <button class="btn btn-sm btn-outline-secondary" type="button" id="exportPdfBtn">Export PDF</button>
-          <button class="btn btn-sm btn-outline-primary" type="button" id="saveRegimenBtn">Save regimen</button>
-          <button class="btn btn-sm btn-outline-primary" type="button" id="loadRegimenBtn">Load regimen</button>
-          <input type="file" id="regimenFileInput" accept=".json,application/json" hidden>
-          <button class="btn btn-sm btn-outline-primary" type="button" id="summaryParamsBtn">Advanced settings</button>
-        </div>
-        <p id="regimenFileStatus" class="small" role="status"></p>
-      </details>
-    </section>
 
-    <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">
-      <span id="simulationStatusText">Simulation is up to date.</span>
-      <button class="btn btn-sm btn-outline-secondary simulation-status__undo" type="button" id="undoTimelineBtn" hidden>Undo</button>
-    </div>
-
-    <section class="content-section content-section--plot">
-      <div class="content-header">
-        <div>
-          <p class="eyebrow">Primary view</p>
-          <h2 class="h4 m-0">Concentration over time</h2>
-        </div>
-        <div class="text-muted small" id="primaryPlotCaption">Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.</div>
-      </div>
-
-      <div class="card shadow-sm primary-plot-card">
-        <div class="card-body">
-          <div class="chart-toolbar" id="chartToolbar">
-            <div class="chart-window-buttons" role="group" aria-label="Chart time window">
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-window="10">First 10 min</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-window="60">First hour</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" data-chart-window="full">Full simulation</button>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadChartBtn">Save chart PNG</button>
+      <section class="content-section">
+        <div class="content-header">
+          <div>
+            <p class="eyebrow">At a glance</p>
+            <h2 class="h4 m-0">Simulation results</h2>
           </div>
-          <div id="myDiv1" class="plot plot--primary"></div>
-          <div id="therapeuticRangeKey" class="range-key" aria-label="Therapeutic range references" hidden></div>
-          <div class="tci-rate-panel" id="tciRatePanel" hidden>
-            <div class="tci-rate-panel__heading"><span id="deliveryRateHeading">Educational TCI calculated infusion rate</span> <span id="tciRateUnit">mg/kg/min</span></div>
-            <div id="tciRatePlot" class="plot plot--tci-rate"></div>
-          </div>
-          <section class="tci-replay-comparison" id="tciReplayComparison" aria-label="Original TCI comparison" hidden>
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-              <strong>Against original TCI (model replay)</strong>
-              <button class="btn btn-sm btn-outline-secondary" type="button" id="undoTciImportBtn">Undo import—restore TCI</button>
-            </div>
-            <p class="small mb-1" id="tciSourceDescription"></p>
-            <p class="small mb-1" id="tciReplayMetrics"></p>
-            <p class="small mb-1" id="tciReplayWarning"></p>
-            <label class="small"><input type="checkbox" id="showTciReference" checked /> Show original TCI Cp/Ce on the plot</label>
-            <p class="small text-muted mb-0">This compares predictions within the selected model; it does not validate concentrations in a patient or define a pump program.</p>
-          </section>
-          <div class="dose-timeline" aria-live="polite">
-            <div class="dose-timeline__header"><span>Dosing timeline <small class="dose-timeline__help">Click to add a bolus · drag to add an infusion · click a dose to edit it</small></span><span id="doseTimelineText">—</span></div>
-            <div class="dose-timeline__track" id="doseTimelineTrack" aria-label="Editable dosing timeline"></div>
-            <section class="timeline-event-editor" id="timelineEventEditor" aria-labelledby="timelineEventEditorHeading" hidden>
-              <div class="timeline-event-editor__heading">
-                <div>
-                  <p class="eyebrow">Selected dose</p>
-                  <h3 id="timelineEventEditorHeading">Edit timeline event</h3>
-                </div>
-                <button class="btn btn-sm btn-outline-secondary" type="button" id="timelineEventDuplicateBtn">Duplicate</button>
+          <div class="text-muted small">Key outputs and model details</div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="result-grid" aria-label="Key simulation results" aria-live="polite">
+              <div class="result-card">
+                <span>Peak plasma concentration</span><strong id="keyPeakCp">0</strong
+                ><small id="keyPeakCpUnit">mg/mL</small>
               </div>
-              <div class="timeline-event-editor__fields" id="timelineEventEditorFields">
-                <label id="timelineBolusTimeField" for="timelineEventTime">Time (min)
-                  <input class="form-control form-control-sm" id="timelineEventTime" type="number" min="0" step="any" inputmode="decimal">
-                </label>
-                <label id="timelineInfusionStartField" for="timelineEventStart">Start (min)
-                  <input class="form-control form-control-sm" id="timelineEventStart" type="number" min="0" step="any" inputmode="decimal">
-                </label>
-                <label id="timelineInfusionEndField" for="timelineEventEnd">End (min)
-                  <input class="form-control form-control-sm" id="timelineEventEnd" type="number" min="0" step="any" inputmode="decimal">
-                </label>
-                <label id="timelineBolusDoseField" for="timelineEventDose">Dose <span id="timelineEventDoseUnit">mg/kg</span>
-                  <input class="form-control form-control-sm" id="timelineEventDose" type="number" min="0" step="any" inputmode="decimal">
-                </label>
-                <label id="timelineBolusDurationField" for="timelineEventDuration">Duration (min)
-                  <input class="form-control form-control-sm" id="timelineEventDuration" type="number" min="0" step="any" inputmode="decimal">
-                </label>
-                <label id="timelineInfusionRateField" for="timelineEventRate">Rate <span id="timelineEventRateUnit">mg/kg/min</span>
-                  <input class="form-control form-control-sm" id="timelineEventRate" type="number" min="0" step="any" inputmode="decimal">
-                </label>
+              <div class="result-card">
+                <span>Peak effect-site concentration</span><strong id="keyPeakCe">0</strong
+                ><small id="keyPeakCeUnit">mg/mL</small>
               </div>
-              <div class="timeline-event-editor__actions">
-                <button class="btn btn-sm btn-primary" type="button" id="timelineEventSaveBtn">Update dose</button>
-                <button class="btn btn-sm btn-outline-danger" type="button" id="timelineEventDeleteBtn">Delete dose</button>
+              <div class="result-card">
+                <span>Time to peak effect site</span><strong id="keyTmaxCe">0</strong
+                ><small>min</small>
               </div>
-            </section>
-          </div>
-          <section class="pdf-dose-details" aria-labelledby="pdfDoseDetailsHeading">
-            <h3 id="pdfDoseDetailsHeading">Dosing protocol</h3>
-            <div id="pdfDoseProtocol"></div>
-          </section>
-          <details class="distribution-details" id="distributionDetails">
-            <summary>Show distribution compartments</summary>
-            <div class="row mt-3">
-              <div class="col-lg-6 mb-3"><div id="myDiv2" class="plot plot--small"></div></div>
-              <div class="col-lg-6 mb-3"><div id="myDiv3" class="plot plot--small"></div></div>
+              <div class="result-card">
+                <span>Final plasma concentration</span><strong id="keyFinalCp">0</strong
+                ><small id="keyFinalCpUnit">mg/mL</small>
+              </div>
+              <div class="result-card">
+                <span>Final effect-site concentration</span><strong id="keyFinalCe">0</strong
+                ><small id="keyFinalCeUnit">mg/mL</small>
+              </div>
+              <div class="result-card">
+                <span>Terminal half-life</span><strong id="keyTerminalHalfLife">0</strong
+                ><small>min</small>
+              </div>
+              <div class="result-card">
+                <span>Context-sensitive half-time</span><strong id="keyContextHalfLife">0</strong
+                ><small>min</small>
+              </div>
             </div>
-          </details>
-        </div>
-      </div>
-    </section>
 
-    <section class="content-section">
-      <div class="content-header">
-        <div>
-          <p class="eyebrow">At a glance</p>
-          <h2 class="h4 m-0">Simulation results</h2>
-        </div>
-        <div class="text-muted small">Key outputs and model details</div>
-      </div>
+            <details class="model-details">
+              <summary>Show model constants and derived rates</summary>
+              <div class="table-responsive mt-3">
+                <table class="table table-bordered table-sm text-center">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Parameter</th>
+                      <th>Value</th>
+                      <th>Units</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>k<sub>10</sub></td>
+                      <td><div id="k10html"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>k<sub>12</sub></td>
+                      <td><div id="k12html"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>k<sub>21</sub></td>
+                      <td><div id="k21html"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>k<sub>13</sub></td>
+                      <td><div id="k13html"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>k<sub>31</sub></td>
+                      <td><div id="k31html"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>V<sub>1</sub></td>
+                      <td><div id="Vd1numhtml"></div></td>
+                      <td>mL/kg</td>
+                    </tr>
+                    <tr>
+                      <td>V<sub>2</sub></td>
+                      <td><div id="Vd2numhtml"></div></td>
+                      <td>mL/kg</td>
+                    </tr>
+                    <tr>
+                      <td>V<sub>3</sub></td>
+                      <td><div id="Vd3numhtml"></div></td>
+                      <td>mL/kg</td>
+                    </tr>
+                    <tr>
+                      <td>C<sub>l</sub></td>
+                      <td><div id="Clnumhtml"></div></td>
+                      <td>mL/kg/min</td>
+                    </tr>
+                    <tr>
+                      <td>Q<sub>2</sub></td>
+                      <td><div id="Q2numhtml"></div></td>
+                      <td>mL/kg/min</td>
+                    </tr>
+                    <tr>
+                      <td>Q<sub>3</sub></td>
+                      <td><div id="Q3numhtml"></div></td>
+                      <td>mL/kg/min</td>
+                    </tr>
+                    <tr>
+                      <td>t<sub>1/2 term</sub></td>
+                      <td><div id="termhalflifehtml"></div></td>
+                      <td>min</td>
+                    </tr>
+                    <tr>
+                      <td>Context-sensitive half-time</td>
+                      <td><div id="contextsensitivehalflifehtml"></div></td>
+                      <td>min</td>
+                    </tr>
+                    <tr>
+                      <td>α</td>
+                      <td><div id="alphahtml"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>β</td>
+                      <td><div id="betahtml"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>γ</td>
+                      <td><div id="gammahtml"></div></td>
+                      <td>min<sup>-1</sup></td>
+                    </tr>
+                    <tr>
+                      <td>[P]<sub>final</sub></td>
+                      <td><div id="pfinalhtml"></div></td>
+                      <td><div id="concentrationunitshtml1"></div></td>
+                    </tr>
+                    <tr>
+                      <td>[P]<sub>ss</sub> at final active rate</td>
+                      <td><div id="psshtml"></div></td>
+                      <td><div id="concentrationunitshtml2"></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </details>
 
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="result-grid" aria-label="Key simulation results" aria-live="polite">
-            <div class="result-card"><span>Peak plasma concentration</span><strong id="keyPeakCp">0</strong><small id="keyPeakCpUnit">mg/mL</small></div>
-            <div class="result-card"><span>Peak effect-site concentration</span><strong id="keyPeakCe">0</strong><small id="keyPeakCeUnit">mg/mL</small></div>
-            <div class="result-card"><span>Time to peak effect site</span><strong id="keyTmaxCe">0</strong><small>min</small></div>
-            <div class="result-card"><span>Final plasma concentration</span><strong id="keyFinalCp">0</strong><small id="keyFinalCpUnit">mg/mL</small></div>
-            <div class="result-card"><span>Final effect-site concentration</span><strong id="keyFinalCe">0</strong><small id="keyFinalCeUnit">mg/mL</small></div>
-            <div class="result-card"><span>Terminal half-life</span><strong id="keyTerminalHalfLife">0</strong><small>min</small></div>
-            <div class="result-card"><span>Context-sensitive half-time</span><strong id="keyContextHalfLife">0</strong><small>min</small></div>
+            <hr class="my-3" />
+            <h6 class="mb-2">Comparison (Cp/Ce)</h6>
+            <div id="compareResults" class="table-responsive"></div>
           </div>
-
-          <details class="model-details">
-            <summary>Show model constants and derived rates</summary>
-            <div class="table-responsive mt-3">
-            <table class="table table-bordered table-sm text-center">
-              <thead class="table-light">
-                <tr><th>Parameter</th><th>Value</th><th>Units</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>k<sub>10</sub></td><td><div id="k10html"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>k<sub>12</sub></td><td><div id="k12html"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>k<sub>21</sub></td><td><div id="k21html"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>k<sub>13</sub></td><td><div id="k13html"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>k<sub>31</sub></td><td><div id="k31html"></div></td><td>min<sup>-1</sup></td></tr>
-		<tr><td>V<sub>1</sub></td><td><div id="Vd1numhtml"></div></td><td>mL/kg</td></tr>
-		<tr><td>V<sub>2</sub></td><td><div id="Vd2numhtml"></div></td><td>mL/kg</td></tr>
-		<tr><td>V<sub>3</sub></td><td><div id="Vd3numhtml"></div></td><td>mL/kg</td></tr>
-		<tr><td>C<sub>l</sub></td><td><div id="Clnumhtml"></div></td><td>mL/kg/min</td></tr>
-		<tr><td>Q<sub>2</sub></td><td><div id="Q2numhtml"></div></td><td>mL/kg/min</td></tr>
-		<tr><td>Q<sub>3</sub></td><td><div id="Q3numhtml"></div></td><td>mL/kg/min</td></tr>
-		<tr><td>t<sub>1/2 term</sub></td><td><div id="termhalflifehtml"></div></td><td>min</td></tr>
-		<tr><td>Context-sensitive half-time</td><td><div id="contextsensitivehalflifehtml"></div></td><td>min</td></tr>
-                <tr><td>α</td><td><div id="alphahtml"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>β</td><td><div id="betahtml"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>γ</td><td><div id="gammahtml"></div></td><td>min<sup>-1</sup></td></tr>
-                <tr><td>[P]<sub>final</sub></td><td><div id="pfinalhtml"></div></td><td><div id="concentrationunitshtml1"></div></td></tr>
-                <tr><td>[P]<sub>ss</sub> at final active rate</td><td><div id="psshtml"></div></td><td><div id="concentrationunitshtml2"></div></td></tr>
-              </tbody>
-            </table>
-            </div>
-          </details>
-
-          <hr class="my-3" />
-          <h6 class="mb-2">Comparison (Cp/Ce)</h6>
-          <div id="compareResults" class="table-responsive"></div>
         </div>
+      </section>
+
+      <div class="copyright-badge">
+        Copyright ©
+        <script>
+          document.write(new Date().getFullYear());
+        </script>
+        Julian W. Landaw, MD, PhD.
       </div>
-    </section>
+    </main>
 
-    <div class="copyright-badge">Copyright © <script>document.write(new Date().getFullYear())</script> Julian W. Landaw, MD, PhD.</div>
-  </main>
-
-  <dialog id="scheduleEditor" class="schedule-editor" aria-labelledby="scheduleEditorTitle">
-    <div class="schedule-editor__header"><h2 id="scheduleEditorTitle">Dosing schedule</h2><button type="button" class="btn btn-outline-secondary" id="closeScheduleEditorBtn">Done</button></div>
-    <div class="schedule-navigation">
-      <label for="scheduleJumpTime">Jump to time (min)<input id="scheduleJumpTime" type="number" min="0" step="any" value="0"></label>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="scheduleJumpBtn">Go</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" id="schedulePreviousBtn">Previous</button>
-      <span id="schedulePageStatus" role="status"></span>
-      <button type="button" class="btn btn-sm btn-outline-secondary" id="scheduleNextBtn">Next</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" id="scheduleCsvBtn">Export schedule CSV</button>
-    </div>
-    <p id="scheduleEditorErrors" class="validation-summary" role="status" hidden></p>
-    <div id="scheduleEditorBody"></div>
-  </dialog>
-  <!-- App script -->
-  <script src="../assets/js/threecompartmentmodel_files.js"></script>
-  <script src="../assets/js/threecompartmentmodel.js"></script>
-</body>
+    <dialog id="scheduleEditor" class="schedule-editor" aria-labelledby="scheduleEditorTitle">
+      <div class="schedule-editor__header">
+        <h2 id="scheduleEditorTitle">Dosing schedule</h2>
+        <button type="button" class="btn btn-outline-secondary" id="closeScheduleEditorBtn">
+          Done
+        </button>
+      </div>
+      <div class="schedule-navigation">
+        <label for="scheduleJumpTime"
+          >Jump to time (min)<input
+            id="scheduleJumpTime"
+            type="number"
+            min="0"
+            step="any"
+            value="0"
+        /></label>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="scheduleJumpBtn">
+          Go
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="schedulePreviousBtn">
+          Previous
+        </button>
+        <span id="schedulePageStatus" role="status"></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="scheduleNextBtn">
+          Next
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="scheduleCsvBtn">
+          Export schedule CSV
+        </button>
+      </div>
+      <p id="scheduleEditorErrors" class="validation-summary" role="status" hidden></p>
+      <div id="scheduleEditorBody"></div>
+    </dialog>
+    <!-- App script -->
+    <script src="../assets/js/drug_registry.js"></script>
+    <script src="../assets/js/threecompartmentmodel_schedule.js"></script>
+    <script src="../assets/js/threecompartmentmodel_tci.js"></script>
+    <script src="../assets/js/threecompartmentmodel_files.js"></script>
+    <script src="../assets/js/threecompartmentmodel_draft.js"></script>
+    <script src="../assets/js/threecompartmentmodel.js"></script>
+  </body>
 </html>

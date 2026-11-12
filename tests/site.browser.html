@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Website regression checks</title>
+  </head>
+  <body data-result="running">
+    <h1>Website checks</h1>
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Page under test"
+      style="position: absolute; left: -2000px; width: 390px; height: 844px"
+    ></iframe>
+    <script>
+      const checks = [];
+      function check(name, passed) {
+        checks.push(`${passed ? 'PASS' : 'FAIL'} ${name}`);
+        if (!passed) throw Error(name);
+      }
+      const frame = document.getElementById('app');
+      const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      function openPage(path) {
+        return new Promise((resolve) => {
+          frame.onload = () => resolve(frame.contentWindow);
+          frame.src = '../docs/' + path;
+        });
+      }
+      (async () => {
+        try {
+          for (const path of ['index.html', 'Pharmacology/pharmacology.html']) {
+            const app = await openPage(path),
+              d = app.document,
+              toggle = d.querySelector('.navbar-toggler');
+            check(`${path}: teaching content loads`, d.querySelectorAll('section').length >= 2);
+            toggle.click();
+            await pause(400);
+            check(
+              `${path}: mobile navigation opens`,
+              d.getElementById('navbarNav').classList.contains('show'),
+            );
+            toggle.click();
+            await pause(400);
+            check(
+              `${path}: mobile navigation closes`,
+              !d.getElementById('navbarNav').classList.contains('show'),
+            );
+          }
+          const respiratory = await openPage('Respiratory/respiratory.html');
+          check(
+            'respiratory pressure-control navigation has a destination',
+            respiratory.document.getElementById('pressure-control') !== null,
+          );
+          check(
+            'respiratory overview links to both simulators',
+            respiratory.document.querySelectorAll('a[href="volume_control_simulator.html"]')
+              .length > 0 &&
+              respiratory.document.querySelectorAll('a[href="pressure_control_simulator.html"]')
+                .length > 0,
+          );
+          for (const [page, id, value] of [
+            ['pressure_control_simulator.html', 'pcvPC', '18'],
+            ['volume_control_simulator.html', 'vcvVT', '600'],
+          ]) {
+            const app = await openPage('Respiratory/' + page),
+              d = app.document,
+              metrics = d.getElementById('metrics'),
+              before = metrics.textContent;
+            check(
+              `${page}: renders three waveforms`,
+              d.querySelectorAll('#plot path').length === 3,
+            );
+            const input = d.getElementById(id);
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            check(`${page}: settings update predictions`, metrics.textContent !== before);
+            d.getElementById('resetBtn').click();
+            check(`${page}: reset restores predictions`, metrics.textContent === before);
+          }
+          const app = await openPage('Pharmacology/inhalational_anesthesia.html'),
+            d = app.document;
+          check(
+            'inhalational simulator renders three charts',
+            ['fractionPlot', 'tissuePlot', 'uptakePlot'].every(
+              (id) => d.getElementById(id).data?.length > 0,
+            ),
+          );
+          const before = d.getElementById('fractionPlot').data[0].y[0];
+          d.getElementById('agent').value = 'desflurane';
+          d.getElementById('agent').dispatchEvent(new Event('change', { bubbles: true }));
+          check(
+            'agent selection updates delivery and charts',
+            d.getElementById('fractionPlot').data[0].y[0] !== before,
+          );
+          d.getElementById('resetBtn').click();
+          check(
+            'inhalational reset restores the original delivery',
+            d.getElementById('fractionPlot').data[0].y[0] === before,
+          );
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push(`FAIL ${error.message}`);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      })();
+    </script>
+  </body>
+</html>

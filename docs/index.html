@@ -2,185 +2,161 @@
   Copyright (c) 2026 Julian W. Landaw
   SPDX-License-Identifier: MIT
 -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>Physiology and Pharmacology</title>
-  <!-- Bootstrap + Steller main styles -->
-  <link rel="stylesheet" href="assets/css/steller.css">
-  <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
-  <script src="assets/js/math.js" type="text/javascript"></script>
-  <script src="assets/js/plotly.js"></script>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Physiology and Pharmacology</title>
+    <!-- Bootstrap + Steller main styles -->
+    <link rel="stylesheet" href="assets/css/steller.css" />
 
-  <style>
-    body {
-      background-image: url('assets/imgs/background.jpeg');
-      background-size: cover;
-      background-attachment: fixed;
-      background-position: center;
-      font-family: "Segoe UI", Arial, sans-serif;
-    }
-    .navbar {
-      background: rgba(255, 255, 255, 0.8);
-      backdrop-filter: blur(6px);
-    }
-    section {
-      padding: 80px 0;
-    }
-    h1 {
-      font-weight: 700;
-    }
-    .card {
-      border: none;
-      border-radius: 1rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      padding: 2rem;
-      background: rgba(255, 255, 255, 0.9);
-    }
-    footer {
-      background: #222;
-      color: #bbb;
-      padding: 20px 0;
-      text-align: center;
-    }
-    .copyright-badge {
-        position: fixed;
-        left: 16px;
-        bottom: 12px;
-        z-index: 9999;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-        font-size: 12.5px;
-        line-height: 1.2;
-        color: #fff;
-        background: rgba(0,0,0,0.55);
-        backdrop-filter: saturate(120%) blur(2px);
-        -webkit-backdrop-filter: saturate(120%) blur(2px);
-        padding: 6px 10px;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-        pointer-events: none; /* so it doesn't block clicks */
-      }
-  @media (prefers-color-scheme: light) {
-    .copyright-badge { background: rgba(0,0,0,0.45); color: #fff; }
-  }
-  @media (prefers-color-scheme: dark) {
-    .copyright-badge { background: rgba(0,0,0,0.55); color: #f2f2f2; }
-  }
-  @media (max-width: 480px) {
-    .copyright-badge { font-size: 11.5px; right: 10px; bottom: 10px; padding: 5px 8px; }
-  }
-  </style>
-</head>
-<body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg fixed-top navbar-light">
-    <div class="container">
-      <a class="navbar-brand" href="#"><img src="assets/imgs/chaos.jpeg" alt=""></a>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item"><a class="nav-link" href="#respiratory">Respiratory</a></li>
-          <li class="nav-item"><a class="nav-link" href="#pharmacology">Pharmacology</a></li>
-        </ul>
+    <link rel="stylesheet" href="assets/css/site.css" />
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top navbar-light">
+      <div class="container">
+        <a class="navbar-brand" href="#"><img src="assets/imgs/chaos.jpeg" alt="" /></a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#navbarNav"
+          aria-controls="navbarNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item"><a class="nav-link" href="#respiratory">Respiratory</a></li>
+            <li class="nav-item"><a class="nav-link" href="#pharmacology">Pharmacology</a></li>
+          </ul>
+        </div>
       </div>
-    </div>
-  </nav>
+    </nav>
 
-  <!-- Respiratory Section -->
-<section id="respiratory">
-  <div class="container">
-    <div class="card">
-      <h1 class="display-4 mb-4">Respiratory Physiology</h1>
-      <p class="lead">
-        The lungs can be modeled as a balloon attached to a narrow tube, open to the outside world. 
-        This simple analogy captures the two main properties of the respiratory system: 
-        <strong>compliance</strong> and <strong>resistance</strong>.
-      </p>
-      <p>
-        The balloon represents the alveoli, the tiny air sacs where gas exchange occurs. 
-        Their ability to expand and recoil is described by compliance (<i>C</i>), 
-        which is the inverse of elasticity (<i>e</i>): 
-        <i>C</i> = 1/<i>e</i>. The relationship between the plateau pressure <i>P<sub>plat</sub></i> and volume <i>V</i> is given by 
-        <br><center><i>P<sub>plat</sub> = V / C</i>.</center></p>
-       <p>A lung with high compliance inflates easily but may lack elastic recoil, 
-        while a lung with low compliance is stiff and harder to inflate.
-      </p>
-      <p>
-        The narrow tube models the airways, which resist airflow. 
-        Resistance (<i>R</i>) determines how much pressure is needed to generate flow 
-        according to the equation: 
-        <br><center><i>P<sub>res</sub> = R × V′</i>,</center></p> 
-        <p>where <i>V′</i> is the flow of air (change in volume over time).
-      </p>
-      <p>
-        The total pressure inside the lungs (<i>P</i>) is the sum of these two components:
-        <br><center><i>P = P<sub>plat</sub> + P<sub>res</sub></i>,</center></p> 
-      <p>where <i>P<sub>plat</sub></i> (plateau pressure) reflects alveolar pressure due to volume and compliance, 
-        and <i>P<sub>res</sub></i> reflects airway resistance during airflow.
-      </p>
-      <p>
-        This simple model helps explain key clinical scenarios. 
-        For example, in asthma, airway resistance is elevated, raising <i>P<sub>res</sub></i>. 
-        In pulmonary fibrosis, compliance is reduced, leading to higher <i>P<sub>plat</sub></i>. 
-        Understanding the balance between compliance and resistance is essential for interpreting 
-        ventilator waveforms and managing respiratory diseases.
-      </p>
-      <div class="text-center mt-3">
-        <a class="btn btn-outline-primary btn-lg rounded-pill" href="Respiratory/respiratory.html">Explore More</a>
+    <!-- Respiratory Section -->
+    <section id="respiratory">
+      <div class="container">
+        <div class="card">
+          <h1 class="display-4 mb-4">Respiratory Physiology</h1>
+          <p class="lead">
+            The lungs can be modeled as a balloon attached to a narrow tube, open to the outside
+            world. This simple analogy captures the two main properties of the respiratory system:
+            <strong>compliance</strong> and <strong>resistance</strong>.
+          </p>
+          <p>
+            The balloon represents the alveoli, the tiny air sacs where gas exchange occurs. Their
+            ability to expand and recoil is described by compliance (<i>C</i>), which is the inverse
+            of elasticity (<i>e</i>):
+            <i>C</i> = 1/<i>e</i>. The relationship between the plateau pressure
+            <i>P<sub>plat</sub></i> and volume <i>V</i> is given by <br />
+            <center>
+              <i>P<sub>plat</sub> = V / C</i>.
+            </center>
+          </p>
+          <p>
+            A lung with high compliance inflates easily but may lack elastic recoil, while a lung
+            with low compliance is stiff and harder to inflate.
+          </p>
+          <p>
+            The narrow tube models the airways, which resist airflow. Resistance (<i>R</i>)
+            determines how much pressure is needed to generate flow according to the equation:
+            <br />
+            <center>
+              <i>P<sub>res</sub> = R × V′</i>,
+            </center>
+          </p>
+          <p>where <i>V′</i> is the flow of air (change in volume over time).</p>
+          <p>
+            The total pressure inside the lungs (<i>P</i>) is the sum of these two components:
+            <br />
+            <center>
+              <i>P = P<sub>plat</sub> + P<sub>res</sub></i
+              >,
+            </center>
+          </p>
+          <p>
+            where <i>P<sub>plat</sub></i> (plateau pressure) reflects alveolar pressure due to
+            volume and compliance, and <i>P<sub>res</sub></i> reflects airway resistance during
+            airflow.
+          </p>
+          <p>
+            This simple model helps explain key clinical scenarios. For example, in asthma, airway
+            resistance is elevated, raising <i>P<sub>res</sub></i
+            >. In pulmonary fibrosis, compliance is reduced, leading to higher
+            <i>P<sub>plat</sub></i
+            >. Understanding the balance between compliance and resistance is essential for
+            interpreting ventilator waveforms and managing respiratory diseases.
+          </p>
+          <div class="text-center mt-3">
+            <a
+              class="btn btn-outline-primary btn-lg rounded-pill"
+              href="Respiratory/respiratory.html"
+              >Explore More</a
+            >
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-  <!-- Pharmacology Section -->
-  <section id="pharmacology">
-  <div class="container">
-    <div class="card">
-      <h1 class="display-4 mb-4">Pharmacology</h1>
-      <p class="lead">
-        Pharmacology is the study of how drugs interact with the body and how the body 
-        processes drugs. It can be divided into two major areas: 
-        <strong>pharmacokinetics</strong> and <strong>pharmacodynamics</strong>.
-      </p>
-      <p>
-        <strong>Pharmacokinetics</strong> describes what the body does to a drug. 
-        It is often summarized by the acronym <b>ADME</b>:
-      </p>
-      <ul>
-        <li><b>Absorption</b> – how the drug enters the bloodstream</li>
-        <li><b>Distribution</b> – how the drug spreads through tissues and compartments</li>
-        <li><b>Metabolism</b> – how the drug is chemically altered, usually in the liver</li>
-        <li><b>Excretion</b> – how the drug is eliminated, often through the kidneys or bile</li>
-      </ul>
-      <p>
-        <strong>Pharmacodynamics</strong> describes what the drug does to the body. 
-        It includes the mechanism of action, receptor binding, and dose–response relationships. 
-        For example, a beta-agonist increases heart rate and bronchodilation 
-        by stimulating β-adrenergic receptors.
-      </p>
-      <p>
-        Together, pharmacokinetics and pharmacodynamics determine a drug’s onset, 
-        intensity, and duration of action. These principles form the foundation 
-        for safe and effective medication use in clinical practice.
-      </p>
-      <div class="text-center mt-3">
-        <a class="btn btn-outline-primary btn-lg rounded-pill" href="Pharmacology/pharmacology.html">Explore More</a>
+    <!-- Pharmacology Section -->
+    <section id="pharmacology">
+      <div class="container">
+        <div class="card">
+          <h1 class="display-4 mb-4">Pharmacology</h1>
+          <p class="lead">
+            Pharmacology is the study of how drugs interact with the body and how the body processes
+            drugs. It can be divided into two major areas:
+            <strong>pharmacokinetics</strong> and <strong>pharmacodynamics</strong>.
+          </p>
+          <p>
+            <strong>Pharmacokinetics</strong> describes what the body does to a drug. It is often
+            summarized by the acronym <b>ADME</b>:
+          </p>
+          <ul>
+            <li><b>Absorption</b> – how the drug enters the bloodstream</li>
+            <li><b>Distribution</b> – how the drug spreads through tissues and compartments</li>
+            <li><b>Metabolism</b> – how the drug is chemically altered, usually in the liver</li>
+            <li>
+              <b>Excretion</b> – how the drug is eliminated, often through the kidneys or bile
+            </li>
+          </ul>
+          <p>
+            <strong>Pharmacodynamics</strong> describes what the drug does to the body. It includes
+            the mechanism of action, receptor binding, and dose–response relationships. For example,
+            a beta-agonist increases heart rate and bronchodilation by stimulating β-adrenergic
+            receptors.
+          </p>
+          <p>
+            Together, pharmacokinetics and pharmacodynamics determine a drug’s onset, intensity, and
+            duration of action. These principles form the foundation for safe and effective
+            medication use in clinical practice.
+          </p>
+          <div class="text-center mt-3">
+            <a
+              class="btn btn-outline-primary btn-lg rounded-pill"
+              href="Pharmacology/pharmacology.html"
+              >Explore More</a
+            >
+          </div>
+        </div>
       </div>
+    </section>
+
+    <div class="copyright-badge">
+      Copyright ©
+      <script>
+        document.write(new Date().getFullYear());
+      </script>
+      Julian W. Landaw, MD, PhD.
     </div>
-  </div>
-</section>
 
-  <div class="copyright-badge">Copyright © <script>document.write(new Date().getFullYear())</script> Julian W. Landaw, MD, PhD.</div>
-
-
-  <!-- JS -->
-  <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
-  <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
-  <script src="assets/vendors/bootstrap/bootstrap.affix.js"></script>
-  <script src="assets/js/steller.js"></script>
-</body>
+    <!-- JS -->
+    <script src="assets/vendors/jquery/jquery-3.4.1.js"></script>
+    <script src="assets/vendors/bootstrap/bootstrap.bundle.js"></script>
+  </body>
 </html>

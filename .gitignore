@@ -1,0 +1,13 @@
+.DS_Store
+node_modules/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.aux
+*.log
+*.blg
+*.bbl
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk

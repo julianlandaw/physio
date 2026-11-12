@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Timed TCI and draft recovery checks</title>
+  </head>
+  <body data-result="running">
+    <h1>Timed TCI and draft recovery checks</h1>
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Regimen under test"
+      style="width: 390px; height: 844px; position: absolute; left: -2000px"
+    ></iframe>
+    <script>
+      const checks = [];
+      const check = (name, value) => {
+        checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
+        if (!value) throw Error(name);
+      };
+      const approx = (a, b, tolerance = 1e-7) => Number.isFinite(a) && Math.abs(a - b) <= tolerance;
+      const frame = document.getElementById('app');
+      let app,
+        d,
+        sequence = 0;
+      const input = (id) => d.getElementById(id);
+      const load = async () => {
+        await new Promise((resolve) => {
+          frame.addEventListener('load', resolve, { once: true });
+          frame.src = `../docs/Pharmacology/threecompartmentmodel.html?recovery-check=${++sequence}`;
+        });
+        app = frame.contentWindow;
+        d = app.document;
+      };
+      const change = (id, value) => {
+        input(id).value = value;
+        input(id).dispatchEvent(new app.Event('input', { bubbles: true }));
+        input(id).dispatchEvent(new app.Event('change', { bubbles: true }));
+      };
+      const samePredictions = (a, b) =>
+        approx(a.totalDoseMgKg, b.totalDoseMgKg) &&
+        b.ts.every((time, i) => {
+          const j = a.ts.findIndex((t) => approx(t, time));
+          return j >= 0 && approx(b.cp[i], a.cp[j], 1e-6) && approx(b.ce[i], a.ce[j], 1e-6);
+        });
+      (async () => {
+        try {
+          localStorage.removeItem('physio.regimen.draft.v1');
+          localStorage.removeItem('physio.regimen.recovery.enabled');
+          await load();
+          app.applyDrugById('propofol');
+          input('tfinal').value = 3;
+          input('tciStopTime').value = 2;
+          app.setDosingMode('tci');
+          app.setTciTargetChanges([
+            { time: 0.35, target: 3 },
+            { time: 0.75, target: 0 },
+            { time: 1.25, target: 1.2 },
+          ]);
+          app.dfsolve();
+          check(
+            'timed target controls are exposed in TCI mode',
+            !input('tciTargetScheduleEditor').hidden && app.validateSimulationInputs(),
+          );
+          input('tciTargetScheduleEditor').open = true;
+          check(
+            'timed target controls fit on mobile',
+            d.documentElement.scrollWidth <= app.innerWidth &&
+              input('tciTargetChanges').getBoundingClientRect().width < app.innerWidth,
+          );
+          const source = app.simulateStrategy(app.getCurrentState());
+          check(
+            'simulation includes fractional target boundaries',
+            [0.35, 0.75, 1.25].every((time) => source.ts.some((t) => approx(t, time))),
+          );
+          check(
+            'zero target pauses delivery until the next target',
+            source.intervalRates.every(
+              (rate, i) => source.ts[i] < 0.75 || source.ts[i] >= 1.25 || rate === 0,
+            ),
+          );
+          const targetTrace = input('myDiv1').data.find((trace) =>
+            trace.name.startsWith('Cp target'),
+          );
+          check(
+            'target graph shows steps at the requested times',
+            targetTrace.line.shape === 'hv' &&
+              targetTrace.y[targetTrace.x.findIndex((t) => approx(t, 0.35))] === 3 &&
+              targetTrace.y[targetTrace.x.findIndex((t) => approx(t, 0.75))] === 0,
+          );
+          app.dispatchEvent(new app.Event('beforeprint'));
+          check(
+            'summary and print protocol include target changes',
+            input('pdfDoseProtocol').textContent.includes('TCI target changes') &&
+              d.body.textContent.includes('3 target changes'),
+          );
+          app.setDisplayUnit('ng/mL');
+          app.dfsolve();
+          check(
+            'changing concentration units converts every target',
+            app.getTciTargetChanges()[0].target === 3000 &&
+              app.getTciTargetChanges()[2].target === 1200 &&
+              samePredictions(source, app.simulateStrategy(app.getCurrentState())),
+          );
+          app.setDisplayUnit('µg/mL');
+          app.dfsolve();
+          app.captureCurrentStrategy();
+          const strategyId = app.eval('strategies.at(-1).id');
+          const savedFile = JSON.stringify(app.buildRegimenDocument());
+          app.setTciTargetChanges([]);
+          app.loadStrategyToInputs(strategyId);
+          check(
+            'strategy loading restores the target schedule',
+            app.getTciTargetChanges().length === 3 &&
+              samePredictions(source, app.simulateStrategy(app.getCurrentState())),
+          );
+          app.reset();
+          app.loadRegimenDocument(savedFile);
+          check(
+            'regimen file loading restores timed TCI predictions',
+            samePredictions(source, app.simulateStrategy(app.getCurrentState())) &&
+              app.getTciTargetChanges().length === 3,
+          );
+          const invalidFile = JSON.parse(savedFile);
+          invalidFile.current.tci.changes[1].time = 0.35;
+          let rejected = false;
+          try {
+            app.loadRegimenDocument(JSON.stringify(invalidFile));
+          } catch (error) {
+            rejected = true;
+          }
+          check(
+            'duplicate target times are rejected before changing inputs',
+            rejected && app.getTciTargetChanges()[1].time === 0.75,
+          );
+          app.setTciTargetChanges([{ time: 2, target: 1 }]);
+          check(
+            'target changes at the TCI stop boundary are rejected',
+            !app.validateSimulationInputs(),
+          );
+          app.setTciTargetChanges([{ time: 0.5, target: '' }]);
+          check(
+            'blank target changes remain invalid and visible',
+            !app.validateSimulationInputs() && input('tciTargetScheduleEditor').open,
+          );
+          app.loadRegimenDocument(savedFile);
+          app.writeDraftNow();
+          check(
+            'valid timed TCI regimen is saved locally',
+            JSON.parse(localStorage.getItem('physio.regimen.draft.v1')).current.tci.changes
+              .length === 3,
+          );
+          await load();
+          check(
+            'reloading restores active TCI and its target changes',
+            input('tciEnabled').checked &&
+              app.getTciTargetChanges().length === 3 &&
+              input('draftStatus').textContent.includes('Recovered'),
+          );
+          check(
+            'recovered TCI produces the same predictions',
+            samePredictions(source, app.simulateStrategy(app.getCurrentState())),
+          );
+          input('mainImportTciScheduleBtn').click();
+          check(
+            'timed TCI imports as an editable schedule with the same predictions',
+            input('useSchedule').checked &&
+              samePredictions(source, app.simulateStrategy(app.getCurrentState())),
+          );
+          app.writeDraftNow();
+          const validDraft = localStorage.getItem('physio.regimen.draft.v1');
+          change('mainInfusionRate', '');
+          app.writeDraftNow();
+          check(
+            'incomplete edits leave the previous valid draft intact',
+            localStorage.getItem('physio.regimen.draft.v1') === validDraft,
+          );
+          await load();
+          check(
+            'imported schedules recover their original TCI snapshot',
+            input('useSchedule').checked &&
+              !input('tciReplayComparison').hidden &&
+              app.buildRegimenDocument().tciOriginal.tci.changes.length === 3,
+          );
+          check(
+            'recovered schedule keeps all infusion segments and predictions',
+            samePredictions(source, app.simulateStrategy(app.getCurrentState())),
+          );
+          input('undoTciImportBtn').click();
+          check(
+            'undo after recovery restores the full TCI target schedule',
+            input('tciEnabled').checked &&
+              app.getTciTargetChanges().length === 3 &&
+              samePredictions(source, app.simulateStrategy(app.getCurrentState())),
+          );
+          input('forgetDraftBtn').click();
+          check(
+            'forget removes the local draft and disables future saving',
+            !localStorage.getItem('physio.regimen.draft.v1') &&
+              !input('draftRecoveryEnabled').checked,
+          );
+          change('mainTciTarget', '2.5');
+          app.writeDraftNow();
+          await load();
+          check(
+            'forgotten drafts stay disabled across edits and reloads',
+            !localStorage.getItem('physio.regimen.draft.v1') &&
+              !input('draftRecoveryEnabled').checked &&
+              !input('tciEnabled').checked,
+          );
+          input('draftRecoveryEnabled').checked = true;
+          input('draftRecoveryEnabled').dispatchEvent(new app.Event('change', { bubbles: true }));
+          app.writeDraftNow();
+          check(
+            'recovery can be explicitly enabled again',
+            Boolean(localStorage.getItem('physio.regimen.draft.v1')),
+          );
+          const beforeInvalidEnable = localStorage.getItem('physio.regimen.draft.v1');
+          input('draftRecoveryEnabled').checked = false;
+          input('draftRecoveryEnabled').dispatchEvent(new app.Event('change', { bubbles: true }));
+          change('mainBolusAmount', '');
+          input('draftRecoveryEnabled').checked = true;
+          input('draftRecoveryEnabled').dispatchEvent(new app.Event('change', { bubbles: true }));
+          app.writeDraftNow();
+          check(
+            'enabling recovery cannot save incomplete inputs as zero',
+            localStorage.getItem('physio.regimen.draft.v1') === beforeInvalidEnable,
+          );
+          change('mainBolusAmount', '1');
+          const setItem = app.Storage.prototype.setItem;
+          app.Storage.prototype.setItem = () => {
+            throw Error('Storage unavailable');
+          };
+          app.dfsolve();
+          app.writeDraftNow();
+          check(
+            'storage failures leave the simulation usable',
+            input('draftStatus').textContent.includes('could not be saved') &&
+              app.validateSimulationInputs(),
+          );
+          app.Storage.prototype.setItem = setItem;
+          app.cancelDraftSave();
+          app.eval('draftRecoveryReady = false');
+          localStorage.setItem('physio.regimen.draft.v1', '{broken');
+          await load();
+          check(
+            'corrupt stored drafts fall back to usable default inputs',
+            input('draftStatus').textContent.includes('could not be recovered') &&
+              app.validateSimulationInputs(),
+          );
+          const legacy = JSON.parse(savedFile);
+          delete legacy.current.tci.changes;
+          legacy.strategies = [];
+          app.loadRegimenDocument(JSON.stringify(legacy));
+          check(
+            'older regimen files without target changes still load',
+            input('tciEnabled').checked && app.getTciTargetChanges().length === 0,
+          );
+          app.applyDrugById('remifentanil');
+          input('tfinal').value = 3;
+          input('tciStopTime').value = 2;
+          app.setDosingMode('tci');
+          app.setTciTargetChanges([
+            { time: 0.35, target: 4 },
+            { time: 0.75, target: 0 },
+            { time: 1.25, target: 1 },
+          ]);
+          app.dfsolve();
+          const ce = app.simulateStrategy(app.getCurrentState());
+          check(
+            'effect-site targets respect the maximum infusion cap',
+            input('tciTargetType').value === 'ce' &&
+              ce.intervalRates.every((rate) => rate >= 0 && rate <= app.getTciConfig().maxRate),
+          );
+          input('mainImportTciScheduleBtn').click();
+          check(
+            'effect-site target changes reproduce Cp, Ce, and dose after import',
+            samePredictions(ce, app.simulateStrategy(app.getCurrentState())),
+          );
+          app.applyDrugById('propofol');
+          check(
+            'switching drugs clears previous timed targets',
+            app.getTciTargetChanges().length === 0,
+          );
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push(`FAIL ${error.message}`);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      })();
+    </script>
+  </body>
+</html>

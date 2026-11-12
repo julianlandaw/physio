@@ -1,0 +1,876 @@
+{
+  "version": 1,
+  "id": "physio-live-v1",
+  "description": "Authoritative live site presets. Parameters preserved from the maintained simulator; microconstants and downloadable tables are generated.",
+  "drugs": [
+    {
+      "id": "propofol",
+      "label": "Propofol",
+      "group": "Hypnotics & sedatives",
+      "note": "Marsh model (validated preset parameters).",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 228,
+        "Vd2": 464,
+        "Vd3": 2895,
+        "Cl": 27.1,
+        "Q2": 25.5,
+        "Q3": 9.6,
+        "ke0": 0.26
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 1,
+        "infusion": 100,
+        "infusionMinutes": 60,
+        "finalMinutes": 255
+      },
+      "tci": {
+        "targetType": "cp",
+        "target": 2,
+        "maxRate": 200,
+        "note": "Educational Propofol/Marsh starting point: Cp 2 µg/mL; maximum 200 µg/kg/min. Adjust only for simulation exploration."
+      },
+      "ranges": [
+        {
+          "label": "Sedation (plasma)",
+          "unit": "µg/mL",
+          "low": 1,
+          "high": 2,
+          "color": "#1f77b4"
+        },
+        {
+          "label": "General anesthesia (plasma)",
+          "unit": "µg/mL",
+          "low": 3,
+          "high": 6,
+          "color": "#1f77b4"
+        },
+        {
+          "label": "Effect-site hypnosis (Ce)",
+          "unit": "µg/mL",
+          "low": 2.5,
+          "high": 4,
+          "color": "#ff7f0e"
+        }
+      ]
+    },
+    {
+      "id": "etomidate",
+      "label": "Etomidate",
+      "group": "Hypnotics & sedatives",
+      "note": "Arden-derived preset; V3 is refined for less deep accumulation.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 64,
+        "Vd2": 214,
+        "Vd3": 700,
+        "Cl": 9,
+        "Q2": 43,
+        "Q3": 7,
+        "ke0": 0.45
+      },
+      "example": {
+        "bolus": 0.3,
+        "bolusMinutes": 1
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Hypnosis (plasma)",
+          "unit": "µg/mL",
+          "low": 0.2,
+          "high": 0.4,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "ketamine",
+      "label": "Ketamine",
+      "group": "Hypnotics & sedatives",
+      "note": "Domino / Clements / Hijazi-type preset.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 286,
+        "Vd2": 571,
+        "Vd3": 1500,
+        "Cl": 17,
+        "Q2": 18,
+        "Q3": 4,
+        "ke0": 0.3
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 1,
+        "infusion": 1,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Analgesia (plasma)",
+          "unit": "ng/mL",
+          "low": 100,
+          "high": 200,
+          "color": "#1f77b4"
+        },
+        {
+          "label": "Dissociative anesthesia (plasma)",
+          "unit": "µg/mL",
+          "low": 1,
+          "high": 2,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "dexmedetomidine",
+      "label": "Dexmedetomidine",
+      "group": "Hypnotics & sedatives",
+      "note": "Dyck / Hannivoort-type preset; literature-consistent adjustment.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 360,
+        "Vd2": 491,
+        "Vd3": 934,
+        "Cl": 12.9,
+        "Q2": 24,
+        "Q3": 8.9,
+        "ke0": 0.06
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 10,
+        "infusion": 0.5,
+        "infusionMinutes": 60
+      },
+      "tci": {
+        "targetType": "cp",
+        "target": 0.6,
+        "maxRate": 6,
+        "note": "Educational dexmedetomidine starting point: Cp 0.6 ng/mL; maximum 6 µg/kg/hr. This is not a clinical prescription."
+      },
+      "ranges": [
+        {
+          "label": "Sedation (plasma)",
+          "unit": "ng/mL",
+          "low": 0.3,
+          "high": 1.2,
+          "color": "#1f77b4"
+        },
+        {
+          "label": "Deep sedation (plasma)",
+          "unit": "ng/mL",
+          "low": 1.2,
+          "high": 2,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "midazolam",
+      "label": "Midazolam",
+      "group": "Hypnotics & sedatives",
+      "note": "Greenblatt-derived preset with adjusted V1 and Q2.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "mg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 250,
+        "Vd2": 700,
+        "Vd3": 1800,
+        "Cl": 6.4,
+        "Q2": 15,
+        "Q3": 4,
+        "ke0": 0.07
+      },
+      "example": {
+        "bolus": 0.05,
+        "bolusMinutes": 2,
+        "infusion": 1,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Sedation (plasma)",
+          "unit": "µg/mL",
+          "low": 0.05,
+          "high": 0.15,
+          "color": "#1f77b4"
+        },
+        {
+          "label": "Anesthesia (plasma)",
+          "unit": "µg/mL",
+          "low": 0.2,
+          "high": 0.5,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "diazepam",
+      "label": "Diazepam",
+      "group": "Hypnotics & sedatives",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 500,
+        "Vd2": 1667,
+        "Vd3": 7500,
+        "Cl": 5,
+        "Q2": 25,
+        "Q3": 7.5,
+        "ke0": 0.2
+      },
+      "example": {
+        "bolus": 0.1,
+        "bolusMinutes": 2
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Anxiolysis/sedation (plasma)",
+          "unit": "µg/mL",
+          "low": 0.2,
+          "high": 2,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "fentanyl",
+      "label": "Fentanyl",
+      "group": "Opioid analgesics",
+      "note": "Shafer-type approximation preset.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 80,
+        "Vd2": 400,
+        "Vd3": 3000,
+        "Cl": 8,
+        "Q2": 12,
+        "Q3": 4,
+        "ke0": 0.11
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 1,
+        "infusion": 1,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Analgesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 1,
+          "high": 2,
+          "color": "#ff7f0e"
+        },
+        {
+          "label": "Anesthesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 2,
+          "high": 4,
+          "color": "#ff7f0e"
+        }
+      ]
+    },
+    {
+      "id": "hydromorphone",
+      "label": "Hydromorphone",
+      "group": "Opioid analgesics",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 150,
+        "Vd2": 600,
+        "Vd3": 1500,
+        "Cl": 8,
+        "Q2": 25,
+        "Q3": 5,
+        "ke0": 0.5
+      },
+      "example": {
+        "bolus": 0.005,
+        "bolusMinutes": 2
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "remifentanil",
+      "label": "Remifentanil",
+      "group": "Opioid analgesics",
+      "note": "Weight-normalized Minto approximation preset.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 65,
+        "Vd2": 150,
+        "Vd3": 350,
+        "Cl": 30,
+        "Q2": 25,
+        "Q3": 10,
+        "ke0": 0.6
+      },
+      "example": {
+        "bolus": 0.5,
+        "bolusMinutes": 1,
+        "infusion": 0.1,
+        "infusionMinutes": 60
+      },
+      "tci": {
+        "targetType": "ce",
+        "target": 2,
+        "maxRate": 0.5,
+        "note": "Educational remifentanil/Minto starting point: Ce 2 ng/mL; maximum 0.5 µg/kg/min. This is not a clinical prescription."
+      },
+      "ranges": [
+        {
+          "label": "Analgesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 1,
+          "high": 3,
+          "color": "#ff7f0e"
+        },
+        {
+          "label": "Anesthesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 3,
+          "high": 8,
+          "color": "#ff7f0e"
+        }
+      ]
+    },
+    {
+      "id": "sufentanil",
+      "label": "Sufentanil",
+      "group": "Opioid analgesics",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 100,
+        "Vd2": 250,
+        "Vd3": 833,
+        "Cl": 3,
+        "Q2": 15,
+        "Q3": 5,
+        "ke0": 1.5
+      },
+      "example": {
+        "bolus": 0.2,
+        "bolusMinutes": 1,
+        "infusion": 0.3,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Analgesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 0.1,
+          "high": 0.3,
+          "color": "#ff7f0e"
+        },
+        {
+          "label": "Anesthesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 0.3,
+          "high": 0.7,
+          "color": "#ff7f0e"
+        }
+      ]
+    },
+    {
+      "id": "alfentanil",
+      "label": "Alfentanil",
+      "group": "Opioid analgesics",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 150,
+        "Vd2": 300,
+        "Vd3": 600,
+        "Cl": 5.25,
+        "Q2": 30,
+        "Q3": 9,
+        "ke0": 2
+      },
+      "example": {
+        "bolus": 10,
+        "bolusMinutes": 1,
+        "infusion": 0.5,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Analgesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 50,
+          "high": 150,
+          "color": "#ff7f0e"
+        },
+        {
+          "label": "Anesthesia (effect-site Ce)",
+          "unit": "ng/mL",
+          "low": 150,
+          "high": 300,
+          "color": "#ff7f0e"
+        }
+      ]
+    },
+    {
+      "id": "methadone",
+      "label": "Methadone",
+      "group": "Opioid analgesics",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 307.14285714285717,
+        "Vd2": 1072.8571428571427,
+        "Vd3": 6914.285714285715,
+        "Cl": 2.25,
+        "Q2": 77.4,
+        "Q3": 32.4,
+        "ke0": 0.087
+      },
+      "example": {
+        "bolus": 0.05,
+        "bolusMinutes": 2
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Analgesia (plasma)",
+          "unit": "ng/mL",
+          "low": 30,
+          "high": 100,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "rocuronium",
+      "label": "Rocuronium",
+      "group": "Neuromuscular blockers",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 80,
+        "Vd2": 300,
+        "Vd3": 400,
+        "Cl": 3.2,
+        "Q2": 20,
+        "Q3": 5,
+        "ke0": 0.2
+      },
+      "example": {
+        "bolus": 0.6,
+        "bolusMinutes": 1
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "vecuronium",
+      "label": "Vecuronium",
+      "group": "Neuromuscular blockers",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 146.42857142857144,
+        "Vd2": 113.14285714285714,
+        "Vd3": 599.8571428571429,
+        "Cl": 7.285714285714286,
+        "Q2": 7.285714285714286,
+        "Q3": 1.3571428571428572,
+        "ke0": 0.3
+      },
+      "example": {
+        "bolus": 0.1,
+        "bolusMinutes": 1
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "cisatracurium",
+      "label": "Cisatracurium",
+      "group": "Neuromuscular blockers",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 40,
+        "Vd2": 60,
+        "Vd3": 45,
+        "Cl": 5,
+        "Q2": 10,
+        "Q3": 2,
+        "ke0": 0.0575
+      },
+      "example": {
+        "bolus": 0.15,
+        "bolusMinutes": 1,
+        "infusion": 1,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "pancuronium",
+      "label": "Pancuronium",
+      "group": "Neuromuscular blockers",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 60,
+        "Vd2": 180,
+        "Vd3": 600,
+        "Cl": 1.5,
+        "Q2": 9,
+        "Q3": 3,
+        "ke0": 0.05
+      },
+      "example": {
+        "bolus": 0.08,
+        "bolusMinutes": 1
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "succinylcholine",
+      "label": "Succinylcholine",
+      "group": "Neuromuscular blockers",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/min"
+      },
+      "pk": {
+        "Vd1": 50,
+        "Vd2": 100,
+        "Vd3": 150,
+        "Cl": 300,
+        "Q2": 25,
+        "Q3": 10,
+        "ke0": 0.197
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 0.5
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "lidocaine",
+      "label": "Lidocaine",
+      "group": "Local anesthetics",
+      "note": "Standard PK preset; no validated effect-site model is assumed.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/hr"
+      },
+      "pk": {
+        "Vd1": 500,
+        "Vd2": 1000,
+        "Vd3": 1500,
+        "Cl": 10,
+        "Q2": 10,
+        "Q3": 5,
+        "ke0": 0
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 2,
+        "infusion": 1,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": [
+        {
+          "label": "Antiarrhythmic therapeutic (plasma)",
+          "unit": "µg/mL",
+          "low": 1.5,
+          "high": 5,
+          "color": "#1f77b4"
+        }
+      ]
+    },
+    {
+      "id": "bupivacaine",
+      "label": "Bupivacaine",
+      "group": "Local anesthetics",
+      "note": "Site preset parameters; no validated effect-site model is assumed.",
+      "units": {
+        "conc": "µg/mL",
+        "bolus": "mg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 150,
+        "Vd2": 300,
+        "Vd3": 600,
+        "Cl": 3,
+        "Q2": 15,
+        "Q3": 6,
+        "ke0": 0
+      },
+      "example": {},
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "phenylephrine",
+      "label": "Phenylephrine",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 214.28571428571428,
+        "Vd2": 357.14285714285717,
+        "Vd3": 714.2857142857143,
+        "Cl": 17.142857142857142,
+        "Q2": 17.142857142857142,
+        "Q3": 11.428571428571429,
+        "ke0": 0.4
+      },
+      "example": {
+        "bolus": 1,
+        "bolusMinutes": 0,
+        "infusion": 0.5,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "ephedrine",
+      "label": "Ephedrine",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "mg/kg",
+        "infusion": "mg/kg/min"
+      },
+      "pk": {
+        "Vd1": 285.7142857142857,
+        "Vd2": 857.1428571428571,
+        "Vd3": 1714.2857142857142,
+        "Cl": 5.714285714285714,
+        "Q2": 10,
+        "Q3": 7.142857142857143,
+        "ke0": 0.06
+      },
+      "example": {
+        "bolus": 0.1,
+        "bolusMinutes": 0
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "epinephrine",
+      "label": "Epinephrine",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 171.42857142857142,
+        "Vd2": 357.14285714285717,
+        "Vd3": 571.4285714285714,
+        "Cl": 21.428571428571427,
+        "Q2": 21.428571428571427,
+        "Q3": 14.285714285714286,
+        "ke0": 0.8
+      },
+      "example": {
+        "infusion": 0.05,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "dobutamine",
+      "label": "Dobutamine",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 214.28571428571428,
+        "Vd2": 428.57142857142856,
+        "Vd3": 714.2857142857143,
+        "Cl": 14.285714285714286,
+        "Q2": 14.285714285714286,
+        "Q3": 10,
+        "ke0": 0.3
+      },
+      "example": {
+        "infusion": 5,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "dopamine",
+      "label": "Dopamine",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 228.57142857142858,
+        "Vd2": 428.57142857142856,
+        "Vd3": 785.7142857142857,
+        "Cl": 12.857142857142858,
+        "Q2": 12.857142857142858,
+        "Q3": 8.571428571428571,
+        "ke0": 0.2
+      },
+      "example": {
+        "infusion": 5,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "milrinone",
+      "label": "Milrinone",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 285.7142857142857,
+        "Vd2": 1000,
+        "Vd3": 2142.8571428571427,
+        "Cl": 2.857142857142857,
+        "Q2": 7.142857142857143,
+        "Q3": 4.285714285714286,
+        "ke0": 0.03
+      },
+      "example": {
+        "bolus": 50,
+        "bolusMinutes": 10,
+        "infusion": 0.375,
+        "infusionMinutes": 60
+      },
+      "tci": null,
+      "ranges": []
+    },
+    {
+      "id": "vasopressin",
+      "label": "Vasopressin",
+      "group": "Vasoactive & inotropic agents",
+      "note": "Site preset parameters; verify model applicability for the intended patient.",
+      "units": {
+        "conc": "ng/mL",
+        "bolus": "µg/kg",
+        "infusion": "µg/kg/min"
+      },
+      "pk": {
+        "Vd1": 171.42857142857142,
+        "Vd2": 357.14285714285717,
+        "Vd3": 571.4285714285714,
+        "Cl": 4.285714285714286,
+        "Q2": 8.571428571428571,
+        "Q3": 5.714285714285714,
+        "ke0": 0.05
+      },
+      "example": {},
+      "tci": null,
+      "ranges": []
+    }
+  ]
+}

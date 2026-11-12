@@ -3,25 +3,25 @@
    SPDX-License-Identifier: MIT
 */
 
-/* threecompartmentmodel.js
-   Clean UI wiring + existing PK/PD model logic.
-   Notes:
-   - Keeps your internal math the same.
-   - Adds: categorized drug preset picker, right drawer.
-*/
+/* Pharmacokinetic simulation, dosing schedules, and chart controls. */
 
 // ============================
 // Small helpers
 // ============================
-const $ = (sel, root=document) => root.querySelector(sel);
-const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
 // Mirror raw entries, including blanks, so validation never turns an incomplete dose into zero.
 const MAIN_INPUT_LINKS = {
-  mainWeight: 'weight', mainFinalTime: 'tfinal',
-  mainBolusAmount: 'b', mainLoadingDuration: 'tbolus',
-  mainInfusionRate: 'infusion', mainInfusionDuration: 'tinfusion',
-  mainTciTarget: 'tciTarget', mainTciMaxRate: 'tciMaxRate', mainTciStopTime: 'tciStopTime'
+  mainWeight: 'weight',
+  mainFinalTime: 'tfinal',
+  mainBolusAmount: 'b',
+  mainLoadingDuration: 'tbolus',
+  mainInfusionRate: 'infusion',
+  mainInfusionDuration: 'tinfusion',
+  mainTciTarget: 'tciTarget',
+  mainTciMaxRate: 'tciMaxRate',
+  mainTciStopTime: 'tciStopTime',
 };
 
 function parseFloatSafe(v, defVal = 0) {
@@ -29,7 +29,9 @@ function parseFloatSafe(v, defVal = 0) {
   return Number.isFinite(x) ? x : defVal;
 }
 
-function clamp(x, lo, hi) { return Math.min(Math.max(x, lo), hi); }
+function clamp(x, lo, hi) {
+  return Math.min(Math.max(x, lo), hi);
+}
 
 function roundToSignificantFigures(num, sigFigs) {
   if (num === 0) return 0;
@@ -62,8 +64,9 @@ function renderPlot(id, traces, layout) {
 function setChartWindow(windowMinutes) {
   const end = parseFloatSafe(tfinalnum.value, 240);
   const range = [0, windowMinutes === 'full' ? end : Math.min(end, Number(windowMinutes))];
-  ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach(id => {
-    if (document.getElementById(id)?.data) Plotly.relayout(id, { 'xaxis.range': range, 'xaxis.autorange': false });
+  ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach((id) => {
+    if (document.getElementById(id)?.data)
+      Plotly.relayout(id, { 'xaxis.range': range, 'xaxis.autorange': false });
   });
 }
 
@@ -82,12 +85,15 @@ function buildSimulationTimes(finalTime, eventTimes = [], step = SIMULATION_STEP
   for (let t = step; t < tfinal - TIME_EPSILON; t += step) {
     times.push(Math.min(t, tfinal));
   }
-  eventTimes.forEach(value => {
+  eventTimes.forEach((value) => {
     const time = Number(value);
-    if (Number.isFinite(time) && time > TIME_EPSILON && time < tfinal - TIME_EPSILON) times.push(time);
+    if (Number.isFinite(time) && time > TIME_EPSILON && time < tfinal - TIME_EPSILON)
+      times.push(time);
   });
   times.sort((a, b) => a - b);
-  return times.filter((time, index) => index === 0 || Math.abs(time - times[index - 1]) > TIME_EPSILON);
+  return times.filter(
+    (time, index) => index === 0 || Math.abs(time - times[index - 1]) > TIME_EPSILON,
+  );
 }
 
 function createTransition(pk, ke0, duration, cache = new Map()) {
@@ -95,18 +101,31 @@ function createTransition(pk, ke0, duration, cache = new Map()) {
   const cacheKey = dt.toFixed(12);
   if (cache.has(cacheKey)) return cache.get(cacheKey);
   const mat = math.matrix([
-    [ -dt*(pk.k10 + pk.k12 + pk.k13), dt*pk.k21, dt*pk.k31, 0, dt ],
-    [ dt*pk.k12, -dt*pk.k21, 0, 0, 0 ],
-    [ dt*pk.k13, 0, -dt*pk.k31, 0, 0 ],
-    [ dt*(ke0/pk.V1), 0, 0, -dt*ke0, 0 ],
-    [ 0, 0, 0, 0, 0 ]
+    [-dt * (pk.k10 + pk.k12 + pk.k13), dt * pk.k21, dt * pk.k31, 0, dt],
+    [dt * pk.k12, -dt * pk.k21, 0, 0, 0],
+    [dt * pk.k13, 0, -dt * pk.k31, 0, 0],
+    [dt * (ke0 / pk.V1), 0, 0, -dt * ke0, 0],
+    [0, 0, 0, 0, 0],
   ]);
   const M = math.expm(mat);
   const transition = {
-    a11: M.subset(math.index(0,0)), a12: M.subset(math.index(0,1)), a13: M.subset(math.index(0,2)), a15: M.subset(math.index(0,4)),
-    a21: M.subset(math.index(1,0)), a22: M.subset(math.index(1,1)), a23: M.subset(math.index(1,2)), a25: M.subset(math.index(1,4)),
-    a31: M.subset(math.index(2,0)), a32: M.subset(math.index(2,1)), a33: M.subset(math.index(2,2)), a35: M.subset(math.index(2,4)),
-    a41: M.subset(math.index(3,0)), a42: M.subset(math.index(3,1)), a43: M.subset(math.index(3,2)), a44: M.subset(math.index(3,3)), a45: M.subset(math.index(3,4))
+    a11: M.subset(math.index(0, 0)),
+    a12: M.subset(math.index(0, 1)),
+    a13: M.subset(math.index(0, 2)),
+    a15: M.subset(math.index(0, 4)),
+    a21: M.subset(math.index(1, 0)),
+    a22: M.subset(math.index(1, 1)),
+    a23: M.subset(math.index(1, 2)),
+    a25: M.subset(math.index(1, 4)),
+    a31: M.subset(math.index(2, 0)),
+    a32: M.subset(math.index(2, 1)),
+    a33: M.subset(math.index(2, 2)),
+    a35: M.subset(math.index(2, 4)),
+    a41: M.subset(math.index(3, 0)),
+    a42: M.subset(math.index(3, 1)),
+    a43: M.subset(math.index(3, 2)),
+    a44: M.subset(math.index(3, 3)),
+    a45: M.subset(math.index(3, 4)),
   };
   cache.set(cacheKey, transition);
   return transition;
@@ -123,7 +142,7 @@ function initDrawer() {
   let previousFocus = null;
 
   function setBackgroundInert(isInert) {
-    ['appHeader', 'appContent'].forEach(id => {
+    ['appHeader', 'appContent'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       el.toggleAttribute('inert', isInert);
@@ -139,11 +158,6 @@ function initDrawer() {
     btn?.setAttribute('aria-expanded', 'true');
     drawer?.setAttribute('aria-hidden', 'false');
     backdrop?.setAttribute('aria-hidden', 'false');
-    // Allow Plotly to re-measure after drawer animation
-    setTimeout(() => ['myDiv1','myDiv2','myDiv3','tciRatePlot'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && window.Plotly) Plotly.Plots.resize(el);
-    }), 260);
     setTimeout(() => closeBtn?.focus(), 0);
   }
 
@@ -169,8 +183,10 @@ function initDrawer() {
       return;
     }
     if (e.key !== 'Tab' || !drawer) return;
-    const focusable = $$('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', drawer)
-      .filter(el => el.offsetParent !== null);
+    const focusable = $$(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      drawer,
+    ).filter((el) => el.offsetParent !== null);
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -184,7 +200,7 @@ function initDrawer() {
   });
 
   // Collapse cards (simple)
-  $$('.card-header[data-collapse="true"]').forEach(h => {
+  $$('.card-header[data-collapse="true"]').forEach((h) => {
     h.addEventListener('click', () => {
       const body = h.nextElementSibling;
       const icon = h.querySelector('.toggle-icon');
@@ -193,16 +209,11 @@ function initDrawer() {
       body.style.display = isHidden ? 'block' : 'none';
       if (icon) icon.textContent = isHidden ? '▼' : '▲';
       h.setAttribute('aria-expanded', String(isHidden));
-      // Resize Plotly if plots are inside (they are not), but keep safe
-      setTimeout(() => ['myDiv1','myDiv2','myDiv3','tciRatePlot'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && window.Plotly) Plotly.Plots.resize(el);
-      }), 50);
     });
   });
 
   // Keep every parameter section collapsed until the user chooses to open it.
-  const collapseById = (id, collapsed=true) => {
+  const collapseById = (id, collapsed = true) => {
     const card = document.getElementById(id);
     if (!card) return;
     const header = card.querySelector('.card-header');
@@ -227,23 +238,43 @@ function initDrawer() {
 // Plot theme (light/dark) + scale toggle
 // ============================
 const lightLayout = {
-  font: {family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif', size: 14, color: '#333'},
+  font: {
+    family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+    size: 14,
+    color: '#333',
+  },
   paper_bgcolor: '#ffffff',
   plot_bgcolor: '#f8f9fa',
-  margin: {l: 60, r: 30, t: 55, b: 70},
+  margin: { l: 60, r: 30, t: 55, b: 70 },
   xaxis: { gridcolor: '#e9ecef', zerolinecolor: '#dee2e6', linecolor: '#adb5bd', mirror: true },
   yaxis: { gridcolor: '#e9ecef', zerolinecolor: '#dee2e6', linecolor: '#adb5bd', mirror: true },
-  title: { font: {family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif', size: 18, color: '#212529'} }
+  title: {
+    font: {
+      family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+      size: 18,
+      color: '#212529',
+    },
+  },
 };
 
 const darkLayout = {
-  font: {family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif', size: 14, color: '#e9ecef'},
+  font: {
+    family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+    size: 14,
+    color: '#e9ecef',
+  },
   paper_bgcolor: '#121212',
   plot_bgcolor: '#1e1e1e',
-  margin: {l: 60, r: 30, t: 55, b: 70},
+  margin: { l: 60, r: 30, t: 55, b: 70 },
   xaxis: { gridcolor: '#2a2a2a', zerolinecolor: '#444', linecolor: '#666', mirror: true },
   yaxis: { gridcolor: '#2a2a2a', zerolinecolor: '#444', linecolor: '#666', mirror: true },
-  title: { font: {family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif', size: 18, color: '#e9ecef'} }
+  title: {
+    font: {
+      family: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+      size: 18,
+      color: '#e9ecef',
+    },
+  },
 };
 
 function themedPlotLayout(layout) {
@@ -255,7 +286,11 @@ function themedPlotLayout(layout) {
     margin: { ...theme.margin, ...layout.margin },
     xaxis: { ...theme.xaxis, ...layout.xaxis },
     yaxis: { ...theme.yaxis, ...layout.yaxis },
-    title: { ...theme.title, ...layout.title, font: { ...theme.title.font, ...layout.title?.font } }
+    title: {
+      ...theme.title,
+      ...layout.title,
+      font: { ...theme.title.font, ...layout.title?.font },
+    },
   };
 }
 
@@ -274,9 +309,9 @@ let isLogScale = false;
 function toggleScale() {
   isLogScale = !isLogScale;
   const newType = isLogScale ? 'log' : 'linear';
-  Plotly.relayout('myDiv1', {'yaxis.type': newType});
-  Plotly.relayout('myDiv2', {'yaxis.type': newType});
-  Plotly.relayout('myDiv3', {'yaxis.type': newType});
+  Plotly.relayout('myDiv1', { 'yaxis.type': newType });
+  Plotly.relayout('myDiv2', { 'yaxis.type': newType });
+  Plotly.relayout('myDiv3', { 'yaxis.type': newType });
   const btn = document.getElementById('scaleToggleBtnTop');
   if (btn) {
     btn.textContent = isLogScale ? 'Linear Y-axis' : 'Log Y-axis';
@@ -285,91 +320,111 @@ function toggleScale() {
 }
 
 // ============================
-// DOM: labels and inputs (kept from your current JS)
+// DOM labels and inputs
 // ============================
-const Vd1html = document.getElementById("Vd1html");
-Vd1html.innerHTML = "<i>V</i><sub>1</sub> (mL/kg)";
-const Vd1num = document.getElementById("Vd1");
-const Vd2html = document.getElementById("Vd2html");
-Vd2html.innerHTML = "<i>V</i><sub>2</sub> (mL/kg)";
-const Vd2num = document.getElementById("Vd2");
-const Vd3html = document.getElementById("Vd3html");
-Vd3html.innerHTML = "<i>V</i><sub>3</sub> (mL/kg)";
-const Vd3num = document.getElementById("Vd3");
-const Clhtml = document.getElementById("Clhtml");
-Clhtml.innerHTML = "<i>C</i><sub><i>l</i></sub> (mL/kg/min)";
-const Clnum = document.getElementById("Cl");
-const Q2html = document.getElementById("Q2html");
-Q2html.innerHTML = "<i>Q</i><sub>2</sub> (mL/kg/min)";
-const Q2num = document.getElementById("Q2");
-const Q3html = document.getElementById("Q3html");
-Q3html.innerHTML = "<i>Q</i><sub>3</sub> (mL/kg/min)";
-const Q3num = document.getElementById("Q3");
+const Vd1html = document.getElementById('Vd1html');
+Vd1html.innerHTML = '<i>V</i><sub>1</sub> (mL/kg)';
+const Vd1num = document.getElementById('Vd1');
+const Vd2html = document.getElementById('Vd2html');
+Vd2html.innerHTML = '<i>V</i><sub>2</sub> (mL/kg)';
+const Vd2num = document.getElementById('Vd2');
+const Vd3html = document.getElementById('Vd3html');
+Vd3html.innerHTML = '<i>V</i><sub>3</sub> (mL/kg)';
+const Vd3num = document.getElementById('Vd3');
+const Clhtml = document.getElementById('Clhtml');
+Clhtml.innerHTML = '<i>C</i><sub><i>l</i></sub> (mL/kg/min)';
+const Clnum = document.getElementById('Cl');
+const Q2html = document.getElementById('Q2html');
+Q2html.innerHTML = '<i>Q</i><sub>2</sub> (mL/kg/min)';
+const Q2num = document.getElementById('Q2');
+const Q3html = document.getElementById('Q3html');
+Q3html.innerHTML = '<i>Q</i><sub>3</sub> (mL/kg/min)';
+const Q3num = document.getElementById('Q3');
 
-const pkInputModeSelect = document.getElementById("pkInputMode");
+const pkInputModeSelect = document.getElementById('pkInputMode');
 
-const k10inputhtml = document.getElementById("k10inputhtml");
-if (k10inputhtml) k10inputhtml.innerHTML = "k<sub>10</sub> (min<sup>-1</sup>)";
-const k10inputnum = document.getElementById("k10input");
-const k12inputhtml = document.getElementById("k12inputhtml");
-if (k12inputhtml) k12inputhtml.innerHTML = "k<sub>12</sub> (min<sup>-1</sup>)";
-const k12inputnum = document.getElementById("k12input");
-const k21inputhtml = document.getElementById("k21inputhtml");
-if (k21inputhtml) k21inputhtml.innerHTML = "k<sub>21</sub> (min<sup>-1</sup>)";
-const k21inputnum = document.getElementById("k21input");
-const k13inputhtml = document.getElementById("k13inputhtml");
-if (k13inputhtml) k13inputhtml.innerHTML = "k<sub>13</sub> (min<sup>-1</sup>)";
-const k13inputnum = document.getElementById("k13input");
-const k31inputhtml = document.getElementById("k31inputhtml");
-if (k31inputhtml) k31inputhtml.innerHTML = "k<sub>31</sub> (min<sup>-1</sup>)";
-const k31inputnum = document.getElementById("k31input");
-const bhtml = document.getElementById("bhtml");
-bhtml.innerHTML = "Bolus (mg/kg)";
-const bnum = document.getElementById("b");
-const infusionhtml = document.getElementById("infusionhtml");
-infusionhtml.innerHTML = "Infusion (mg/kg/min)";
-const infusionnum = document.getElementById("infusion");
-const tbolushtml = document.getElementById("tbolushtml");
-tbolushtml.innerHTML = "Loading-dose duration (min)";
-const tbolusnum = document.getElementById("tbolus");
-const tinfusionhtml = document.getElementById("tinfusionhtml");
-tinfusionhtml.innerHTML = "Infusion duration (min)";
-const tinfusionnum = document.getElementById("tinfusion");
-const weighthtml = document.getElementById("weighthtml");
-if (weighthtml) weighthtml.innerHTML = "Patient weight (kg)";
-const weightnum = document.getElementById("weight");
-const bolusUnitSelect = document.getElementById("bolusUnitSelect");
-const infusionUnitSelect = document.getElementById("infusionUnitSelect");
-const initialphtml = document.getElementById("initialphtml");
-initialphtml.innerHTML = "[<i>P</i>]<sub>init</sub> (mg/mL)";
-const initialpnum = document.getElementById("initialp");
-const tfinalhtml = document.getElementById("tfinalhtml");
-tfinalhtml.innerHTML = "<i>t</i><sub>final</sub> (min)";
-const tfinalnum = document.getElementById("tfinal");
-const ke0html = document.getElementById("ke0html");
-ke0html.innerHTML = "k<sub>e0</sub> (min<sup>-1</sup>)";
-const ke0num = document.getElementById("ke0");
+const k10inputhtml = document.getElementById('k10inputhtml');
+if (k10inputhtml) k10inputhtml.innerHTML = 'k<sub>10</sub> (min<sup>-1</sup>)';
+const k10inputnum = document.getElementById('k10input');
+const k12inputhtml = document.getElementById('k12inputhtml');
+if (k12inputhtml) k12inputhtml.innerHTML = 'k<sub>12</sub> (min<sup>-1</sup>)';
+const k12inputnum = document.getElementById('k12input');
+const k21inputhtml = document.getElementById('k21inputhtml');
+if (k21inputhtml) k21inputhtml.innerHTML = 'k<sub>21</sub> (min<sup>-1</sup>)';
+const k21inputnum = document.getElementById('k21input');
+const k13inputhtml = document.getElementById('k13inputhtml');
+if (k13inputhtml) k13inputhtml.innerHTML = 'k<sub>13</sub> (min<sup>-1</sup>)';
+const k13inputnum = document.getElementById('k13input');
+const k31inputhtml = document.getElementById('k31inputhtml');
+if (k31inputhtml) k31inputhtml.innerHTML = 'k<sub>31</sub> (min<sup>-1</sup>)';
+const k31inputnum = document.getElementById('k31input');
+const bhtml = document.getElementById('bhtml');
+bhtml.innerHTML = 'Bolus (mg/kg)';
+const bnum = document.getElementById('b');
+const infusionhtml = document.getElementById('infusionhtml');
+infusionhtml.innerHTML = 'Infusion (mg/kg/min)';
+const infusionnum = document.getElementById('infusion');
+const tbolushtml = document.getElementById('tbolushtml');
+tbolushtml.innerHTML = 'Loading-dose duration (min)';
+const tbolusnum = document.getElementById('tbolus');
+const tinfusionhtml = document.getElementById('tinfusionhtml');
+tinfusionhtml.innerHTML = 'Infusion duration (min)';
+const tinfusionnum = document.getElementById('tinfusion');
+const weighthtml = document.getElementById('weighthtml');
+if (weighthtml) weighthtml.innerHTML = 'Patient weight (kg)';
+const weightnum = document.getElementById('weight');
+const bolusUnitSelect = document.getElementById('bolusUnitSelect');
+const infusionUnitSelect = document.getElementById('infusionUnitSelect');
+const initialphtml = document.getElementById('initialphtml');
+initialphtml.innerHTML = '[<i>P</i>]<sub>init</sub> (mg/mL)';
+const initialpnum = document.getElementById('initialp');
+const tfinalhtml = document.getElementById('tfinalhtml');
+tfinalhtml.innerHTML = '<i>t</i><sub>final</sub> (min)';
+const tfinalnum = document.getElementById('tfinal');
+const ke0html = document.getElementById('ke0html');
+ke0html.innerHTML = 'k<sub>e0</sub> (min<sup>-1</sup>)';
+const ke0num = document.getElementById('ke0');
 
-const pfinalhtml = document.getElementById("pfinalhtml"); pfinalhtml.innerHTML = 0;
-const psshtml = document.getElementById("psshtml"); psshtml.innerHTML = 0;
-const concentrationunitshtml1 = document.getElementById("concentrationunitshtml1"); concentrationunitshtml1.innerHTML = "mg/mL";
-const concentrationunitshtml2 = document.getElementById("concentrationunitshtml2"); concentrationunitshtml2.innerHTML = "mg/mL";
-const alphahtml = document.getElementById("alphahtml"); alphahtml.innerHTML = 0;
-const betahtml = document.getElementById("betahtml"); betahtml.innerHTML = 0;
-const gammahtml = document.getElementById("gammahtml"); gammahtml.innerHTML = 0;
-const termhalflifehtml = document.getElementById("termhalflifehtml"); termhalflifehtml.innerHTML = 0;
-const k10html = document.getElementById("k10html"); k10html.innerHTML = 0;
-const k12html = document.getElementById("k12html"); k12html.innerHTML = 0;
-const k13html = document.getElementById("k13html"); k13html.innerHTML = 0;
-const k21html = document.getElementById("k21html"); k21html.innerHTML = 0;
-const k31html = document.getElementById("k31html"); k31html.innerHTML = 0;
-const Vd1numhtml = document.getElementById("Vd1numhtml"); Vd1numhtml.innerHTML = 0;
-const Vd2numhtml = document.getElementById("Vd2numhtml"); Vd2numhtml.innerHTML = 0;
-const Vd3numhtml = document.getElementById("Vd3numhtml"); Vd3numhtml.innerHTML = 0;
-const Q2numhtml = document.getElementById("Q2numhtml"); Q2numhtml.innerHTML = 0;
-const Q3numhtml = document.getElementById("Q3numhtml"); Q3numhtml.innerHTML = 0;
-const Clnumhtml = document.getElementById("Clnumhtml"); Clnumhtml.innerHTML = 0;
-const contextsensitivehalflifehtml = document.getElementById("contextsensitivehalflifehtml"); contextsensitivehalflifehtml.innerHTML = 0;
+const pfinalhtml = document.getElementById('pfinalhtml');
+pfinalhtml.innerHTML = 0;
+const psshtml = document.getElementById('psshtml');
+psshtml.innerHTML = 0;
+const concentrationunitshtml1 = document.getElementById('concentrationunitshtml1');
+concentrationunitshtml1.innerHTML = 'mg/mL';
+const concentrationunitshtml2 = document.getElementById('concentrationunitshtml2');
+concentrationunitshtml2.innerHTML = 'mg/mL';
+const alphahtml = document.getElementById('alphahtml');
+alphahtml.innerHTML = 0;
+const betahtml = document.getElementById('betahtml');
+betahtml.innerHTML = 0;
+const gammahtml = document.getElementById('gammahtml');
+gammahtml.innerHTML = 0;
+const termhalflifehtml = document.getElementById('termhalflifehtml');
+termhalflifehtml.innerHTML = 0;
+const k10html = document.getElementById('k10html');
+k10html.innerHTML = 0;
+const k12html = document.getElementById('k12html');
+k12html.innerHTML = 0;
+const k13html = document.getElementById('k13html');
+k13html.innerHTML = 0;
+const k21html = document.getElementById('k21html');
+k21html.innerHTML = 0;
+const k31html = document.getElementById('k31html');
+k31html.innerHTML = 0;
+const Vd1numhtml = document.getElementById('Vd1numhtml');
+Vd1numhtml.innerHTML = 0;
+const Vd2numhtml = document.getElementById('Vd2numhtml');
+Vd2numhtml.innerHTML = 0;
+const Vd3numhtml = document.getElementById('Vd3numhtml');
+Vd3numhtml.innerHTML = 0;
+const Q2numhtml = document.getElementById('Q2numhtml');
+Q2numhtml.innerHTML = 0;
+const Q3numhtml = document.getElementById('Q3numhtml');
+Q3numhtml.innerHTML = 0;
+const Clnumhtml = document.getElementById('Clnumhtml');
+Clnumhtml.innerHTML = 0;
+const contextsensitivehalflifehtml = document.getElementById('contextsensitivehalflifehtml');
+contextsensitivehalflifehtml.innerHTML = 0;
 
 // ============================
 // Units (display only; internal math stays mg/mL)
@@ -377,7 +432,7 @@ const contextsensitivehalflifehtml = document.getElementById("contextsensitiveha
 const UNITS = {
   'mg/mL': { name: 'mg/mL', factor: 1 },
   'µg/mL': { name: 'µg/mL', factor: 1e3 },
-  'ng/mL': { name: 'ng/mL', factor: 1e6 }
+  'ng/mL': { name: 'ng/mL', factor: 1e6 },
 };
 let currentUnit = UNITS['mg/mL'];
 
@@ -388,9 +443,19 @@ function formatInputValue(value) {
 function setDisplayUnit(unitName, preserveValue = true) {
   const nextUnit = UNITS[unitName] || UNITS['mg/mL'];
   if (preserveValue && currentUnit.factor !== nextUnit.factor) {
-    [initialpnum, document.getElementById('tciTarget'), document.getElementById('testRegimenTarget')].forEach(input => {
+    $$('#tciTargetChanges [data-field="target"]').forEach((input) => {
+      const value = parseFloat(input.value);
+      if (Number.isFinite(value))
+        input.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
+    });
+    [
+      initialpnum,
+      document.getElementById('tciTarget'),
+      document.getElementById('testRegimenTarget'),
+    ].forEach((input) => {
       const value = parseFloat(input?.value);
-      if (input && Number.isFinite(value)) input.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
+      if (input && Number.isFinite(value))
+        input.value = formatInputValue((value / currentUnit.factor) * nextUnit.factor);
     });
   }
   currentUnit = nextUnit;
@@ -404,9 +469,9 @@ const BOLUSUNITS = {
   'mg/kg': { name: 'mg/kg', factor: 1, perKg: true },
   'µg/kg': { name: 'µg/kg', factor: 1e3, perKg: true },
   'ng/kg': { name: 'ng/kg', factor: 1e6, perKg: true },
-  'mg': { name: 'mg', factor: 1, perKg: false },
-  'µg': { name: 'µg', factor: 1e3, perKg: false },
-  'ng': { name: 'ng', factor: 1e6, perKg: false }
+  mg: { name: 'mg', factor: 1, perKg: false },
+  µg: { name: 'µg', factor: 1e3, perKg: false },
+  ng: { name: 'ng', factor: 1e6, perKg: false },
 };
 let currentBolusUnit = BOLUSUNITS['mg/kg'];
 
@@ -422,16 +487,29 @@ const INFUSIONUNITS = {
   'ng/min': { name: 'ng/min', factor: 1e6, perKg: false },
   'mg/hr': { name: 'mg/hr', factor: 60.0, perKg: false },
   'µg/hr': { name: 'µg/hr', factor: 1e3 * 60.0, perKg: false },
-  'ng/hr': { name: 'ng/hr', factor: 1e6 * 60.0, perKg: false }
+  'ng/hr': { name: 'ng/hr', factor: 1e6 * 60.0, perKg: false },
 };
 let currentInfusionUnit = INFUSIONUNITS['mg/kg/min'];
 
 const BOLUS_UNIT_ORDER = ['mg/kg', 'µg/kg', 'ng/kg', 'mg', 'µg', 'ng'];
-const INFUSION_UNIT_ORDER = ['mg/kg/min', 'µg/kg/min', 'ng/kg/min', 'mg/kg/hr', 'µg/kg/hr', 'ng/kg/hr', 'mg/min', 'µg/min', 'ng/min', 'mg/hr', 'µg/hr', 'ng/hr'];
+const INFUSION_UNIT_ORDER = [
+  'mg/kg/min',
+  'µg/kg/min',
+  'ng/kg/min',
+  'mg/kg/hr',
+  'µg/kg/hr',
+  'ng/kg/hr',
+  'mg/min',
+  'µg/min',
+  'ng/min',
+  'mg/hr',
+  'µg/hr',
+  'ng/hr',
+];
 
 function getWeightKg() {
   const w = parseFloatSafe(weightnum?.value, 70);
-  return (Number.isFinite(w) && w > 0) ? w : 70;
+  return Number.isFinite(w) && w > 0 ? w : 70;
 }
 
 function convertBolusValueToMgKg(value, unitObj = currentBolusUnit, weightKg = getWeightKg()) {
@@ -440,7 +518,11 @@ function convertBolusValueToMgKg(value, unitObj = currentBolusUnit, weightKg = g
   return normalized / Math.max(weightKg, 1e-9);
 }
 
-function convertInfusionValueToMgKgMin(value, unitObj = currentInfusionUnit, weightKg = getWeightKg()) {
+function convertInfusionValueToMgKgMin(
+  value,
+  unitObj = currentInfusionUnit,
+  weightKg = getWeightKg(),
+) {
   const normalized = parseFloatSafe(value, 0) / (unitObj?.factor ?? 1);
   if (unitObj?.perKg) return normalized;
   return normalized / Math.max(weightKg, 1e-9);
@@ -459,7 +541,7 @@ function convertMgKgMinToInfusionValue(valueMgKgMin, unitObj, weightKg = getWeig
 function populateUnitSelect(selectEl, unitsMap, order) {
   if (!selectEl) return;
   selectEl.innerHTML = '';
-  order.forEach(unitName => {
+  order.forEach((unitName) => {
     const meta = unitsMap[unitName];
     if (!meta) return;
     const opt = document.createElement('option');
@@ -474,21 +556,20 @@ function initializeUnitSelectors() {
   populateUnitSelect(infusionUnitSelect, INFUSIONUNITS, INFUSION_UNIT_ORDER);
 }
 
-function rescaleScheduleInputs(selector, convert) {
-  $$(selector).forEach(input => {
-    const value = parseFloat(input.value);
-    if (Number.isFinite(value)) input.value = formatInputValue(convert(value));
-  });
-}
-
 function setBolusUnit(unitName, preserveValues = true) {
   const previousUnit = currentBolusUnit;
   const nextUnit = BOLUSUNITS[unitName] || BOLUSUNITS['mg/kg'];
   if (preserveValues && previousUnit.name !== nextUnit.name) {
     const weightKg = getWeightKg();
-    const convert = value => convertMgKgToBolusValue(convertBolusValueToMgKg(value, previousUnit, weightKg), nextUnit, weightKg);
-    if (bnum && Number.isFinite(parseFloat(bnum.value))) bnum.value = formatInputValue(convert(parseFloat(bnum.value)));
-    rescaleScheduleInputs('#bolusEventsTable input[data-field="dose"]', convert);
+    const convert = (value) =>
+      convertMgKgToBolusValue(
+        convertBolusValueToMgKg(value, previousUnit, weightKg),
+        nextUnit,
+        weightKg,
+      );
+    if (bnum && Number.isFinite(parseFloat(bnum.value)))
+      bnum.value = formatInputValue(convert(parseFloat(bnum.value)));
+    rescaleScheduleState('bolus', 'dose', convert);
   }
   currentBolusUnit = nextUnit;
   bhtml.innerHTML = `Bolus (${currentBolusUnit.name})`;
@@ -501,11 +582,18 @@ function setInfusionUnit(unitName, preserveValues = true) {
   const nextUnit = INFUSIONUNITS[unitName] || INFUSIONUNITS['mg/kg/min'];
   if (preserveValues && previousUnit.name !== nextUnit.name) {
     const weightKg = getWeightKg();
-    const convert = value => convertMgKgMinToInfusionValue(convertInfusionValueToMgKgMin(value, previousUnit, weightKg), nextUnit, weightKg);
-    if (infusionnum && Number.isFinite(parseFloat(infusionnum.value))) infusionnum.value = formatInputValue(convert(parseFloat(infusionnum.value)));
+    const convert = (value) =>
+      convertMgKgMinToInfusionValue(
+        convertInfusionValueToMgKgMin(value, previousUnit, weightKg),
+        nextUnit,
+        weightKg,
+      );
+    if (infusionnum && Number.isFinite(parseFloat(infusionnum.value)))
+      infusionnum.value = formatInputValue(convert(parseFloat(infusionnum.value)));
     const tciMaxRate = document.getElementById('tciMaxRate');
-    if (tciMaxRate && Number.isFinite(parseFloat(tciMaxRate.value))) tciMaxRate.value = formatInputValue(convert(parseFloat(tciMaxRate.value)));
-    rescaleScheduleInputs('#infusionEventsTable input[data-field="rate"]', convert);
+    if (tciMaxRate && Number.isFinite(parseFloat(tciMaxRate.value)))
+      tciMaxRate.value = formatInputValue(convert(parseFloat(tciMaxRate.value)));
+    rescaleScheduleState('infusion', 'rate', convert);
   }
   currentInfusionUnit = nextUnit;
   infusionhtml.innerHTML = `Infusion (${currentInfusionUnit.name})`;
@@ -524,7 +612,7 @@ function updateScheduleUnitLabels() {
   if (iSpan) iSpan.textContent = `(${iUnit})`;
   if (bBadge) bBadge.textContent = bUnit;
   if (iBadge) iBadge.textContent = iUnit;
-  ['tciMaxRateUnit', 'mainTciMaxRateUnit', 'tciRateUnit'].forEach(id => {
+  ['tciMaxRateUnit', 'mainTciMaxRateUnit', 'tciRateUnit'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = iUnit;
   });
@@ -534,15 +622,30 @@ function getTciConfig() {
   const enabled = Boolean(document.getElementById('tciEnabled')?.checked);
   const targetType = document.getElementById('tciTargetType')?.value === 'ce' ? 'ce' : 'cp';
   const target = parseFloatSafe(document.getElementById('tciTarget')?.value, 0);
-  const maxRate = convertInfusionValueToMgKgMin(document.getElementById('tciMaxRate')?.value, currentInfusionUnit, getWeightKg());
+  const maxRate = convertInfusionValueToMgKgMin(
+    document.getElementById('tciMaxRate')?.value,
+    currentInfusionUnit,
+    getWeightKg(),
+  );
   const stopTime = Math.max(0, parseFloatSafe(document.getElementById('tciStopTime')?.value, 0));
-  return { enabled, targetType, target, targetBase: target / currentUnit.factor, maxRate, stopTime };
+  return {
+    enabled,
+    targetType,
+    target,
+    targetBase: target / currentUnit.factor,
+    targetChanges: getTciTargetChanges().map((change) => ({
+      time: change.time,
+      targetBase: change.target / currentUnit.factor,
+    })),
+    maxRate,
+    stopTime,
+  };
 }
 
 function updateTciControls() {
   const config = getTciConfig();
   const targetUnit = currentUnit?.name || 'mg/mL';
-  ['tciTargetUnit', 'mainTciTargetUnit'].forEach(id => {
+  ['tciTargetUnit', 'mainTciTargetUnit'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = targetUnit;
   });
@@ -560,6 +663,7 @@ function updateTciControls() {
   if (mainTarget) mainTarget.value = document.getElementById('tciTarget')?.value || '';
   if (mainMaxRate) mainMaxRate.value = document.getElementById('tciMaxRate')?.value || '';
   if (mainStopTime) mainStopTime.value = document.getElementById('tciStopTime')?.value || '';
+  document.getElementById('tciChangeUnit').textContent = targetUnit;
   updateDosingWorkspace();
 }
 
@@ -567,13 +671,24 @@ function updateDosingWorkspace() {
   const tci = Boolean(document.getElementById('tciEnabled')?.checked);
   const schedule = !tci && Boolean(document.getElementById('useSchedule')?.checked);
   const mode = tci ? 'tci' : schedule ? 'schedule' : 'basic';
-  $$('input[name="dosingMode"]').forEach(input => { input.checked = input.value === mode; });
+  document.getElementById('tciTargetScheduleEditor').hidden = !tci;
+  $$('input[name="dosingMode"]').forEach((input) => {
+    input.checked = input.value === mode;
+  });
   document.getElementById('mainManualControls').hidden = tci;
-  document.getElementById('mainBolusAmount').disabled = tci || (schedule && !getQuickScheduleRow('bolus'));
-  document.getElementById('mainInfusionRate').disabled = tci || (schedule && !getQuickScheduleRow('infusion'));
+  document.getElementById('mainBolusAmount').disabled =
+    tci || (schedule && !getQuickScheduleEntry('bolus'));
+  document.getElementById('mainInfusionRate').disabled =
+    tci || (schedule && !getQuickScheduleEntry('infusion'));
   document.getElementById('mainScheduleControls').hidden = !schedule;
-  $$('.basic-only').forEach(el => { el.hidden = mode !== 'basic'; });
-  document.getElementById('quickDoseEditorHeading').textContent = tci ? 'TCI settings' : schedule ? 'Scheduled dosing' : 'Basic dosing';
+  $$('.basic-only').forEach((el) => {
+    el.hidden = mode !== 'basic';
+  });
+  document.getElementById('quickDoseEditorHeading').textContent = tci
+    ? 'TCI settings'
+    : schedule
+      ? 'Scheduled dosing'
+      : 'Basic dosing';
   Object.entries(MAIN_INPUT_LINKS).forEach(([mainId, sourceId]) => {
     if (schedule && ['mainBolusAmount', 'mainInfusionRate'].includes(mainId)) return;
     document.getElementById(mainId).value = document.getElementById(sourceId).value;
@@ -604,10 +719,13 @@ function generateModelDerivedTestRegimen() {
   const durationInput = document.getElementById('testRegimenLoadingDuration');
   const target = Number(targetInput?.value);
   const duration = Number(durationInput?.value);
-  [targetInput, durationInput].forEach(input => input?.classList.remove('is-invalid'));
+  [targetInput, durationInput].forEach((input) => input?.classList.remove('is-invalid'));
   if (!Number.isFinite(target) || target <= 0) {
     targetInput?.classList.add('is-invalid');
-    setSimulationStatus('Enter a predicted plasma target greater than 0 to generate a test regimen.', 'error');
+    setSimulationStatus(
+      'Enter a predicted plasma target greater than 0 to generate a test regimen.',
+      'error',
+    );
     return;
   }
   if (!Number.isFinite(duration) || duration < 0) {
@@ -623,9 +741,13 @@ function generateModelDerivedTestRegimen() {
   const maintenanceRateMgKgMin = pk.Cl * targetBase;
   const finalTime = Math.max(0, parseFloatSafe(tfinalnum?.value, 0));
 
-  bnum.value = formatInputValue(convertMgKgToBolusValue(loadingDoseMgKg, currentBolusUnit, getWeightKg()));
+  bnum.value = formatInputValue(
+    convertMgKgToBolusValue(loadingDoseMgKg, currentBolusUnit, getWeightKg()),
+  );
   tbolusnum.value = formatInputValue(duration);
-  infusionnum.value = formatInputValue(convertMgKgMinToInfusionValue(maintenanceRateMgKgMin, currentInfusionUnit, getWeightKg()));
+  infusionnum.value = formatInputValue(
+    convertMgKgMinToInfusionValue(maintenanceRateMgKgMin, currentInfusionUnit, getWeightKg()),
+  );
   tinfusionnum.value = formatInputValue(Math.max(0, finalTime - duration));
   const useSchedule = document.getElementById('useSchedule');
   if (useSchedule) useSchedule.checked = false;
@@ -634,121 +756,22 @@ function generateModelDerivedTestRegimen() {
   selectedTimelineEvent = null;
   disableLegacyBolusInfusionInputs(false);
   dfsolve();
-  setSimulationStatus(`Model-derived test regimen generated: loading ${formatInputValue(loadingDoseMgKg)} mg/kg and maintenance ${formatInputValue(maintenanceRateMgKgMin)} mg/kg/min before unit conversion.`, 'ok');
+  setSimulationStatus(
+    `Model-derived test regimen generated: loading ${formatInputValue(loadingDoseMgKg)} mg/kg and maintenance ${formatInputValue(maintenanceRateMgKgMin)} mg/kg/min before unit conversion.`,
+    'ok',
+  );
 }
 
 function disableLegacyBolusInfusionInputs(disabled) {
-  ['b','tbolus','infusion','tinfusion'].forEach(id => {
+  ['b', 'tbolus', 'infusion', 'tinfusion'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.disabled = !!disabled;
   });
 }
 
 // ============================
-// Advanced schedule UI (kept)
+// Schedule editor
 // ============================
-function clearTable(tbl) {
-  if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
-  tbl.tBodies[0].innerHTML = '';
-}
-
-function addBolusRow({ time = 0, dose = 0, duration = 0 } = {}, container = null) {
-  const tbl = document.getElementById('bolusEventsTable');
-  if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="time" value="${time}" min="0" step="any" aria-label="Bolus time in minutes"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="dose" value="${dose}" min="0" step="any" aria-label="Bolus dose"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="duration" value="${duration}" min="0" step="any" aria-label="Bolus duration in minutes"></td>
-    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove bolus">×</button></td>
-  `;
-  (container || tbl.tBodies[0]).appendChild(tr);
-}
-
-function addInfusionRow({ start = 0, end = 0, rate = 0 } = {}, container = null) {
-  const tbl = document.getElementById('infusionEventsTable');
-  if (!tbl || !tbl.tBodies || !tbl.tBodies[0]) return;
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><input type="number" class="form-control form-control-sm" data-field="start" value="${start}" min="0" step="any" aria-label="Infusion start time in minutes"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="end" value="${end}" min="0" step="any" aria-label="Infusion end time in minutes"></td>
-    <td><input type="number" class="form-control form-control-sm" data-field="rate" value="${rate}" min="0" step="any" aria-label="Infusion rate"></td>
-    <td><button class="btn btn-sm btn-outline-danger" type="button" data-action="remove" aria-label="Remove infusion segment">×</button></td>
-  `;
-  (container || tbl.tBodies[0]).appendChild(tr);
-  if (!container && document.getElementById('scheduleEditor').open) schedulePage = Math.floor((tbl.tBodies[0].rows.length - 1) / SCHEDULE_PAGE_SIZE);
-}
-
-function getScheduleFromDOM({ includeInactive = false } = {}) {
-  const schedule = { enabled: false, boluses: [], infusions: [] };
-  const useCb = document.getElementById('useSchedule');
-  if (!useCb || (!useCb.checked && !includeInactive)) return schedule;
-  schedule.enabled = useCb.checked;
-
-  const bolusTbl = document.getElementById('bolusEventsTable');
-  const infTbl = document.getElementById('infusionEventsTable');
-
-  if (bolusTbl && bolusTbl.tBodies && bolusTbl.tBodies[0]) {
-    [...bolusTbl.tBodies[0].rows].forEach(r => {
-      const time = parseFloatSafe(r.querySelector('input[data-field="time"]')?.value, 0);
-      const dose = parseFloatSafe(r.querySelector('input[data-field="dose"]')?.value, 0);
-      const duration = parseFloatSafe(r.querySelector('input[data-field="duration"]')?.value, 0);
-      if (dose === 0) return;
-      schedule.boluses.push({ time, dose, duration });
-    });
-  }
-
-  if (infTbl && infTbl.tBodies && infTbl.tBodies[0]) {
-    [...infTbl.tBodies[0].rows].forEach(r => {
-      const start = parseFloatSafe(r.querySelector('input[data-field="start"]')?.value, 0);
-      const end = parseFloatSafe(r.querySelector('input[data-field="end"]')?.value, 0);
-      const rate = parseFloatSafe(r.querySelector('input[data-field="rate"]')?.value, 0);
-      if (rate === 0) return;
-      schedule.infusions.push({ start, end, rate });
-    });
-  }
-
-  schedule.boluses.sort((a,b) => a.time - b.time);
-  schedule.infusions.sort((a,b) => a.start - b.start);
-  return schedule;
-}
-
-function setScheduleToDOM(schedule) {
-  const useCb = document.getElementById('useSchedule');
-  const bolusTbl = document.getElementById('bolusEventsTable');
-  const infTbl = document.getElementById('infusionEventsTable');
-  if (!useCb || !bolusTbl || !infTbl) return;
-
-  useCb.checked = !!(schedule && schedule.enabled);
-  clearTable(bolusTbl);
-  clearTable(infTbl);
-
-  const bs = (schedule && Array.isArray(schedule.boluses)) ? schedule.boluses : [];
-  const ins = (schedule && Array.isArray(schedule.infusions)) ? schedule.infusions : [];
-
-  const bolusFragment = document.createDocumentFragment();
-  const infusionFragment = document.createDocumentFragment();
-  if (bs.length === 0) addBolusRow({ time: 0, dose: 0, duration: 0 }, bolusFragment);
-  else bs.forEach(b => addBolusRow(b, bolusFragment));
-
-  if (ins.length === 0) addInfusionRow({ start: 0, end: 0, rate: 0 }, infusionFragment);
-  else ins.forEach(i => addInfusionRow(i, infusionFragment));
-  bolusTbl.tBodies[0].appendChild(bolusFragment);
-  infTbl.tBodies[0].appendChild(infusionFragment);
-  schedulePage = 0;
-  updateSchedulePage();
-}
-
-function updateSchedulePage() {
-  const rows = [...document.getElementById('infusionEventsTable').tBodies[0].rows];
-  const pages = Math.max(1, Math.ceil(rows.length / SCHEDULE_PAGE_SIZE));
-  schedulePage = clamp(schedulePage, 0, pages - 1);
-  const editing = document.getElementById('scheduleEditor').open;
-  rows.forEach((row, index) => { row.hidden = editing && Math.floor(index / SCHEDULE_PAGE_SIZE) !== schedulePage; });
-  document.getElementById('schedulePageStatus').textContent = `Infusion rows ${schedulePage * SCHEDULE_PAGE_SIZE + 1}–${Math.min(rows.length, (schedulePage + 1) * SCHEDULE_PAGE_SIZE)} of ${rows.length}`;
-  document.getElementById('schedulePreviousBtn').disabled = schedulePage === 0;
-  document.getElementById('scheduleNextBtn').disabled = schedulePage === pages - 1;
-}
 
 function initScheduleWorkspace() {
   const dialog = document.getElementById('scheduleEditor');
@@ -759,7 +782,8 @@ function initScheduleWorkspace() {
   const open = () => {
     if (dialog.open) return;
     returnFocus = document.activeElement;
-    if (document.body.classList.contains('drawer-open')) document.getElementById('drawerCloseBtn').click();
+    if (document.body.classList.contains('drawer-open'))
+      document.getElementById('drawerCloseBtn').click();
     document.getElementById('scheduleEditorBody').appendChild(card);
     expandDrawerCard('scheduleCard');
     dialog.showModal();
@@ -767,19 +791,24 @@ function initScheduleWorkspace() {
     updateSchedulePage();
   };
   document.getElementById('mainEditScheduleBtn').addEventListener('click', open);
-  $$('[data-open-schedule]').forEach(button => button.addEventListener('click', open));
+  $$('[data-open-schedule]').forEach((button) => button.addEventListener('click', open));
   const restoreDrawer = () => {
     if (!dialog.contains(card)) return;
     anchor.after(card);
     document.body.classList.remove('schedule-editor-open');
     updateSchedulePage();
-    const target = returnFocus?.closest('#paramsDrawer') ? document.getElementById('paramsBtn') : returnFocus;
+    const target = returnFocus?.closest('#paramsDrawer')
+      ? document.getElementById('paramsBtn')
+      : returnFocus;
     target?.focus();
   };
-  const close = () => { dialog.close(); restoreDrawer(); };
+  const close = () => {
+    dialog.close();
+    restoreDrawer();
+  };
   document.getElementById('closeScheduleEditorBtn').addEventListener('click', close);
   dialog.addEventListener('close', restoreDrawer);
-  dialog.addEventListener('cancel', event => {
+  dialog.addEventListener('cancel', (event) => {
     event.preventDefault();
     close();
   });
@@ -790,29 +819,46 @@ function initScheduleWorkspace() {
       document.getElementById('scheduleEditorBody').scrollTop = 0;
     });
   });
+  $$('[data-schedule-page]').forEach((button) =>
+    button.addEventListener('click', () => {
+      schedulePage += Number(button.dataset.schedulePage);
+      updateSchedulePage();
+    }),
+  );
   document.getElementById('scheduleJumpBtn').addEventListener('click', () => {
     const input = document.getElementById('scheduleJumpTime');
     const raw = input.value.trim();
     const time = Number(raw);
-    input.setCustomValidity(!raw || !Number.isFinite(time) || time < 0 ? 'Enter a time of at least 0 minutes.' : '');
+    input.setCustomValidity(
+      !raw || !Number.isFinite(time) || time < 0 ? 'Enter a time of at least 0 minutes.' : '',
+    );
     if (!input.reportValidity()) return;
-    const rows = [...document.getElementById('infusionEventsTable').tBodies[0].rows];
-    const intervals = rows.map((row, index) => ({ row, index, start: Number(row.querySelector('[data-field="start"]').value), end: Number(row.querySelector('[data-field="end"]').value) })).sort((a, b) => a.start - b.start);
-    const found = intervals.find(item => item.end > time) || intervals.at(-1);
+    flushVisibleScheduleInputs();
+    const intervals = scheduleState.infusions
+      .map((event, index) => ({ ...event, index }))
+      .sort((a, b) => a.start - b.start);
+    const found = intervals.find((item) => item.end > time) || intervals.at(-1);
     if (!found) return;
     schedulePage = Math.floor(found.index / SCHEDULE_PAGE_SIZE);
     updateSchedulePage();
-    found.row.querySelector('input').focus();
-    found.row.scrollIntoView({ block: 'center' });
+    const row = document.querySelector(`#infusionEventsTable [data-event-id="${found.id}"]`);
+    row.querySelector('input').focus();
+    row.scrollIntoView({ block: 'center' });
   });
-  document.getElementById('scheduleJumpTime').addEventListener('input', event => event.target.setCustomValidity(''));
-  document.getElementById('scheduleJumpTime').addEventListener('keydown', event => {
-    if (event.key === 'Enter') { event.preventDefault(); document.getElementById('scheduleJumpBtn').click(); }
+  document
+    .getElementById('scheduleJumpTime')
+    .addEventListener('input', (event) => event.target.setCustomValidity(''));
+  document.getElementById('scheduleJumpTime').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      document.getElementById('scheduleJumpBtn').click();
+    }
   });
   document.getElementById('scheduleCsvBtn').addEventListener('click', () => {
     if (!document.getElementById('useSchedule').checked || !validateSimulationInputs()) {
       document.getElementById('scheduleEditorErrors').hidden = false;
-      document.getElementById('scheduleEditorErrors').textContent = 'Enable the schedule and correct any incomplete entries before exporting.';
+      document.getElementById('scheduleEditorErrors').textContent =
+        'Enable the schedule and correct any incomplete entries before exporting.';
       return;
     }
     downloadText('physio-schedule.csv', scheduleCsv(getScheduleFromDOM()), 'text/csv');
@@ -820,10 +866,34 @@ function initScheduleWorkspace() {
 }
 
 function scheduleCsv(schedule) {
-  const rows = [['type', 'start_min', 'end_min', 'dose', 'duration_min', 'rate', 'unit', 'weight_kg']];
-  schedule.boluses.forEach(b => rows.push(['bolus', b.time, b.time + b.duration, b.dose, b.duration, '', currentBolusUnit.name, getWeightKg()]));
-  schedule.infusions.forEach(i => rows.push(['infusion', i.start, i.end, '', '', i.rate, currentInfusionUnit.name, getWeightKg()]));
-  return rows.map(row => row.join(',')).join('\r\n');
+  const rows = [
+    ['type', 'start_min', 'end_min', 'dose', 'duration_min', 'rate', 'unit', 'weight_kg'],
+  ];
+  schedule.boluses.forEach((b) =>
+    rows.push([
+      'bolus',
+      b.time,
+      b.time + b.duration,
+      b.dose,
+      b.duration,
+      '',
+      currentBolusUnit.name,
+      getWeightKg(),
+    ]),
+  );
+  schedule.infusions.forEach((i) =>
+    rows.push([
+      'infusion',
+      i.start,
+      i.end,
+      '',
+      '',
+      i.rate,
+      currentInfusionUnit.name,
+      getWeightKg(),
+    ]),
+  );
+  return rows.map((row) => row.join(',')).join('\r\n');
 }
 
 function buildDosingPlan({ schedule, basic, bolusUnit, infusionUnit, weightKg }) {
@@ -846,12 +916,16 @@ function buildDosingPlan({ schedule, basic, bolusUnit, infusionUnit, weightKg })
   };
 
   if (schedule?.enabled) {
-    (schedule.boluses || []).forEach(event => addBolus(event.time, event.dose, event.duration));
-    (schedule.infusions || []).forEach(event => addInfusion(event.start, event.end, event.rate));
+    (schedule.boluses || []).forEach((event) => addBolus(event.time, event.dose, event.duration));
+    (schedule.infusions || []).forEach((event) => addInfusion(event.start, event.end, event.rate));
   } else {
     const loadingDuration = Math.max(0, parseFloatSafe(basic?.tbolus, 0));
     addBolus(0, basic?.bolus, loadingDuration);
-    addInfusion(loadingDuration, loadingDuration + Math.max(0, parseFloatSafe(basic?.tinfusion, 0)), basic?.infusion);
+    addInfusion(
+      loadingDuration,
+      loadingDuration + Math.max(0, parseFloatSafe(basic?.tinfusion, 0)),
+      basic?.infusion,
+    );
   }
   return { rateEvents, instantEvents };
 }
@@ -860,10 +934,10 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
   const tfinal = Math.max(0, finalTime);
   const hasEffectSite = Number.isFinite(ke0) && ke0 > 0;
   const eventTimes = tci?.enabled
-    ? [tci.stopTime]
+    ? [tci.stopTime, ...(tci.targetChanges || []).map((change) => change.time)]
     : [
-        ...(dosingPlan?.rateEvents || []).flatMap(event => [event.start, event.end]),
-        ...(dosingPlan?.instantEvents || []).map(event => event.time)
+        ...(dosingPlan?.rateEvents || []).flatMap((event) => [event.start, event.end]),
+        ...(dosingPlan?.instantEvents || []).map((event) => event.time),
       ];
   const ts = buildSimulationTimes(tfinal, eventTimes);
   const N = ts.length - 1;
@@ -879,21 +953,26 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
   let totalDoseMgKg = 0;
   let lastRateEndIndex = null;
 
-  const instantAt = time => (dosingPlan?.instantEvents || []).reduce((sum, event) =>
-    Math.abs(event.time - time) <= TIME_EPSILON ? sum + event.amount : sum, 0);
+  const instantAt = (time) =>
+    (dosingPlan?.instantEvents || []).reduce(
+      (sum, event) => (Math.abs(event.time - time) <= TIME_EPSILON ? sum + event.amount : sum),
+      0,
+    );
   const sortedRateEvents = [...(dosingPlan?.rateEvents || [])].sort((a, b) => a.start - b.start);
   let nextRateEvent = 0;
   let activeRateEvents = [];
+  let nextTargetChange = 0;
+  let activeTarget = tci?.targetBase;
   const rateOverInterval = (start, end) => {
     const duration = end - start;
     if (duration <= 0) return 0;
     while (nextRateEvent < sortedRateEvents.length && sortedRateEvents[nextRateEvent].start < end) {
       activeRateEvents.push(sortedRateEvents[nextRateEvent++]);
     }
-    activeRateEvents = activeRateEvents.filter(event => event.end > start);
+    activeRateEvents = activeRateEvents.filter((event) => event.end > start);
     return activeRateEvents.reduce((sum, event) => {
       const overlap = Math.max(0, Math.min(end, event.end) - Math.max(start, event.start));
-      return sum + event.rate * overlap / duration;
+      return sum + (event.rate * overlap) / duration;
     }, 0);
   };
 
@@ -907,13 +986,25 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
     const transition = createTransition(pk, hasEffectSite ? ke0 : 0, duration, transitionCache);
     let rate = 0;
     if (tci?.enabled) {
-      const baseCpNext = (transition.a11*xs1[i] + transition.a12*xs2[i] + transition.a13*xs3[i]) / pk.V1;
-      const baseCeNext = transition.a41*xs1[i] + transition.a42*xs2[i] + transition.a43*xs3[i] + transition.a44*ces[i];
+      while (
+        nextTargetChange < (tci.targetChanges?.length || 0) &&
+        tci.targetChanges[nextTargetChange].time <= ts[i] + TIME_EPSILON
+      ) {
+        activeTarget = tci.targetChanges[nextTargetChange++].targetBase;
+      }
+      const baseCpNext =
+        (transition.a11 * xs1[i] + transition.a12 * xs2[i] + transition.a13 * xs3[i]) / pk.V1;
+      const baseCeNext =
+        transition.a41 * xs1[i] +
+        transition.a42 * xs2[i] +
+        transition.a43 * xs3[i] +
+        transition.a44 * ces[i];
       const gain = tci.targetType === 'ce' ? transition.a45 : transition.a15 / pk.V1;
       const baseline = tci.targetType === 'ce' ? baseCeNext : baseCpNext;
-      rate = ts[i] < tci.stopTime - TIME_EPSILON && gain > 0
-        ? clamp((tci.targetBase - baseline) / gain, 0, tci.maxRate)
-        : 0;
+      rate =
+        ts[i] < tci.stopTime - TIME_EPSILON && gain > 0
+          ? clamp((activeTarget - baseline) / gain, 0, tci.maxRate)
+          : 0;
     } else {
       rate = rateOverInterval(ts[i], ts[i + 1]);
     }
@@ -921,11 +1012,22 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
     totalDoseMgKg += rate * duration;
     if (Math.abs(rate) > 1e-12) lastRateEndIndex = i + 1;
 
-    const x1 = xs1[i], x2 = xs2[i], x3 = xs3[i], ce = ces[i];
-    xs1[i+1] = transition.a11*x1 + transition.a12*x2 + transition.a13*x3 + rate*transition.a15;
-    xs2[i+1] = transition.a21*x1 + transition.a22*x2 + transition.a23*x3 + rate*transition.a25;
-    xs3[i+1] = transition.a31*x1 + transition.a32*x2 + transition.a33*x3 + rate*transition.a35;
-    ces[i+1] = transition.a41*x1 + transition.a42*x2 + transition.a43*x3 + transition.a44*ce + rate*transition.a45;
+    const x1 = xs1[i],
+      x2 = xs2[i],
+      x3 = xs3[i],
+      ce = ces[i];
+    xs1[i + 1] =
+      transition.a11 * x1 + transition.a12 * x2 + transition.a13 * x3 + rate * transition.a15;
+    xs2[i + 1] =
+      transition.a21 * x1 + transition.a22 * x2 + transition.a23 * x3 + rate * transition.a25;
+    xs3[i + 1] =
+      transition.a31 * x1 + transition.a32 * x2 + transition.a33 * x3 + rate * transition.a35;
+    ces[i + 1] =
+      transition.a41 * x1 +
+      transition.a42 * x2 +
+      transition.a43 * x3 +
+      transition.a44 * ce +
+      rate * transition.a45;
   }
 
   const finalInstant = tci?.enabled ? 0 : instantAt(ts[N]);
@@ -935,10 +1037,18 @@ function simulatePkModel({ pk, ke0, initialConcentration, finalTime, dosingPlan,
   }
 
   return {
-    ts, xs1, xs2, xs3, ces, intervalRates, totalDoseMgKg, lastRateEndIndex, hasEffectSite,
+    ts,
+    xs1,
+    xs2,
+    xs3,
+    ces,
+    intervalRates,
+    totalDoseMgKg,
+    lastRateEndIndex,
+    hasEffectSite,
     finalActiveRate: N > 0 ? intervalRates[N - 1] : 0,
-    cp: xs1.map(value => value / pk.V1),
-    ce: ces.slice()
+    cp: xs1.map((value) => value / pk.V1),
+    ce: ces.slice(),
   };
 }
 
@@ -948,7 +1058,9 @@ function buildScheduleFromTciSimulation(simulation, infusionUnit, weightKg) {
     if (!(rateMgKgMin > 0)) return;
     const start = Number(formatInputValue(simulation.ts[index]));
     const end = Number(formatInputValue(simulation.ts[index + 1]));
-    const rate = Number(formatInputValue(convertMgKgMinToInfusionValue(rateMgKgMin, infusionUnit, weightKg)));
+    const rate = Number(
+      formatInputValue(convertMgKgMinToInfusionValue(rateMgKgMin, infusionUnit, weightKg)),
+    );
     const last = infusions[infusions.length - 1];
     if (last && last.end === start && last.rate === rate) last.end = end;
     else infusions.push({ start, end, rate });
@@ -958,7 +1070,10 @@ function buildScheduleFromTciSimulation(simulation, infusionUnit, weightKg) {
 
 function importCurrentTciAsSchedule() {
   if (!document.getElementById('tciEnabled')?.checked) {
-    setSimulationStatus('Enable TCI and enter a target and maximum rate before importing its infusion schedule.', 'error');
+    setSimulationStatus(
+      'Enable TCI and enter a target and maximum rate before importing its infusion schedule.',
+      'error',
+    );
     return;
   }
   if (!validateSimulationInputs()) return;
@@ -970,7 +1085,7 @@ function importCurrentTciAsSchedule() {
   const schedule = buildScheduleFromTciSimulation(
     simulation,
     INFUSIONUNITS[state.units.infusion],
-    state.patient.weightKg
+    state.patient.weightKg,
   );
   tciImportSession = { sourceState: state, sourceSimulation: simulation, exactSchedule: schedule };
   selectedTimelineEvent = null;
@@ -980,11 +1095,14 @@ function importCurrentTciAsSchedule() {
   disableLegacyBolusInfusionInputs(true);
   expandDrawerCard('scheduleCard');
   dfsolve();
-  setSimulationStatus(`TCI rates imported as ${schedule.infusions.length} editable infusion segments. TCI is off; the schedule no longer tracks the target.`, 'ok');
+  setSimulationStatus(
+    `TCI rates imported as ${schedule.infusions.length} editable infusion segments. TCI is off; the schedule no longer tracks the target.`,
+    'ok',
+  );
 }
 
 function simplifyTciInfusions(infusions, limit) {
-  if (limit >= infusions.length) return infusions.map(item => ({ ...item }));
+  if (limit >= infusions.length) return infusions.map((item) => ({ ...item }));
   const runs = [];
   for (const infusion of infusions) {
     const last = runs[runs.length - 1];
@@ -992,9 +1110,11 @@ function simplifyTciInfusions(infusions, limit) {
     else runs.push([infusion]);
   }
   if (runs.length > limit) return null; // Never bridge a zero-rate gap.
-  const groups = runs.map(run => {
-    const duration = [0], dose = [0], squared = [0];
-    run.forEach(item => {
+  const groups = runs.map((run) => {
+    const duration = [0],
+      dose = [0],
+      squared = [0];
+    run.forEach((item) => {
       const dt = item.end - item.start;
       duration.push(duration.at(-1) + dt);
       dose.push(dose.at(-1) + item.rate * dt);
@@ -1005,9 +1125,9 @@ function simplifyTciInfusions(infusions, limit) {
   const loss = (g, a, b) => {
     const dt = g.duration[b] - g.duration[a];
     const dose = g.dose[b] - g.dose[a];
-    return dt > 0 ? g.squared[b] - g.squared[a] - dose * dose / dt : 0;
+    return dt > 0 ? g.squared[b] - g.squared[a] - (dose * dose) / dt : 0;
   };
-  const bestSplit = g => {
+  const bestSplit = (g) => {
     let best = { at: -1, gain: 0 };
     const whole = loss(g, g.from, g.to);
     for (let at = g.from + 1; at < g.to; at++) {
@@ -1017,7 +1137,7 @@ function simplifyTciInfusions(infusions, limit) {
     return best;
   };
   const heap = [];
-  const push = group => {
+  const push = (group) => {
     group.split = bestSplit(group);
     heap.push(group);
     let index = heap.length - 1;
@@ -1029,15 +1149,18 @@ function simplifyTciInfusions(infusions, limit) {
     }
   };
   const pop = () => {
-    const top = heap[0], tail = heap.pop();
+    const top = heap[0],
+      tail = heap.pop();
     if (heap.length) {
       heap[0] = tail;
       let index = 0;
       while (true) {
-        const left = index * 2 + 1, right = left + 1;
+        const left = index * 2 + 1,
+          right = left + 1;
         let largest = index;
         if (left < heap.length && heap[left].split.gain > heap[largest].split.gain) largest = left;
-        if (right < heap.length && heap[right].split.gain > heap[largest].split.gain) largest = right;
+        if (right < heap.length && heap[right].split.gain > heap[largest].split.gain)
+          largest = right;
         if (largest === index) break;
         [heap[index], heap[largest]] = [heap[largest], heap[index]];
         index = largest;
@@ -1051,14 +1174,16 @@ function simplifyTciInfusions(infusions, limit) {
     push({ ...g, to: g.split.at });
     push({ ...g, from: g.split.at });
   }
-  return heap.map(g => {
-    const dt = g.duration[g.to] - g.duration[g.from];
-    return {
-      start: g.run[g.from].start,
-      end: g.run[g.to - 1].end,
-      rate: Number(formatInputValue((g.dose[g.to] - g.dose[g.from]) / dt))
-    };
-  }).sort((a, b) => a.start - b.start);
+  return heap
+    .map((g) => {
+      const dt = g.duration[g.to] - g.duration[g.from];
+      return {
+        start: g.run[g.from].start,
+        end: g.run[g.to - 1].end,
+        rate: Number(formatInputValue((g.dose[g.to] - g.dose[g.from]) / dt)),
+      };
+    })
+    .sort((a, b) => a.start - b.start);
 }
 
 function replaceWithTciOriginal(simplified = false) {
@@ -1074,7 +1199,10 @@ function replaceWithTciOriginal(simplified = false) {
     }
     infusions = simplifyTciInfusions(exact.infusions, limit);
     if (!infusions) {
-      setSimulationStatus(`At least ${countTciInfusionRuns(exact.infusions)} segments are needed to preserve zero-rate gaps.`, 'error');
+      setSimulationStatus(
+        `At least ${countTciInfusionRuns(exact.infusions)} segments are needed to preserve zero-rate gaps.`,
+        'error',
+      );
       return;
     }
   }
@@ -1083,57 +1211,97 @@ function replaceWithTciOriginal(simplified = false) {
   document.getElementById('tciEnabled').checked = false;
   disableLegacyBolusInfusionInputs(true);
   dfsolve();
-  setSimulationStatus(`${simplified ? 'Simplified' : 'Exact'} original TCI schedule restored as ${infusions.length} editable segments. Current schedule edits were replaced.`, 'ok');
+  setSimulationStatus(
+    `${simplified ? 'Simplified' : 'Exact'} original TCI schedule restored as ${infusions.length} editable segments. Current schedule edits were replaced.`,
+    'ok',
+  );
 }
 
 function countTciInfusionRuns(infusions) {
-  return infusions.reduce((count, item, index) => count + (index === 0 || Math.abs(infusions[index - 1].end - item.start) >= 1e-8 ? 1 : 0), 0);
+  return infusions.reduce(
+    (count, item, index) =>
+      count + (index === 0 || Math.abs(infusions[index - 1].end - item.start) >= 1e-8 ? 1 : 0),
+    0,
+  );
 }
 
 function updateRegimenOverview(params, schedule) {
-  const drug = DRUGS.find(d => d.id === currentDrug);
+  const drug = DRUGS.find((d) => d.id === currentDrug);
   const drugLabel = drug ? `${drug.label}${presetIsModified ? ' — modified' : ''}` : 'Custom model';
-  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
   setText('summaryDrug', drugLabel);
   setText('summaryWeight', `${formatInputValue(params.weightKg)} kg`);
-  setText('summaryModel', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes');
-  const sourceText = drug?.note || 'Custom parameters — review volumes, clearances, effect-site rate, units, and source assumptions before interpreting this simulation.';
-  setText('summarySource', presetIsModified
-    ? `${sourceText} PK/effect-site parameters have been modified; preset therapeutic ranges are hidden.`
-    : sourceText);
+  setText(
+    'summaryModel',
+    getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes',
+  );
+  const sourceText =
+    drug?.note ||
+    'Custom parameters — review volumes, clearances, effect-site rate, units, and source assumptions before interpreting this simulation.';
+  setText(
+    'summarySource',
+    presetIsModified
+      ? `${sourceText} PK/effect-site parameters have been modified; preset therapeutic ranges are hidden.`
+      : sourceText,
+  );
 
   let segments = [];
   let description = '';
   const tci = getTciConfig();
   const plotCaption = document.getElementById('primaryPlotCaption');
   if (plotCaption) {
-    plotCaption.textContent = params.ke0 <= 0
-      ? 'Cp = central plasma concentration. Effect-site concentration is unavailable because no effect-site model is defined.'
-      : tci.enabled
-      ? 'Cp = central plasma; Ce = effect site. The dashed green line is the educational TCI target; the rate chart shows calculated delivery.'
-      : 'Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.';
+    plotCaption.textContent =
+      params.ke0 <= 0
+        ? 'Cp = central plasma concentration. Effect-site concentration is unavailable because no effect-site model is defined.'
+        : tci.enabled
+          ? 'Cp = central plasma; Ce = effect site. The dashed green line is the educational TCI target; the rate chart shows calculated delivery.'
+          : 'Cp = central plasma; Ce = effect site. Orange marks loading-dose delivery; blue marks infusion delivery.';
   }
   if (tci.enabled) {
     const compartment = tci.targetType === 'ce' ? 'effect-site (Ce)' : 'plasma (Cp)';
     const stopTime = Math.min(tci.stopTime, params.tfinal);
-    description = `Educational TCI · ${compartment} target ${formatInputValue(tci.target)} ${currentUnit.name} until ${formatInputValue(stopTime)} min · maximum ${formatInputValue(Number(document.getElementById('tciMaxRate')?.value))} ${currentInfusionUnit.name}`;
+    const changes = tci.targetChanges.length;
+    description = `Educational TCI · ${compartment} initial target ${formatInputValue(tci.target)} ${currentUnit.name}${changes ? ` · ${changes} target change${changes === 1 ? '' : 's'}` : ''} · stop ${formatInputValue(stopTime)} min · maximum ${formatInputValue(Number(document.getElementById('tciMaxRate')?.value))} ${currentInfusionUnit.name}`;
     segments = [{ start: 0, end: stopTime, type: 'infusion', index: -1, label: 'Educational TCI' }];
   } else if (schedule?.enabled) {
     const boluses = schedule.boluses || [];
     const infusions = schedule.infusions || [];
     description = `${boluses.length} bolus${boluses.length === 1 ? '' : 'es'} · ${infusions.length} infusion segment${infusions.length === 1 ? '' : 's'}`;
-    const displayedInfusions = infusions.length > MAX_VISIBLE_SCHEDULE_SEGMENTS
-      ? [{ start: infusions[0].start, end: infusions[infusions.length - 1].end, summary: true }]
-      : infusions;
+    const displayedInfusions =
+      infusions.length > MAX_VISIBLE_SCHEDULE_SEGMENTS
+        ? [{ start: infusions[0].start, end: infusions[infusions.length - 1].end, summary: true }]
+        : infusions;
     segments = [
-      ...boluses.map((event, index) => ({ start: event.time, end: event.duration > 0 ? event.time + event.duration : event.time, type: 'bolus', index, label: `Bolus ${index + 1}` })),
-      ...displayedInfusions.map((event, index) => ({ start: event.start, end: event.end, type: 'infusion', index: event.summary ? -1 : index, summary: Boolean(event.summary), label: event.summary ? `${infusions.length} infusion segments` : `Infusion ${index + 1}` }))
+      ...boluses.map((event, index) => ({
+        start: event.time,
+        end: event.duration > 0 ? event.time + event.duration : event.time,
+        type: 'bolus',
+        index,
+        label: `Bolus ${index + 1}`,
+      })),
+      ...displayedInfusions.map((event, index) => ({
+        start: event.start,
+        end: event.end,
+        type: 'infusion',
+        index: event.summary ? -1 : index,
+        summary: Boolean(event.summary),
+        label: event.summary ? `${infusions.length} infusion segments` : `Infusion ${index + 1}`,
+      })),
     ];
   } else {
     description = `Bolus ${formatInputValue(parseFloatSafe(bnum.value, 0))} ${currentBolusUnit.name} over ${formatInputValue(params.tbolus)} min · infusion ${formatInputValue(parseFloatSafe(infusionnum.value, 0))} ${currentInfusionUnit.name} for ${formatInputValue(params.tinfusion)} min`;
     segments = [
       { start: 0, end: params.tbolus, type: 'bolus', index: 0, label: 'Bolus' },
-      { start: params.tbolus, end: params.tbolus + params.tinfusion, type: 'infusion', index: 0, label: 'Infusion' }
+      {
+        start: params.tbolus,
+        end: params.tbolus + params.tinfusion,
+        type: 'infusion',
+        index: 0,
+        label: 'Infusion',
+      },
     ];
   }
   setText('summaryDose', description);
@@ -1142,9 +1310,18 @@ function updateRegimenOverview(params, schedule) {
   const track = document.getElementById('doseTimelineTrack');
   if (!track) return;
   track.textContent = '';
-  const validSegments = segments.filter(segment => Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.start <= params.tfinal && segment.end >= 0);
-  track.setAttribute('aria-label', `${description}; simulation duration ${formatInputValue(params.tfinal)} minutes.`);
-  validSegments.forEach(segment => {
+  const validSegments = segments.filter(
+    (segment) =>
+      Number.isFinite(segment.start) &&
+      Number.isFinite(segment.end) &&
+      segment.start <= params.tfinal &&
+      segment.end >= 0,
+  );
+  track.setAttribute(
+    'aria-label',
+    `${description}; simulation duration ${formatInputValue(params.tfinal)} minutes.`,
+  );
+  validSegments.forEach((segment) => {
     const start = clamp(segment.start, 0, params.tfinal);
     const end = clamp(segment.end, 0, params.tfinal);
     const marker = document.createElement('span');
@@ -1153,8 +1330,13 @@ function updateRegimenOverview(params, schedule) {
     marker.dataset.eventIndex = String(segment.index);
     marker.style.left = `${(start / params.tfinal) * 100}%`;
     marker.style.width = `${Math.max(1.2, ((Math.max(end, start) - start) / params.tfinal) * 100)}%`;
-    const eventDetails = segment.summary ? `${segment.label}; edit individual rates in Dosing Schedule` : tci.enabled ? description : getTimelineEventDetails(segment, schedule);
-    marker.title = tci.enabled || segment.summary ? eventDetails : `${eventDetails}. Click to edit.`;
+    const eventDetails = segment.summary
+      ? `${segment.label}; edit individual rates in Dosing Schedule`
+      : tci.enabled
+        ? description
+        : getTimelineEventDetails(segment, schedule);
+    marker.title =
+      tci.enabled || segment.summary ? eventDetails : `${eventDetails}. Click to edit.`;
     if (!tci.enabled && !segment.summary) {
       marker.setAttribute('role', 'button');
       marker.setAttribute('tabindex', '0');
@@ -1162,9 +1344,13 @@ function updateRegimenOverview(params, schedule) {
     }
     const label = document.createElement('span');
     label.className = 'dose-timeline__segment-label';
-    label.textContent = segment.summary ? segment.label : tci.enabled ? `TCI 0–${formatInputValue(end)} min` : segment.type === 'bolus'
-      ? `B ${formatInputValue(start)}m`
-      : `Infusion ${formatInputValue(start)}–${formatInputValue(end)} min`;
+    label.textContent = segment.summary
+      ? segment.label
+      : tci.enabled
+        ? `TCI 0–${formatInputValue(end)} min`
+        : segment.type === 'bolus'
+          ? `B ${formatInputValue(start)}m`
+          : `Infusion ${formatInputValue(start)}–${formatInputValue(end)} min`;
     marker.appendChild(label);
     track.appendChild(marker);
   });
@@ -1208,8 +1394,11 @@ function updateMainDoseEditor(schedule) {
     bolusInput.disabled = !firstBolus;
     infusionInput.disabled = !firstInfusion;
     if (bolusLabel) bolusLabel.textContent = firstBolus ? 'Earliest bolus' : 'No scheduled bolus';
-    if (infusionLabel) infusionLabel.textContent = firstInfusion ? 'Earliest infusion' : 'No scheduled infusion';
-    if (hint) hint.textContent = 'Schedule active: these controls update the earliest events. Use the timeline or schedule table to edit other events.';
+    if (infusionLabel)
+      infusionLabel.textContent = firstInfusion ? 'Earliest infusion' : 'No scheduled infusion';
+    if (hint)
+      hint.textContent =
+        'Schedule active: these controls update the earliest events. Use the timeline or schedule table to edit other events.';
     return;
   }
 
@@ -1229,10 +1418,14 @@ let selectedTimelineEvent = null;
 
 function getTimelineEventDetails(segment, schedule) {
   if (segment.type === 'bolus') {
-    const event = schedule?.enabled ? schedule.boluses?.[segment.index] : { dose: parseFloatSafe(bnum?.value, 0), duration: parseFloatSafe(tbolusnum?.value, 0) };
+    const event = schedule?.enabled
+      ? schedule.boluses?.[segment.index]
+      : { dose: parseFloatSafe(bnum?.value, 0), duration: parseFloatSafe(tbolusnum?.value, 0) };
     return `${segment.label}: ${formatInputValue(event?.dose || 0)} ${currentBolusUnit.name} at ${formatInputValue(segment.start)} min${event?.duration > 0 ? ` over ${formatInputValue(event.duration)} min` : ''}`;
   }
-  const event = schedule?.enabled ? schedule.infusions?.[segment.index] : { rate: parseFloatSafe(infusionnum?.value, 0) };
+  const event = schedule?.enabled
+    ? schedule.infusions?.[segment.index]
+    : { rate: parseFloatSafe(infusionnum?.value, 0) };
   return `${segment.label}: ${formatInputValue(event?.rate || 0)} ${currentInfusionUnit.name} from ${formatInputValue(segment.start)} to ${formatInputValue(segment.end)} min`;
 }
 
@@ -1251,20 +1444,26 @@ function renderTimelineEventEditor(schedule = getScheduleFromDOM()) {
   if (!selected) return;
 
   const isBolus = selected.type === 'bolus';
-  const toggleField = (id, visible) => { const field = document.getElementById(id); if (field) field.hidden = !visible; };
+  const toggleField = (id, visible) => {
+    const field = document.getElementById(id);
+    if (field) field.hidden = !visible;
+  };
   toggleField('timelineBolusTimeField', isBolus);
   toggleField('timelineBolusDoseField', isBolus);
   toggleField('timelineBolusDurationField', isBolus);
   toggleField('timelineInfusionStartField', !isBolus);
   toggleField('timelineInfusionEndField', !isBolus);
   toggleField('timelineInfusionRateField', !isBolus);
-  document.getElementById('timelineEventEditorHeading').textContent = `${isBolus ? 'Bolus' : 'Infusion'} ${selected.index + 1}`;
+  document.getElementById('timelineEventEditorHeading').textContent =
+    `${isBolus ? 'Bolus' : 'Infusion'} ${selected.index + 1}`;
   document.getElementById('timelineEventDoseUnit').textContent = currentBolusUnit.name;
   document.getElementById('timelineEventRateUnit').textContent = currentInfusionUnit.name;
   if (isBolus) {
     document.getElementById('timelineEventTime').value = formatInputValue(selected.event.time);
     document.getElementById('timelineEventDose').value = formatInputValue(selected.event.dose);
-    document.getElementById('timelineEventDuration').value = formatInputValue(selected.event.duration);
+    document.getElementById('timelineEventDuration').value = formatInputValue(
+      selected.event.duration,
+    );
   } else {
     document.getElementById('timelineEventStart').value = formatInputValue(selected.event.start);
     document.getElementById('timelineEventEnd').value = formatInputValue(selected.event.end);
@@ -1282,7 +1481,10 @@ function selectTimelineEvent(type, index) {
     disableLegacyBolusInfusionInputs(true);
   }
   dfsolve();
-  setSimulationStatus(`${type === 'bolus' ? 'Bolus' : 'Infusion'} selected. Edit its details below the timeline.`, 'ok');
+  setSimulationStatus(
+    `${type === 'bolus' ? 'Bolus' : 'Infusion'} selected. Edit its details below the timeline.`,
+    'ok',
+  );
 }
 
 function saveSelectedTimelineEvent() {
@@ -1295,14 +1497,25 @@ function saveSelectedTimelineEvent() {
     event.time = Number(document.getElementById('timelineEventTime')?.value);
     event.dose = Number(document.getElementById('timelineEventDose')?.value);
     event.duration = Number(document.getElementById('timelineEventDuration')?.value);
-    if (![event.time, event.dose, event.duration].every(value => Number.isFinite(value) && value >= 0)) invalid.push('Enter non-negative time, dose, and duration values.');
+    if (
+      ![event.time, event.dose, event.duration].every(
+        (value) => Number.isFinite(value) && value >= 0,
+      )
+    )
+      invalid.push('Enter non-negative time, dose, and duration values.');
     schedule.boluses.sort((a, b) => a.time - b.time);
     selectedTimelineEvent.index = schedule.boluses.indexOf(event);
   } else {
     event.start = Number(document.getElementById('timelineEventStart')?.value);
     event.end = Number(document.getElementById('timelineEventEnd')?.value);
     event.rate = Number(document.getElementById('timelineEventRate')?.value);
-    if (![event.start, event.end, event.rate].every(value => Number.isFinite(value) && value >= 0) || event.end < event.start) invalid.push('Enter non-negative start, end, and rate values; end must not precede start.');
+    if (
+      ![event.start, event.end, event.rate].every(
+        (value) => Number.isFinite(value) && value >= 0,
+      ) ||
+      event.end < event.start
+    )
+      invalid.push('Enter non-negative start, end, and rate values; end must not precede start.');
     schedule.infusions.sort((a, b) => a.start - b.start);
     selectedTimelineEvent.index = schedule.infusions.indexOf(event);
   }
@@ -1331,7 +1544,10 @@ function duplicateSelectedTimelineEvent() {
     schedule.infusions.sort((a, b) => a.start - b.start);
     selectedTimelineEvent = { type: 'infusion', index: schedule.infusions.indexOf(copy) };
   }
-  commitTimelineSchedule(schedule, `${selected.type === 'bolus' ? 'Bolus' : 'Infusion'} duplicated.`);
+  commitTimelineSchedule(
+    schedule,
+    `${selected.type === 'bolus' ? 'Bolus' : 'Infusion'} duplicated.`,
+  );
 }
 
 function deleteSelectedTimelineEvent() {
@@ -1354,12 +1570,16 @@ function getEditableTimelineSchedule() {
   const bolusDuration = Math.max(0, parseFloatSafe(tbolusnum?.value, 0));
   return {
     enabled: true,
-    boluses: [{ time: 0, dose: Math.max(0, parseFloatSafe(bnum?.value, 0)), duration: bolusDuration }],
-    infusions: [{
-      start: bolusDuration,
-      end: bolusDuration + Math.max(0, parseFloatSafe(tinfusionnum?.value, 0)),
-      rate: Math.max(0, parseFloatSafe(infusionnum?.value, 0))
-    }]
+    boluses: [
+      { time: 0, dose: Math.max(0, parseFloatSafe(bnum?.value, 0)), duration: bolusDuration },
+    ],
+    infusions: [
+      {
+        start: bolusDuration,
+        end: bolusDuration + Math.max(0, parseFloatSafe(tinfusionnum?.value, 0)),
+        rate: Math.max(0, parseFloatSafe(infusionnum?.value, 0)),
+      },
+    ],
   };
 }
 
@@ -1401,7 +1621,11 @@ function removeTimelineEvent(type, index) {
   if (!Number.isInteger(index) || index < 0 || index >= events.length) return;
   events.splice(index, 1);
   selectedTimelineEvent = null;
-  commitTimelineSchedule(schedule, `${type === 'bolus' ? 'Bolus' : 'Infusion'} removed from the schedule.`, { undoSchedule: priorSchedule });
+  commitTimelineSchedule(
+    schedule,
+    `${type === 'bolus' ? 'Bolus' : 'Infusion'} removed from the schedule.`,
+    { undoSchedule: priorSchedule },
+  );
 }
 
 function ensureTimelineEditor() {
@@ -1427,12 +1651,12 @@ function ensureTimelineEditor() {
     }
     const tfinal = Math.max(0.1, parseFloatSafe(tfinalnum?.value, 0.1));
     const left = Math.min(start, end);
-    const width = Math.max(0.5, Math.abs(end - start) / tfinal * 100);
-    draft.style.left = `${left / tfinal * 100}%`;
+    const width = Math.max(0.5, (Math.abs(end - start) / tfinal) * 100);
+    draft.style.left = `${(left / tfinal) * 100}%`;
     draft.style.width = `${width}%`;
   };
 
-  track.addEventListener('pointerdown', event => {
+  track.addEventListener('pointerdown', (event) => {
     if (getTciConfig().enabled) return;
     if (event.button !== undefined && event.button !== 0) return;
     const segment = event.target.closest('.dose-timeline__segment');
@@ -1444,7 +1668,7 @@ function ensureTimelineEditor() {
     }
   });
 
-  track.addEventListener('pointermove', event => {
+  track.addEventListener('pointermove', (event) => {
     if (!pointerStart || pointerStart.segment) return;
     const currentTime = getTimelineTimeFromPointer(event, track);
     if (Math.abs(event.clientX - pointerStart.x) > 6) dragging = true;
@@ -1454,7 +1678,7 @@ function ensureTimelineEditor() {
     }
   });
 
-  track.addEventListener('pointerup', event => {
+  track.addEventListener('pointerup', (event) => {
     if (!pointerStart) return;
     const start = pointerStart;
     const endTime = getTimelineTimeFromPointer(event, track);
@@ -1463,7 +1687,10 @@ function ensureTimelineEditor() {
 
     if (start.segment) {
       if (Math.abs(event.clientX - start.x) <= 6) {
-        selectTimelineEvent(start.segment.dataset.eventType, Number(start.segment.dataset.eventIndex));
+        selectTimelineEvent(
+          start.segment.dataset.eventType,
+          Number(start.segment.dataset.eventIndex),
+        );
       }
       return;
     }
@@ -1472,16 +1699,37 @@ function ensureTimelineEditor() {
     if (dragging) {
       const infusionStart = Math.min(start.time, endTime);
       const infusionEnd = Math.max(infusionStart + 0.1, Math.max(start.time, endTime));
-      schedule.infusions.push({ start: infusionStart, end: infusionEnd, rate: timelineDefaultInfusionRate(schedule) });
+      schedule.infusions.push({
+        start: infusionStart,
+        end: infusionEnd,
+        rate: timelineDefaultInfusionRate(schedule),
+      });
       schedule.infusions.sort((a, b) => a.start - b.start);
-      const eventIndex = schedule.infusions.findIndex(event => event.start === infusionStart && event.end === infusionEnd);
+      const eventIndex = schedule.infusions.findIndex(
+        (event) => event.start === infusionStart && event.end === infusionEnd,
+      );
       selectedTimelineEvent = { type: 'infusion', index: eventIndex };
-      commitTimelineSchedule(schedule, `Infusion added from ${formatInputValue(infusionStart)} to ${formatInputValue(infusionEnd)} min. Edit its rate below the timeline.`);
+      commitTimelineSchedule(
+        schedule,
+        `Infusion added from ${formatInputValue(infusionStart)} to ${formatInputValue(infusionEnd)} min. Edit its rate below the timeline.`,
+      );
     } else {
-      schedule.boluses.push({ time: start.time, dose: timelineDefaultBolusDose(schedule), duration: 0 });
+      schedule.boluses.push({
+        time: start.time,
+        dose: timelineDefaultBolusDose(schedule),
+        duration: 0,
+      });
       schedule.boluses.sort((a, b) => a.time - b.time);
-      selectedTimelineEvent = { type: 'bolus', index: schedule.boluses.findIndex(event => event.time === start.time && event.duration === 0) };
-      commitTimelineSchedule(schedule, `Bolus added at ${formatInputValue(start.time)} min. Edit its dose below the timeline.`);
+      selectedTimelineEvent = {
+        type: 'bolus',
+        index: schedule.boluses.findIndex(
+          (event) => event.time === start.time && event.duration === 0,
+        ),
+      };
+      commitTimelineSchedule(
+        schedule,
+        `Bolus added at ${formatInputValue(start.time)} min. Edit its dose below the timeline.`,
+      );
     }
     dragging = false;
   });
@@ -1492,12 +1740,13 @@ function ensureTimelineEditor() {
     clearDraft();
   });
 
-  track.addEventListener('keydown', event => {
+  track.addEventListener('keydown', (event) => {
     if (getTciConfig().enabled) return;
     const segment = event.target.closest('.dose-timeline__segment');
     if (!segment || !['Enter', ' ', 'Delete', 'Backspace'].includes(event.key)) return;
     event.preventDefault();
-    if (['Delete', 'Backspace'].includes(event.key)) removeTimelineEvent(segment.dataset.eventType, Number(segment.dataset.eventIndex));
+    if (['Delete', 'Backspace'].includes(event.key))
+      removeTimelineEvent(segment.dataset.eventType, Number(segment.dataset.eventIndex));
     else selectTimelineEvent(segment.dataset.eventType, Number(segment.dataset.eventIndex));
   });
 }
@@ -1516,16 +1765,16 @@ function updatePdfDoseProtocol(params, schedule) {
     table.className = 'pdf-dose-table';
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    headers.forEach(header => {
+    headers.forEach((header) => {
       const cell = document.createElement('th');
       cell.textContent = header;
       headerRow.appendChild(cell);
     });
     thead.appendChild(headerRow);
     const tbody = document.createElement('tbody');
-    rows.forEach(row => {
+    rows.forEach((row) => {
       const tr = document.createElement('tr');
-      row.forEach(value => {
+      row.forEach((value) => {
         const cell = document.createElement('td');
         cell.textContent = value;
         tr.appendChild(cell);
@@ -1537,7 +1786,7 @@ function updatePdfDoseProtocol(params, schedule) {
     container.appendChild(section);
   };
 
-  const formatTime = value => `${formatInputValue(parseFloatSafe(value, 0))} min`;
+  const formatTime = (value) => `${formatInputValue(parseFloatSafe(value, 0))} min`;
   const protocol = document.createElement('p');
   protocol.className = 'pdf-dose-note';
   protocol.textContent = `Simulation duration: ${formatTime(params.tfinal)}.`;
@@ -1547,12 +1796,35 @@ function updatePdfDoseProtocol(params, schedule) {
   if (tci.enabled) {
     addTable(
       'Educational target-controlled infusion settings',
-      ['Target compartment', `Target (${currentUnit.name})`, `Maximum rate (${currentInfusionUnit.name})`, 'Infusion stop'],
-      [[tci.targetType === 'ce' ? 'Effect site (Ce)' : 'Plasma (Cp)', formatInputValue(tci.target), formatInputValue(Number(document.getElementById('tciMaxRate')?.value)), formatTime(Math.min(tci.stopTime, params.tfinal))]]
+      [
+        'Target compartment',
+        `Initial target (${currentUnit.name})`,
+        `Maximum rate (${currentInfusionUnit.name})`,
+        'Infusion stop',
+      ],
+      [
+        [
+          tci.targetType === 'ce' ? 'Effect site (Ce)' : 'Plasma (Cp)',
+          formatInputValue(tci.target),
+          formatInputValue(Number(document.getElementById('tciMaxRate')?.value)),
+          formatTime(Math.min(tci.stopTime, params.tfinal)),
+        ],
+      ],
     );
+    if (tci.targetChanges.length) {
+      addTable(
+        'TCI target changes',
+        ['Time', `New target (${currentUnit.name})`],
+        getTciTargetChanges().map((change) => [
+          formatTime(change.time),
+          formatInputValue(change.target),
+        ]),
+      );
+    }
     const note = document.createElement('p');
     note.className = 'pdf-dose-note';
-    note.textContent = 'The calculated variable infusion rate is shown in the TCI rate graph above.';
+    note.textContent =
+      'The calculated variable infusion rate is shown in the TCI rate graph above.';
     container.appendChild(note);
     return;
   }
@@ -1561,12 +1833,20 @@ function updatePdfDoseProtocol(params, schedule) {
     addTable(
       'Bolus events',
       ['Time', `Dose (${currentBolusUnit.name})`, 'Duration'],
-      (schedule.boluses || []).map(event => [formatTime(event.time), formatInputValue(event.dose), formatTime(event.duration)])
+      (schedule.boluses || []).map((event) => [
+        formatTime(event.time),
+        formatInputValue(event.dose),
+        formatTime(event.duration),
+      ]),
     );
     addTable(
       'Infusion segments',
       ['Start', 'End', `Rate (${currentInfusionUnit.name})`],
-      (schedule.infusions || []).map(event => [formatTime(event.start), formatTime(event.end), formatInputValue(event.rate)])
+      (schedule.infusions || []).map((event) => [
+        formatTime(event.start),
+        formatTime(event.end),
+        formatInputValue(event.rate),
+      ]),
     );
     if (!(schedule.boluses || []).length && !(schedule.infusions || []).length) {
       const empty = document.createElement('p');
@@ -1579,12 +1859,18 @@ function updatePdfDoseProtocol(params, schedule) {
   addTable(
     'Bolus',
     ['Start', `Dose (${currentBolusUnit.name})`, 'Duration'],
-    [[formatTime(0), formatInputValue(parseFloatSafe(bnum.value, 0)), formatTime(params.tbolus)]]
+    [[formatTime(0), formatInputValue(parseFloatSafe(bnum.value, 0)), formatTime(params.tbolus)]],
   );
   addTable(
     'Infusion',
     ['Start', 'End', `Rate (${currentInfusionUnit.name})`],
-    [[formatTime(params.tbolus), formatTime(params.tbolus + params.tinfusion), formatInputValue(parseFloatSafe(infusionnum.value, 0))]]
+    [
+      [
+        formatTime(params.tbolus),
+        formatTime(params.tbolus + params.tinfusion),
+        formatInputValue(parseFloatSafe(infusionnum.value, 0)),
+      ],
+    ],
   );
 }
 
@@ -1592,14 +1878,24 @@ function updatePdfReportSummary(params, schedule) {
   const container = document.getElementById('pdfReportMeta');
   if (!container) return;
   container.textContent = '';
-  const drug = DRUGS.find(item => item.id === currentDrug);
+  const drug = DRUGS.find((item) => item.id === currentDrug);
   const tci = getTciConfig();
   const items = [
-    ['Drug/model', drug ? `${drug.label}${presetIsModified ? ' — modified parameters' : ''}` : 'Custom model'],
+    [
+      'Drug/model',
+      drug ? `${drug.label}${presetIsModified ? ' — modified parameters' : ''}` : 'Custom model',
+    ],
     ['Patient weight', `${formatInputValue(params.weightKg)} kg`],
     ['Simulation duration', `${formatInputValue(params.tfinal)} min`],
     ['PK inputs', getPkInputMode() === 'microconstants' ? 'Microconstants' : 'Clearance & volumes'],
-    ['Delivery strategy', tci.enabled ? `Educational TCI (${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target)` : (schedule?.enabled ? 'Custom dose schedule' : 'Bolus + infusion')]
+    [
+      'Delivery strategy',
+      tci.enabled
+        ? `Educational TCI (${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target)`
+        : schedule?.enabled
+          ? 'Custom dose schedule'
+          : 'Bolus + infusion',
+    ],
   ];
   items.forEach(([label, value]) => {
     const item = document.createElement('div');
@@ -1615,42 +1911,60 @@ function initDistributionDetails() {
   if (!details) return;
   details.addEventListener('toggle', () => {
     if (!details.open) return;
-    setTimeout(() => ['myDiv2', 'myDiv3'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && window.Plotly) Plotly.Plots.resize(el);
-    }), 0);
+    setTimeout(
+      () =>
+        ['myDiv2', 'myDiv3'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el && window.Plotly) Plotly.Plots.resize(el);
+        }),
+      0,
+    );
   });
 }
 
 function exportSimulationPdf() {
   if (latestPdfContext) updatePdfDoseProtocol(latestPdfContext.params, latestPdfContext.schedule);
-  const expandableSections = $$('.distribution-details, .model-details, .regimen-more, .regimen-model-details');
-  const priorStates = expandableSections.map(section => section.open);
+  const expandableSections = $$(
+    '.distribution-details, .model-details, .regimen-more, .regimen-model-details',
+  );
+  const priorStates = expandableSections.map((section) => section.open);
   const generatedAt = document.getElementById('pdfGeneratedAt');
   if (generatedAt) {
     generatedAt.textContent = `Generated ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}`;
   }
 
   document.body.classList.add('print-report');
-  expandableSections.forEach(section => { section.open = true; });
+  expandableSections.forEach((section) => {
+    section.open = true;
+  });
 
   // Plotly needs a layout pass once hidden detail panels become printable.
   setTimeout(() => {
-    ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach(id => {
+    ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach((id) => {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     });
     window.print();
   }, 120);
 
-  window.addEventListener('afterprint', () => {
-    document.body.classList.remove('print-report');
-    expandableSections.forEach((section, index) => { section.open = priorStates[index]; });
-    setTimeout(() => ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && window.Plotly) Plotly.Plots.resize(el);
-    }), 0);
-  }, { once: true });
+  window.addEventListener(
+    'afterprint',
+    () => {
+      document.body.classList.remove('print-report');
+      expandableSections.forEach((section, index) => {
+        section.open = priorStates[index];
+      });
+      setTimeout(
+        () =>
+          ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && window.Plotly) Plotly.Plots.resize(el);
+          }),
+        0,
+      );
+    },
+    { once: true },
+  );
 }
 
 function ensureScheduleUI() {
@@ -1676,32 +1990,62 @@ function ensureScheduleUI() {
     disableLegacyBolusInfusionInputs(useCb.checked);
     dfsolve();
   });
-  addB.addEventListener('click', () => { addBolusRow(); dfsolve(); });
-  addI.addEventListener('click', () => { addInfusionRow(); dfsolve(); });
-  clrB.addEventListener('click', () => { clearTable(bolusTbl); addBolusRow({ time: 0, dose: 0, duration: 0 }); dfsolve(); });
-  clrI.addEventListener('click', () => { clearTable(infTbl); addInfusionRow({ start: 0, end: 0, rate: 0 }); dfsolve(); });
+  addB.addEventListener('click', () => {
+    addBolusRow();
+    dfsolve();
+  });
+  addI.addEventListener('click', () => {
+    addInfusionRow();
+    dfsolve();
+  });
+  clrB.addEventListener('click', () => {
+    clearTable(bolusTbl);
+    addBolusRow({ time: 0, dose: 0, duration: 0 });
+    dfsolve();
+  });
+  clrI.addEventListener('click', () => {
+    clearTable(infTbl);
+    addInfusionRow({ start: 0, end: 0, rate: 0 });
+    dfsolve();
+  });
   convertBasicBtn?.addEventListener('click', () => {
     document.getElementById('tciEnabled').checked = false;
     const duration = Math.max(0, parseFloatSafe(tbolusnum.value, 0));
     setScheduleToDOM({
       enabled: true,
       boluses: [{ time: 0, dose: parseFloatSafe(bnum.value, 0), duration }],
-      infusions: [{ start: duration, end: duration + Math.max(0, parseFloatSafe(tinfusionnum.value, 0)), rate: parseFloatSafe(infusionnum.value, 0) }]
+      infusions: [
+        {
+          start: duration,
+          end: duration + Math.max(0, parseFloatSafe(tinfusionnum.value, 0)),
+          rate: parseFloatSafe(infusionnum.value, 0),
+        },
+      ],
     });
     disableLegacyBolusInfusionInputs(true);
     dfsolve();
   });
-  $$('[data-import-tci-schedule]').forEach(button => button.addEventListener('click', importCurrentTciAsSchedule));
-  document.getElementById('simplifyTciScheduleBtn')?.addEventListener('click', () => replaceWithTciOriginal(true));
-  document.getElementById('restoreExactTciScheduleBtn')?.addEventListener('click', () => replaceWithTciOriginal(false));
+  $$('[data-import-tci-schedule]').forEach((button) =>
+    button.addEventListener('click', importCurrentTciAsSchedule),
+  );
+  document
+    .getElementById('simplifyTciScheduleBtn')
+    ?.addEventListener('click', () => replaceWithTciOriginal(true));
+  document
+    .getElementById('restoreExactTciScheduleBtn')
+    ?.addEventListener('click', () => replaceWithTciOriginal(false));
   document.getElementById('undoTciImportBtn')?.addEventListener('click', undoTciImport);
   document.getElementById('showTciReference')?.addEventListener('change', dfsolve);
 
   let scheduleEditTimer = null;
   const scheduleInput = () => {
+    flushVisibleScheduleInputs();
     if (!useCb.checked) return;
     clearTimeout(scheduleEditTimer);
-    scheduleEditTimer = setTimeout(() => { scheduleEditTimer = null; dfsolve(); }, 250);
+    scheduleEditTimer = setTimeout(() => {
+      scheduleEditTimer = null;
+      dfsolve();
+    }, 250);
   };
   const scheduleChange = () => {
     if (!useCb.checked) return;
@@ -1718,7 +2062,7 @@ function ensureScheduleUI() {
     const btn = ev.target.closest('button');
     if (!btn) return;
     if (btn.dataset.action === 'remove') {
-      btn.closest('tr')?.remove();
+      removeScheduleEntry('bolus', btn.closest('tr').dataset.eventId);
       if (useCb.checked) dfsolve();
     }
   });
@@ -1727,14 +2071,14 @@ function ensureScheduleUI() {
     const btn = ev.target.closest('button');
     if (!btn) return;
     if (btn.dataset.action === 'remove') {
-      btn.closest('tr')?.remove();
+      removeScheduleEntry('infusion', btn.closest('tr').dataset.eventId);
       if (useCb.checked) dfsolve();
     }
   });
 }
 
 // ============================
-// Therapeutic ranges + toggle (kept)
+// Therapeutic ranges
 // ============================
 let currentDrug = null;
 let presetIsModified = false;
@@ -1746,55 +2090,9 @@ function markPresetModified() {
   setCurrentDrugLabel();
 }
 
-const EFFECT_SITE_RANGES = {
-  "propofol": [
-    {"label": "Sedation (plasma)", "unit": "µg/mL", "low": 1.0, "high": 2.0, "color": "#1f77b4"},
-    {"label": "General anesthesia (plasma)", "unit": "µg/mL", "low": 3.0, "high": 6.0, "color": "#1f77b4"},
-    {"label": "Effect-site hypnosis (Ce)", "unit": "µg/mL", "low": 2.5, "high": 4.0, "color": "#ff7f0e"}
-  ],
-  "etomidate": [
-    {"label": "Hypnosis (plasma)", "unit": "µg/mL", "low": 0.2, "high": 0.4, "color": "#1f77b4"}
-  ],
-  "ketamine": [
-    {"label": "Analgesia (plasma)", "unit": "ng/mL", "low": 100.0, "high": 200.0, "color": "#1f77b4"},
-    {"label": "Dissociative anesthesia (plasma)", "unit": "µg/mL", "low": 1.0, "high": 2.0, "color": "#1f77b4"}
-  ],
-  "dexmedetomidine": [
-    {"label": "Sedation (plasma)", "unit": "ng/mL", "low": 0.3, "high": 1.2, "color": "#1f77b4"},
-    {"label": "Deep sedation (plasma)", "unit": "ng/mL", "low": 1.2, "high": 2.0, "color": "#1f77b4"}
-  ],
-  "midazolam": [
-    {"label": "Sedation (plasma)", "unit": "µg/mL", "low": 0.05, "high": 0.15, "color": "#1f77b4"},
-    {"label": "Anesthesia (plasma)", "unit": "µg/mL", "low": 0.2, "high": 0.5, "color": "#1f77b4"}
-  ],
-  "diazepam": [
-    {"label": "Anxiolysis/sedation (plasma)", "unit": "µg/mL", "low": 0.2, "high": 2.0, "color": "#1f77b4"}
-  ],
-  "fentanyl": [
-    {"label": "Analgesia (effect-site Ce)", "unit": "ng/mL", "low": 1.0, "high": 2.0, "color": "#ff7f0e"},
-    {"label": "Anesthesia (effect-site Ce)", "unit": "ng/mL", "low": 2.0, "high": 4.0, "color": "#ff7f0e"}
-  ],
-  "hydromorphone": [],
-  "remifentanil": [
-    {"label": "Analgesia (effect-site Ce)", "unit": "ng/mL", "low": 1.0, "high": 3.0, "color": "#ff7f0e"},
-    {"label": "Anesthesia (effect-site Ce)", "unit": "ng/mL", "low": 3.0, "high": 8.0, "color": "#ff7f0e"}
-  ],
-  "sufentanil": [
-    {"label": "Analgesia (effect-site Ce)", "unit": "ng/mL", "low": 0.1, "high": 0.3, "color": "#ff7f0e"},
-    {"label": "Anesthesia (effect-site Ce)", "unit": "ng/mL", "low": 0.3, "high": 0.7, "color": "#ff7f0e"}
-  ],
-  "alfentanil": [
-    {"label": "Analgesia (effect-site Ce)", "unit": "ng/mL", "low": 50.0, "high": 150.0, "color": "#ff7f0e"},
-    {"label": "Anesthesia (effect-site Ce)", "unit": "ng/mL", "low": 150.0, "high": 300.0, "color": "#ff7f0e"}
-  ],
-  "methadone": [
-    {"label": "Analgesia (plasma)", "unit": "ng/mL", "low": 30.0, "high": 100.0, "color": "#1f77b4"}
-  ],
-  "rocuronium": [], "vecuronium": [], "cisatracurium": [], "pancuronium": [], "succinylcholine": [],
-  "lidocaine": [ {"label": "Antiarrhythmic therapeutic (plasma)", "unit": "µg/mL", "low": 1.5, "high": 5.0, "color": "#1f77b4"} ],
-  "bupivacaine": [],
-  "phenylephrine": [], "ephedrine": [], "epinephrine": [], "dobutamine": [], "dopamine": [], "milrinone": [], "vasopressin": []
-};
+const EFFECT_SITE_RANGES = Object.fromEntries(
+  PHYSIO_DRUG_REGISTRY.drugs.map((d) => [d.id, d.ranges]),
+);
 
 function valToDisplayY(value, unitName) {
   const sourceUnit = UNITS[unitName];
@@ -1808,15 +2106,23 @@ function buildTherapeuticShapes(finalTime) {
   if (!showTherapeutic || !currentDrug || presetIsModified) return { shapes };
   const ranges = EFFECT_SITE_RANGES[currentDrug] || [];
   if (!Array.isArray(ranges) || ranges.length === 0) return { shapes };
-  const x0 = 0, x1 = finalTime;
+  const x0 = 0,
+    x1 = finalTime;
 
   ranges.forEach((r) => {
     const yLow = valToDisplayY(r.low, r.unit);
     const yHigh = valToDisplayY(r.high, r.unit);
     shapes.push({
-      type: 'rect', xref: 'x', yref: 'y',
-      x0, x1, y0: yLow, y1: yHigh,
-      fillcolor: r.color, opacity: 0.07, line: { width: 0 }
+      type: 'rect',
+      xref: 'x',
+      yref: 'y',
+      x0,
+      x1,
+      y0: yLow,
+      y1: yHigh,
+      fillcolor: r.color,
+      opacity: 0.07,
+      line: { width: 0 },
     });
   });
 
@@ -1828,12 +2134,15 @@ function renderTherapeuticRangeKey() {
   const ranges = showTherapeutic && !presetIsModified ? EFFECT_SITE_RANGES[currentDrug] || [] : [];
   key.replaceChildren();
   key.hidden = !ranges.length;
-  ranges.forEach(range => {
+  ranges.forEach((range) => {
     const item = document.createElement('span');
     const swatch = document.createElement('i');
     swatch.style.backgroundColor = range.color;
     swatch.setAttribute('aria-hidden', 'true');
-    item.append(swatch, document.createTextNode(`${range.label}: ${range.low}–${range.high} ${range.unit}`));
+    item.append(
+      swatch,
+      document.createTextNode(`${range.label}: ${range.low}–${range.high} ${range.unit}`),
+    );
     key.appendChild(item);
   });
 }
@@ -1870,19 +2179,25 @@ function ensureTherapeuticToggle() {
 }
 
 // Legend formatting helper
-function legendOutsideBottom(layout, { y = -0.22, bottom = 90, fontSize = 11, itemWidth = 30 } = {}) {
+function legendOutsideBottom(
+  layout,
+  { y = -0.22, bottom = 90, fontSize = 11, itemWidth = 30 } = {},
+) {
   layout.legend = {
     ...(layout.legend || {}),
     orientation: 'h',
-    x: 0.5, xanchor: 'center',
-    y, yanchor: 'top', yref: 'paper',
+    x: 0.5,
+    xanchor: 'center',
+    y,
+    yanchor: 'top',
+    yref: 'paper',
     bgcolor: 'rgba(0,0,0,0)',
     borderwidth: 0,
     font: { size: fontSize },
     itemwidth: itemWidth,
     itemclick: 'toggle',
     itemdoubleclick: 'toggleothers',
-    tracegroupgap: 8
+    tracegroupgap: 8,
   };
 
   const m = layout.margin || {};
@@ -1891,7 +2206,7 @@ function legendOutsideBottom(layout, { y = -0.22, bottom = 90, fontSize = 11, it
     r: Math.max(20, m.r || 0),
     b: Math.max(bottom, m.b || 0),
     l: Math.max(60, m.l || 0),
-    pad: 4
+    pad: 4,
   };
 
   layout.xaxis = layout.xaxis || {};
@@ -1901,18 +2216,25 @@ function legendOutsideBottom(layout, { y = -0.22, bottom = 90, fontSize = 11, it
 }
 
 // ============================
-// Comparison feature (kept; minimal changes)
+// Strategy comparison
 // ============================
 let strategies = [];
 let compareMode = false;
 let activeStrategyId = null;
 
 function uuidLike() {
-  try { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : ('id-' + Math.random().toString(16).slice(2) + Date.now().toString(16)); }
-  catch (e) { return 'id-' + Math.random().toString(16).slice(2) + Date.now().toString(16); }
+  try {
+    return crypto && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'id-' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+  } catch (e) {
+    return 'id-' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
 }
 
-function plural(n, one, many) { return (n === 1) ? one : many; }
+function plural(n, one, many) {
+  return n === 1 ? one : many;
+}
 
 function scheduleCounts(schedule) {
   if (!schedule || !schedule.enabled) return { boluses: 1, infusions: 1 };
@@ -1928,12 +2250,12 @@ function getCurrentState(name = 'Current') {
     drug: currentDrug,
     presetModified: presetIsModified,
     patient: {
-      weightKg: getWeightKg()
+      weightKg: getWeightKg(),
     },
     units: {
       conc: currentUnit?.name || 'mg/mL',
       bolus: currentBolusUnit?.name || 'mg/kg',
-      infusion: currentInfusionUnit?.name || 'mg/kg/min'
+      infusion: currentInfusionUnit?.name || 'mg/kg/min',
     },
     inputs: {
       b: parseFloatSafe(bnum.value),
@@ -1941,7 +2263,7 @@ function getCurrentState(name = 'Current') {
       infusion: parseFloatSafe(infusionnum.value),
       tinfusion: parseFloatSafe(tinfusionnum.value),
       tfinal: parseFloatSafe(tfinalnum.value),
-      initialp: parseFloatSafe(initialpnum.value)
+      initialp: parseFloatSafe(initialpnum.value),
     },
     schedule: getScheduleFromDOM(),
     tci: {
@@ -1949,7 +2271,8 @@ function getCurrentState(name = 'Current') {
       targetType: document.getElementById('tciTargetType')?.value === 'ce' ? 'ce' : 'cp',
       target: parseFloatSafe(document.getElementById('tciTarget')?.value, 0),
       maxRate: parseFloatSafe(document.getElementById('tciMaxRate')?.value, 0),
-      stopTime: parseFloatSafe(document.getElementById('tciStopTime')?.value, 0)
+      stopTime: parseFloatSafe(document.getElementById('tciStopTime')?.value, 0),
+      changes: getTciTargetChanges(),
     },
     pk: {
       inputMode: getPkInputMode(),
@@ -1964,8 +2287,8 @@ function getCurrentState(name = 'Current') {
       k21: parseFloatSafe(k21inputnum?.value, 0),
       k13: parseFloatSafe(k13inputnum?.value, 0),
       k31: parseFloatSafe(k31inputnum?.value, 0),
-      ke0: Number.isFinite(parseFloat(ke0num.value)) ? parseFloat(ke0num.value) : 0
-    }
+      ke0: Number.isFinite(parseFloat(ke0num.value)) ? parseFloat(ke0num.value) : 0,
+    },
   };
 }
 
@@ -1977,11 +2300,12 @@ function renderStrategyList() {
     return;
   }
 
-  const rows = strategies.map(s => {
-    const activeClass = (s.id === activeStrategyId) ? 'border-primary' : '';
-    const c = scheduleCounts(s.schedule);
-    const subtitle = `${c.boluses} ${plural(c.boluses,'bolus','boluses')}; ${c.infusions} ${plural(c.infusions,'infusion','infusions')}; tfinal ${s.inputs.tfinal} min`;
-    return `
+  const rows = strategies
+    .map((s) => {
+      const activeClass = s.id === activeStrategyId ? 'border-primary' : '';
+      const c = scheduleCounts(s.schedule);
+      const subtitle = `${c.boluses} ${plural(c.boluses, 'bolus', 'boluses')}; ${c.infusions} ${plural(c.infusions, 'infusion', 'infusions')}; tfinal ${s.inputs.tfinal} min`;
+      return `
       <div class="list-group-item ${activeClass}" data-id="${escapeHtml(s.id)}">
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div class="flex-grow-1">
@@ -1994,7 +2318,8 @@ function renderStrategyList() {
           </div>
         </div>
       </div>`;
-  }).join('');
+    })
+    .join('');
 
   list.innerHTML = rows;
 }
@@ -2002,7 +2327,7 @@ function renderStrategyList() {
 function captureCurrentStrategy() {
   const live = getCurrentState();
   const n = strategies.length + 1;
-  const s = { ...live, id: uuidLike(), name: `${(currentDrug ?? 'Drug')} strategy ${n}` };
+  const s = { ...live, id: uuidLike(), name: `${currentDrug ?? 'Drug'} strategy ${n}` };
   strategies.push(s);
   activeStrategyId = s.id;
   renderStrategyList();
@@ -2019,7 +2344,7 @@ function clearStrategies() {
 }
 
 function loadStrategyToInputs(id) {
-  const s = strategies.find(x => x.id === id);
+  const s = strategies.find((x) => x.id === id);
   if (!s) return;
   chartRevision++;
   tciImportSession = null;
@@ -2033,7 +2358,8 @@ function restoreSimulationState(s) {
   const tciEnabled = document.getElementById('tciEnabled');
   if (tciEnabled) tciEnabled.checked = false;
   try {
-    if (s.drug && typeof window[s.drug] === 'function') withoutIntermediateSolve(() => window[s.drug]());
+    const preset = DRUGS.find((drug) => drug.id === s.drug);
+    if (preset) withoutIntermediateSolve(preset.apply);
   } catch (e) {
     console.warn('Could not switch drug preset:', e);
   }
@@ -2061,13 +2387,13 @@ function restoreSimulationState(s) {
   Q3num.value = s.pk.Q3;
   ke0num.value = s.pk.ke0;
 
-  if (pkInputModeSelect) pkInputModeSelect.value = s.pk.inputMode || "clearance";
-  if (k10inputnum) k10inputnum.value = s.pk.k10 ?? "";
-  if (k12inputnum) k12inputnum.value = s.pk.k12 ?? "";
-  if (k21inputnum) k21inputnum.value = s.pk.k21 ?? "";
-  if (k13inputnum) k13inputnum.value = s.pk.k13 ?? "";
-  if (k31inputnum) k31inputnum.value = s.pk.k31 ?? "";
-  if ((s.pk.inputMode || "clearance") === "microconstants") syncClearanceInputsFromMicroInputs();
+  if (pkInputModeSelect) pkInputModeSelect.value = s.pk.inputMode || 'clearance';
+  if (k10inputnum) k10inputnum.value = s.pk.k10 ?? '';
+  if (k12inputnum) k12inputnum.value = s.pk.k12 ?? '';
+  if (k21inputnum) k21inputnum.value = s.pk.k21 ?? '';
+  if (k13inputnum) k13inputnum.value = s.pk.k13 ?? '';
+  if (k31inputnum) k31inputnum.value = s.pk.k31 ?? '';
+  if ((s.pk.inputMode || 'clearance') === 'microconstants') syncClearanceInputsFromMicroInputs();
   else syncMicroInputsFromClearanceInputs();
   updatePkInputVisibility();
 
@@ -2080,6 +2406,7 @@ function restoreSimulationState(s) {
     document.getElementById('tciTarget').value = s.tci.target;
     document.getElementById('tciMaxRate').value = s.tci.maxRate;
     document.getElementById('tciStopTime').value = s.tci.stopTime;
+    setTciTargetChanges(s.tci.changes || []);
   }
   disableLegacyBolusInfusionInputs(Boolean(tciEnabled?.checked || s.schedule?.enabled));
   setCurrentDrugLabel();
@@ -2092,12 +2419,15 @@ function undoTciImport() {
   selectedTimelineEvent = null;
   restoreSimulationState(sourceState);
   dfsolve();
-  setSimulationStatus('Original TCI settings restored. Schedule edits made since import were discarded.', 'ok');
+  setSimulationStatus(
+    'Original TCI settings restored. Schedule edits made since import were discarded.',
+    'ok',
+  );
 }
 
 function deleteStrategy(id) {
-  strategies = strategies.filter(s => s.id !== id);
-  if (activeStrategyId === id) activeStrategyId = (strategies[0]?.id || null);
+  strategies = strategies.filter((s) => s.id !== id);
+  if (activeStrategyId === id) activeStrategyId = strategies[0]?.id || null;
   renderStrategyList();
   dfsolve();
 }
@@ -2110,7 +2440,10 @@ function ensureCompareUI() {
   if (!cb || !addBtn || !clearBtn || !list) return;
 
   cb.checked = compareMode;
-  cb.addEventListener('change', function () { compareMode = this.checked; dfsolve(); });
+  cb.addEventListener('change', function () {
+    compareMode = this.checked;
+    dfsolve();
+  });
   addBtn.addEventListener('click', () => captureCurrentStrategy());
   clearBtn.addEventListener('click', () => clearStrategies());
 
@@ -2127,19 +2460,22 @@ function ensureCompareUI() {
     const inp = ev.target.closest('input.strategy-name');
     if (!inp) return;
     const id = inp.getAttribute('data-id');
-    const s = strategies.find(x => x.id === id);
+    const s = strategies.find((x) => x.id === id);
     if (s) s.name = inp.value;
+  });
+  list.addEventListener('change', (ev) => {
+    if (ev.target.matches('input.strategy-name')) dfsolve();
   });
 
   renderStrategyList();
 }
 
-// Strategy simulation for comparison (kept, trimmed but equivalent)
+// Simulate a saved strategy independently of the current form.
 function simulateStrategy(state) {
   const p = { ...(state.pk || {}) };
   const inp = state.inputs;
 
-  if ((p.inputMode || "clearance") === "microconstants") {
+  if ((p.inputMode || 'clearance') === 'microconstants') {
     p.Vd2 = p.k21 > 0 ? (p.k12 * p.Vd1) / p.k21 : 0;
     p.Vd3 = p.k31 > 0 ? (p.k13 * p.Vd1) / p.k31 : 0;
     p.Cl = p.k10 * p.Vd1;
@@ -2148,7 +2484,7 @@ function simulateStrategy(state) {
   }
 
   let k10, k12, k21, k13, k31;
-  if ((p.inputMode || "clearance") === "microconstants") {
+  if ((p.inputMode || 'clearance') === 'microconstants') {
     k10 = parseFloatSafe(p.k10, 0);
     k12 = parseFloatSafe(p.k12, 0);
     k21 = parseFloatSafe(p.k21, 0);
@@ -2167,21 +2503,26 @@ function simulateStrategy(state) {
 
   const bUnit = BOLUSUNITS[state.units.bolus] || BOLUSUNITS['mg/kg'];
   const iUnit = INFUSIONUNITS[state.units.infusion] || INFUSIONUNITS['mg/kg/min'];
-  const weightKg = (state.patient?.weightKg && state.patient.weightKg > 0) ? state.patient.weightKg : 70;
+  const weightKg =
+    state.patient?.weightKg && state.patient.weightKg > 0 ? state.patient.weightKg : 70;
   const dosingPlan = buildDosingPlan({
     schedule: state.schedule,
     basic: { bolus: inp.b, tbolus: inp.tbolus, infusion: inp.infusion, tinfusion: inp.tinfusion },
     bolusUnit: bUnit,
     infusionUnit: iUnit,
-    weightKg
+    weightKg,
   });
   const savedTci = state.tci || { enabled: false };
   const tci = {
     enabled: Boolean(savedTci.enabled),
     targetType: savedTci.targetType === 'ce' ? 'ce' : 'cp',
     targetBase: parseFloatSafe(savedTci.target, 0) / initUnit.factor,
+    targetChanges: (savedTci.changes || []).map((change) => ({
+      time: change.time,
+      targetBase: change.target / initUnit.factor,
+    })),
     maxRate: convertInfusionValueToMgKgMin(savedTci.maxRate, iUnit, weightKg),
-    stopTime: Math.max(0, parseFloatSafe(savedTci.stopTime, 0))
+    stopTime: Math.max(0, parseFloatSafe(savedTci.stopTime, 0)),
   };
   return simulatePkModel({
     pk: { V1: p.Vd1, V2: p.Vd2, V3: p.Vd3, k10, k12, k21, k13, k31 },
@@ -2189,39 +2530,46 @@ function simulateStrategy(state) {
     initialConcentration: initialp_mgml,
     finalTime: Math.max(0, parseFloatSafe(inp.tfinal, 0)),
     dosingPlan,
-    tci
+    tci,
   });
 }
 
 function trapz(y, x) {
   let s = 0;
   for (let i = 1; i < y.length; i++) {
-    const dx = x[i] - x[i-1];
-    s += 0.5 * (y[i] + y[i-1]) * dx;
+    const dx = x[i] - x[i - 1];
+    s += 0.5 * (y[i] + y[i - 1]) * dx;
   }
   return s;
 }
 
-
 function computeMetrics(sim) {
   const { ts, cp, ce } = sim;
   const idxCp = cp.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0);
-  const idxCe = sim.hasEffectSite ? ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0) : null;
+  const idxCe = sim.hasEffectSite
+    ? ce.reduce((imax, v, i, arr) => (v > arr[imax] ? i : imax), 0)
+    : null;
 
   return {
     totalDose_mgkg: sim.totalDoseMgKg,
-    cmaxCp: cp[idxCp], tmaxCp: ts[idxCp],
-    cmaxCe: idxCe == null ? null : ce[idxCe], tmaxCe: idxCe == null ? null : ts[idxCe],
-    aucCp: trapz(cp, ts), aucCe: sim.hasEffectSite ? trapz(ce, ts) : null
+    cmaxCp: cp[idxCp],
+    tmaxCp: ts[idxCp],
+    cmaxCe: idxCe == null ? null : ce[idxCe],
+    tmaxCe: idxCe == null ? null : ts[idxCe],
+    aucCp: trapz(cp, ts),
+    aucCe: sim.hasEffectSite ? trapz(ce, ts) : null,
   };
 }
 
 function renderCompareResults(rows, unitLabel) {
   const container = document.getElementById('compareResults');
   if (!container) return;
-  if (!rows || !rows.length) { container.innerHTML = ''; return; }
+  if (!rows || !rows.length) {
+    container.innerHTML = '';
+    return;
+  }
 
-  const fmt = (x, sig=3) => Number.isFinite(x) ? roundToSignificantFigures(x, sig) : 'N/A';
+  const fmt = (x, sig = 3) => (Number.isFinite(x) ? roundToSignificantFigures(x, sig) : 'N/A');
 
   const header = `
     <table class="table table-bordered table-sm align-middle text-center">
@@ -2239,9 +2587,10 @@ function renderCompareResults(rows, unitLabel) {
       </thead>
       <tbody>`;
 
-  const body = rows.map(r => {
-    const m = r.metrics;
-    return `
+  const body = rows
+    .map((r) => {
+      const m = r.metrics;
+      return `
       <tr>
         <td class="text-start">${escapeHtml(r.state.name)}</td>
         <td>${fmt(m.totalDose_mgkg, 4)}</td>
@@ -2252,18 +2601,30 @@ function renderCompareResults(rows, unitLabel) {
         <td>${fmt(m.aucCp * currentUnit.factor, 4)}</td>
         <td>${fmt(m.aucCe == null ? null : m.aucCe * currentUnit.factor, 4)}</td>
       </tr>`;
-  }).join('');
+    })
+    .join('');
 
   container.innerHTML = header + body + '</tbody></table>';
 }
 
 function plotComparisonFromCurrent() {
   const live = getCurrentState('Current');
-  const relevant = strategies.filter(s => s.drug === currentDrug);
+  const relevant = strategies.filter((s) => s.drug === currentDrug);
   const all = [live, ...relevant];
   if (all.length <= 1) return;
 
-  const palette = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'];
+  const palette = [
+    '#1f77b4',
+    '#ff7f0e',
+    '#2ca02c',
+    '#d62728',
+    '#9467bd',
+    '#8c564b',
+    '#e377c2',
+    '#7f7f7f',
+    '#bcbd22',
+    '#17becf',
+  ];
   const unitLabel = currentUnit.name;
   const yFactor = currentUnit.factor;
 
@@ -2273,9 +2634,21 @@ function plotComparisonFromCurrent() {
   all.forEach((s, i) => {
     const sim = simulateStrategy(s);
     const color = palette[i % palette.length];
-    traces.push({ x: sim.ts, y: sim.cp.map(v => v * yFactor), name: `${s.name} Cp (${unitLabel})`, legendgroup: s.id, line: { color, width: 2 } });
+    traces.push({
+      x: sim.ts,
+      y: sim.cp.map((v) => v * yFactor),
+      name: `${s.name} Cp (${unitLabel})`,
+      legendgroup: s.id,
+      line: { color, width: 2 },
+    });
     if (sim.hasEffectSite) {
-      traces.push({ x: sim.ts, y: sim.ce.map(v => v * yFactor), name: `${s.name} Ce (${unitLabel})`, legendgroup: s.id, line: { color, width: 2, dash: 'dot' } });
+      traces.push({
+        x: sim.ts,
+        y: sim.ce.map((v) => v * yFactor),
+        name: `${s.name} Ce (${unitLabel})`,
+        legendgroup: s.id,
+        line: { color, width: 2, dash: 'dot' },
+      });
     }
     metricsRows.push({ state: s, metrics: computeMetrics(sim) });
   });
@@ -2283,29 +2656,34 @@ function plotComparisonFromCurrent() {
   const layout = {
     title: { text: 'Central vs Effect-site (Comparison)' },
     xaxis: { title: { text: 'Time (min)' } },
-    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' }
+    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' },
   };
 
   const { shapes: therShapes } = buildTherapeuticShapes(live.inputs.tfinal);
-  layout.shapes = [ ...(layout.shapes || []), ...therShapes ];
+  layout.shapes = [...(layout.shapes || []), ...therShapes];
   legendOutsideBottom(layout);
   renderPlot('myDiv1', traces, layout);
   renderCompareResults(metricsRows, unitLabel);
 }
 
-
 // ============================
 // PK input mode: clearances/volumes vs microconstants
 // ============================
 function getPkInputMode() {
-  return pkInputModeSelect?.value || "clearance";
+  return pkInputModeSelect?.value || 'clearance';
 }
 
 function updatePkInputVisibility() {
-  const microMode = getPkInputMode() === "microconstants";
-  $$(".pk-clearance-row").forEach(row => { row.style.display = microMode ? "none" : ""; });
-  $$(".pk-clearance-volume-row").forEach(row => { row.style.display = microMode ? "none" : ""; });
-  $$(".pk-micro-row").forEach(row => { row.style.display = microMode ? "" : "none"; });
+  const microMode = getPkInputMode() === 'microconstants';
+  $$('.pk-clearance-row').forEach((row) => {
+    row.style.display = microMode ? 'none' : '';
+  });
+  $$('.pk-clearance-volume-row').forEach((row) => {
+    row.style.display = microMode ? 'none' : '';
+  });
+  $$('.pk-micro-row').forEach((row) => {
+    row.style.display = microMode ? '' : 'none';
+  });
 }
 
 function syncMicroInputsFromClearanceInputs() {
@@ -2349,7 +2727,7 @@ function getPkParametersFromInputs() {
   const V1 = parseFloatSafe(Vd1num?.value, 0);
   let V2, V3, Cl, Q2, Q3, k10, k12, k21, k13, k31;
 
-  if (mode === "microconstants") {
+  if (mode === 'microconstants') {
     k10 = parseFloatSafe(k10inputnum?.value, 0);
     k12 = parseFloatSafe(k12inputnum?.value, 0);
     k21 = parseFloatSafe(k21inputnum?.value, 0);
@@ -2376,7 +2754,7 @@ function getPkParametersFromInputs() {
 }
 
 // ============================
-// Main solver / plotting (preserved)
+// Main solver and plotting
 // ============================
 function addEventMarkers(layout) {
   const finalTime = parseFloatSafe(document.getElementById('tfinal')?.value, 0);
@@ -2386,8 +2764,26 @@ function addEventMarkers(layout) {
   if (tci.enabled) {
     const stopTime = Math.min(tci.stopTime, finalTime);
     if (stopTime > 0 && stopTime < finalTime) {
-      layout.shapes.push({ type: 'line', x0: stopTime, x1: stopTime, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: '#198754', width: 0.8, dash: 'dot' } });
-      layout.annotations.push({ x: stopTime, y: 1, xref: 'x', yref: 'paper', text: 'TCI stop', showarrow: false, yanchor: 'bottom', font: { color: '#198754', size: 10 } });
+      layout.shapes.push({
+        type: 'line',
+        x0: stopTime,
+        x1: stopTime,
+        y0: 0,
+        y1: 1,
+        xref: 'x',
+        yref: 'paper',
+        line: { color: '#198754', width: 0.8, dash: 'dot' },
+      });
+      layout.annotations.push({
+        x: stopTime,
+        y: 1,
+        xref: 'x',
+        yref: 'paper',
+        text: 'TCI stop',
+        showarrow: false,
+        yanchor: 'bottom',
+        font: { color: '#198754', size: 10 },
+      });
     }
     return layout;
   }
@@ -2398,33 +2794,108 @@ function addEventMarkers(layout) {
     const infusionStop = parseFloatSafe(document.getElementById('tinfusion')?.value, 0) + bolusTime;
 
     if (bolusTime > 0 && bolusTime < finalTime) {
-      layout.shapes.push({ type: 'line', x0: bolusTime, x1: bolusTime, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: 'red', width: 0.6, dash: 'dot' } });
-      layout.annotations.push({ x: bolusTime, y: 1, xref: 'x', yref: 'paper', text: 'Bolus', showarrow: false, yanchor: 'bottom', font: { color: 'red', size: 10 } });
+      layout.shapes.push({
+        type: 'line',
+        x0: bolusTime,
+        x1: bolusTime,
+        y0: 0,
+        y1: 1,
+        xref: 'x',
+        yref: 'paper',
+        line: { color: 'red', width: 0.6, dash: 'dot' },
+      });
+      layout.annotations.push({
+        x: bolusTime,
+        y: 1,
+        xref: 'x',
+        yref: 'paper',
+        text: 'Bolus',
+        showarrow: false,
+        yanchor: 'bottom',
+        font: { color: 'red', size: 10 },
+      });
     }
 
     if (infusionStop > 0 && infusionStop < finalTime) {
-      layout.shapes.push({ type: 'line', x0: infusionStop, x1: infusionStop, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: 'blue', width: 0.6, dash: 'dot' } });
-      layout.annotations.push({ x: infusionStop, y: 1, xref: 'x', yref: 'paper', text: 'Infusion End', showarrow: false, yanchor: 'bottom', font: { color: 'blue', size: 10 } });
+      layout.shapes.push({
+        type: 'line',
+        x0: infusionStop,
+        x1: infusionStop,
+        y0: 0,
+        y1: 1,
+        xref: 'x',
+        yref: 'paper',
+        line: { color: 'blue', width: 0.6, dash: 'dot' },
+      });
+      layout.annotations.push({
+        x: infusionStop,
+        y: 1,
+        xref: 'x',
+        yref: 'paper',
+        text: 'Infusion End',
+        showarrow: false,
+        yanchor: 'bottom',
+        font: { color: 'blue', size: 10 },
+      });
     }
     return layout;
   }
 
-  const boluses = (schedule.boluses || []).filter(b => Number.isFinite(b.time));
-  const infs = (schedule.infusions || []).filter(i => Number.isFinite(i.start) && Number.isFinite(i.end));
+  const boluses = (schedule.boluses || []).filter((b) => Number.isFinite(b.time));
+  const infs = (schedule.infusions || []).filter(
+    (i) => Number.isFinite(i.start) && Number.isFinite(i.end),
+  );
 
   boluses.forEach((b, k) => {
     const t = b.time;
     if (t >= 0 && t <= finalTime) {
-      layout.shapes.push({ type: 'line', x0: t, x1: t, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: 'red', width: 0.6, dash: 'dot' } });
-      if (k < 6) layout.annotations.push({ x: t, y: 1, xref: 'x', yref: 'paper', text: `B${k+1}`, showarrow: false, yanchor: 'bottom', font: { color: 'red', size: 10 } });
+      layout.shapes.push({
+        type: 'line',
+        x0: t,
+        x1: t,
+        y0: 0,
+        y1: 1,
+        xref: 'x',
+        yref: 'paper',
+        line: { color: 'red', width: 0.6, dash: 'dot' },
+      });
+      if (k < 6)
+        layout.annotations.push({
+          x: t,
+          y: 1,
+          xref: 'x',
+          yref: 'paper',
+          text: `B${k + 1}`,
+          showarrow: false,
+          yanchor: 'bottom',
+          font: { color: 'red', size: 10 },
+        });
     }
   });
 
   if (infs.length > MAX_VISIBLE_SCHEDULE_SEGMENTS) {
     [infs[0].start, infs[infs.length - 1].end].forEach((time, index) => {
       if (time >= 0 && time <= finalTime) {
-        layout.shapes.push({ type: 'line', x0: time, x1: time, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: 'blue', width: 0.6, dash: 'dot' } });
-        layout.annotations.push({ x: time, y: 1, xref: 'x', yref: 'paper', text: index === 0 ? 'Variable infusion start' : 'Variable infusion end', showarrow: false, yanchor: 'bottom', font: { color: 'blue', size: 10 } });
+        layout.shapes.push({
+          type: 'line',
+          x0: time,
+          x1: time,
+          y0: 0,
+          y1: 1,
+          xref: 'x',
+          yref: 'paper',
+          line: { color: 'blue', width: 0.6, dash: 'dot' },
+        });
+        layout.annotations.push({
+          x: time,
+          y: 1,
+          xref: 'x',
+          yref: 'paper',
+          text: index === 0 ? 'Variable infusion start' : 'Variable infusion end',
+          showarrow: false,
+          yanchor: 'bottom',
+          font: { color: 'blue', size: 10 },
+        });
       }
     });
     return layout;
@@ -2435,10 +2906,28 @@ function addEventMarkers(layout) {
     const e = Math.max(0, seg.end);
     [s, e].forEach((t, j) => {
       if (t >= 0 && t <= finalTime) {
-        layout.shapes.push({ type: 'line', x0: t, x1: t, y0: 0, y1: 1, xref: 'x', yref: 'paper', line: { color: 'blue', width: 0.6, dash: 'dot' } });
+        layout.shapes.push({
+          type: 'line',
+          x0: t,
+          x1: t,
+          y0: 0,
+          y1: 1,
+          xref: 'x',
+          yref: 'paper',
+          line: { color: 'blue', width: 0.6, dash: 'dot' },
+        });
         if (k < 4) {
-          const label = (j === 0) ? `I${k+1}s` : `I${k+1}e`;
-          layout.annotations.push({ x: t, y: 1, xref: 'x', yref: 'paper', text: label, showarrow: false, yanchor: 'bottom', font: { color: 'blue', size: 10 } });
+          const label = j === 0 ? `I${k + 1}s` : `I${k + 1}e`;
+          layout.annotations.push({
+            x: t,
+            y: 1,
+            xref: 'x',
+            yref: 'paper',
+            text: label,
+            showarrow: false,
+            yanchor: 'bottom',
+            font: { color: 'blue', size: 10 },
+          });
         }
       }
     });
@@ -2456,7 +2945,9 @@ function toArray(m) {
 
 function getScheduleWarnings(schedule, finalTime) {
   const warnings = [];
-  const infusions = schedule.infusions.filter(i => Number.isFinite(i.start) && Number.isFinite(i.end) && i.end > i.start);
+  const infusions = schedule.infusions.filter(
+    (i) => Number.isFinite(i.start) && Number.isFinite(i.end) && i.end > i.start,
+  );
   let furthestEnd = 0;
   infusions.forEach((infusion, index) => {
     if (index && infusion.start < furthestEnd - TIME_EPSILON) {
@@ -2466,10 +2957,16 @@ function getScheduleWarnings(schedule, finalTime) {
     }
     furthestEnd = Math.max(furthestEnd, infusion.end);
   });
-  if (Number.isFinite(finalTime) && (
-    infusions.some(i => i.start >= finalTime || i.end > finalTime + TIME_EPSILON) ||
-    schedule.boluses.some(b => b.time > finalTime || b.time + b.duration > finalTime + TIME_EPSILON)
-  )) warnings.push('Some dosing extends beyond the simulation end time and is truncated or omitted.');
+  if (
+    Number.isFinite(finalTime) &&
+    (infusions.some((i) => i.start >= finalTime || i.end > finalTime + TIME_EPSILON) ||
+      schedule.boluses.some(
+        (b) => b.time > finalTime || b.time + b.duration > finalTime + TIME_EPSILON,
+      ))
+  )
+    warnings.push(
+      'Some dosing extends beyond the simulation end time and is truncated or omitted.',
+    );
   return [...new Set(warnings)];
 }
 
@@ -2483,13 +2980,20 @@ function validateSimulationInputs() {
     Object.entries(MAIN_INPUT_LINKS).forEach(([mainId, sourceId]) => {
       if (sourceId === id) linkedIds.push(mainId);
     });
-    linkedIds.forEach(invalidId => {
+    linkedIds.forEach((invalidId) => {
       invalidIds.add(invalidId);
       const error = document.getElementById(`${invalidId}Error`);
-      if (error && !error.textContent) { error.textContent = message; error.hidden = false; }
+      if (error && !error.textContent) {
+        error.textContent = message;
+        error.hidden = false;
+      }
     });
   };
-  const readNumber = (id, label, { min = -Infinity, strictlyPositive = false, optional = false } = {}) => {
+  const readNumber = (
+    id,
+    label,
+    { min = -Infinity, strictlyPositive = false, optional = false } = {},
+  ) => {
     const el = document.getElementById(id);
     const raw = el?.value?.trim();
     if (optional && raw === '') return 0;
@@ -2501,8 +3005,14 @@ function validateSimulationInputs() {
     return value;
   };
 
-  $$('.form-control.is-invalid').forEach(el => { el.classList.remove('is-invalid'); el.removeAttribute('aria-invalid'); });
-  $$('.field-error').forEach(el => { el.hidden = true; el.textContent = ''; });
+  $$('.form-control.is-invalid').forEach((el) => {
+    el.classList.remove('is-invalid');
+    el.removeAttribute('aria-invalid');
+  });
+  $$('.field-error').forEach((el) => {
+    el.hidden = true;
+    el.textContent = '';
+  });
   readNumber('weight', 'Weight', { strictlyPositive: true });
   const finalTime = readNumber('tfinal', 'Final time', { strictlyPositive: true });
   if (finalTime != null && finalTime > MAX_SIMULATION_MINUTES) {
@@ -2520,6 +3030,7 @@ function validateSimulationInputs() {
     readNumber('tinfusion', 'Infusion duration', { min: 0 });
   }
   if (tciActive) {
+    validateTciTargetChanges(addError);
     readNumber('tciTarget', 'TCI target', { strictlyPositive: true });
     readNumber('tciMaxRate', 'TCI maximum rate', { strictlyPositive: true });
     readNumber('tciStopTime', 'TCI stop time', { min: 0 });
@@ -2534,8 +3045,10 @@ function validateSimulationInputs() {
     const k13 = readNumber('k13input', 'k13', { min: 0 });
     const k31 = readNumber('k31input', 'k31', { min: 0 });
     readNumber('k10input', 'k10', { min: 0 });
-    if (k12 > 0 && k21 <= 0) addError('k21input', 'k21 must be greater than 0 when k12 is greater than 0.');
-    if (k13 > 0 && k31 <= 0) addError('k31input', 'k31 must be greater than 0 when k13 is greater than 0.');
+    if (k12 > 0 && k21 <= 0)
+      addError('k21input', 'k21 must be greater than 0 when k12 is greater than 0.');
+    if (k13 > 0 && k31 <= 0)
+      addError('k31input', 'k31 must be greater than 0 when k13 is greater than 0.');
   } else {
     const v2 = readNumber('Vd2', 'V2', { min: 0 });
     const v3 = readNumber('Vd3', 'V3', { min: 0 });
@@ -2548,39 +3061,20 @@ function validateSimulationInputs() {
 
   const schedule = getScheduleFromDOM();
   if (scheduleActive && schedule.enabled) {
-    $$('#bolusEventsTable tbody tr').forEach((row, index) => {
-      const fields = ['time', 'dose', 'duration'].map(field => row.querySelector(`[data-field="${field}"]`)?.value?.trim());
-      const [time, dose, duration] = fields.map(Number);
-      if (fields.some(value => value === '') || !Number.isFinite(time) || time < 0 || !Number.isFinite(dose) || dose < 0 || !Number.isFinite(duration) || duration < 0) {
-        addError(null, `Bolus ${index + 1} must have non-negative time, dose, and duration.`);
-        $$('input', row).forEach(el => el.classList.add('is-invalid'));
-        if (row === getQuickScheduleRow('bolus') && (fields[1] === '' || !Number.isFinite(dose) || dose < 0)) {
-          addError('mainBolusAmount', 'Bolus amount must be a number at least 0.');
-        }
-      }
-    });
-    $$('#infusionEventsTable tbody tr').forEach((row, index) => {
-      const fields = ['start', 'end', 'rate'].map(field => row.querySelector(`[data-field="${field}"]`)?.value?.trim());
-      const [start, end, rate] = fields.map(Number);
-      if (fields.some(value => value === '') || !Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end < start || !Number.isFinite(rate) || rate < 0) {
-        addError(null, `Infusion ${index + 1} must have non-negative start/end/rate values, with end at or after start.`);
-        $$('input', row).forEach(el => el.classList.add('is-invalid'));
-        if (row === getQuickScheduleRow('infusion') && (fields[2] === '' || !Number.isFinite(rate) || rate < 0)) {
-          addError('mainInfusionRate', 'Infusion rate must be a number at least 0.');
-        }
-      }
-    });
+    validateScheduleState(addError);
   }
 
-  invalidIds.forEach(id => document.getElementById(id)?.classList.add('is-invalid'));
-  $$('.is-invalid').forEach(el => el.setAttribute('aria-invalid', 'true'));
+  invalidIds.forEach((id) => document.getElementById(id)?.classList.add('is-invalid'));
+  $$('.is-invalid').forEach((el) => el.setAttribute('aria-invalid', 'true'));
   const summary = document.getElementById('validationSummary');
   if (summary) {
     summary.hidden = errors.length === 0;
     summary.textContent = errors.length ? `Simulation not updated: ${errors.join(' ')}` : '';
   }
   document.getElementById('mainValidationSummary').hidden = errors.length === 0;
-  document.getElementById('mainInputErrors').textContent = errors.length ? `Results have not updated. ${[...new Set(errors)].join(' ')}` : '';
+  document.getElementById('mainInputErrors').textContent = errors.length
+    ? `Results have not updated. ${[...new Set(errors)].join(' ')}`
+    : '';
   document.getElementById('scheduleEditorErrors').hidden = errors.length === 0;
   document.getElementById('scheduleEditorErrors').textContent = errors.join(' ');
   const scheduleWarnings = document.getElementById('scheduleWarnings');
@@ -2589,7 +3083,12 @@ function validateSimulationInputs() {
     scheduleWarnings.hidden = warnings.length === 0;
     scheduleWarnings.textContent = warnings.length ? `Schedule note: ${warnings.join(' ')}` : '';
   }
-  setSimulationStatus(errors.length ? 'Results are not updated. Correct the highlighted parameters.' : 'Simulation is up to date.', errors.length ? 'error' : 'ok');
+  setSimulationStatus(
+    errors.length
+      ? 'Results are not updated. Correct the highlighted parameters.'
+      : 'Simulation is up to date.',
+    errors.length ? 'error' : 'ok',
+  );
   return errors.length === 0;
 }
 
@@ -2621,7 +3120,8 @@ function interpolateSimulationValue(simulation, values, time) {
   const ts = simulation.ts;
   if (time <= ts[0]) return values[0];
   if (time >= ts[ts.length - 1]) return values[values.length - 1];
-  let lo = 0, hi = ts.length - 1;
+  let lo = 0,
+    hi = ts.length - 1;
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1;
     if (ts[mid] <= time) lo = mid;
@@ -2635,11 +3135,23 @@ function maxReplayDifference(original, edited, field, endTime) {
   let maximum = 0;
   for (const time of original.ts) {
     if (time > endTime + TIME_EPSILON) break;
-    maximum = Math.max(maximum, Math.abs(interpolateSimulationValue(edited, edited[field], time) - interpolateSimulationValue(original, original[field], time)));
+    maximum = Math.max(
+      maximum,
+      Math.abs(
+        interpolateSimulationValue(edited, edited[field], time) -
+          interpolateSimulationValue(original, original[field], time),
+      ),
+    );
   }
   for (const time of edited.ts) {
     if (time > endTime + TIME_EPSILON) break;
-    maximum = Math.max(maximum, Math.abs(interpolateSimulationValue(edited, edited[field], time) - interpolateSimulationValue(original, original[field], time)));
+    maximum = Math.max(
+      maximum,
+      Math.abs(
+        interpolateSimulationValue(edited, edited[field], time) -
+          interpolateSimulationValue(original, original[field], time),
+      ),
+    );
   }
   return maximum;
 }
@@ -2654,43 +3166,60 @@ function updateTciReplayComparison(simulation, schedule, tci) {
 
   const source = tciImportSession.sourceState;
   const original = tciImportSession.sourceSimulation;
-  const drug = DRUGS.find(d => d.id === source.drug)?.label || 'Custom model';
+  const drug = DRUGS.find((d) => d.id === source.drug)?.label || 'Custom model';
   const sourceText = document.getElementById('tciSourceDescription');
-  if (sourceText) sourceText.textContent = `${drug} · ${source.tci.targetType === 'ce' ? 'Ce' : 'Cp'} target ${formatInputValue(source.tci.target)} ${source.units.conc} · maximum ${formatInputValue(source.tci.maxRate)} ${source.units.infusion} · ${formatInputValue(source.patient.weightKg)} kg · original ${tciImportSession.exactSchedule.infusions.length} segments`;
+  if (sourceText)
+    sourceText.textContent = `${drug} · ${source.tci.targetType === 'ce' ? 'Ce' : 'Cp'} target ${formatInputValue(source.tci.target)} ${source.units.conc} · maximum ${formatInputValue(source.tci.maxRate)} ${source.units.infusion} · ${formatInputValue(source.patient.weightKg)} kg · original ${tciImportSession.exactSchedule.infusions.length} segments`;
 
   const endTime = Math.min(original.ts.at(-1), simulation.ts.at(-1));
   const cpError = maxReplayDifference(original, simulation, 'cp', endTime) * currentUnit.factor;
-  const ceError = original.hasEffectSite && simulation.hasEffectSite
-    ? maxReplayDifference(original, simulation, 'ce', endTime) * currentUnit.factor : null;
+  const ceError =
+    original.hasEffectSite && simulation.hasEffectSite
+      ? maxReplayDifference(original, simulation, 'ce', endTime) * currentUnit.factor
+      : null;
   const doseDifference = simulation.totalDoseMgKg - original.totalDoseMgKg;
   const metrics = document.getElementById('tciReplayMetrics');
-  if (metrics) metrics.textContent = `Maximum model replay difference over 0–${formatInputValue(endTime)} min: Cp ${formatInputValue(cpError)} ${currentUnit.name}${ceError == null ? '' : `; Ce ${formatInputValue(ceError)} ${currentUnit.name}`}. Total delivered dose difference: ${doseDifference >= 0 ? '+' : ''}${formatInputValue(doseDifference)} mg/kg.`;
+  if (metrics)
+    metrics.textContent = `Maximum model replay difference over 0–${formatInputValue(endTime)} min: Cp ${formatInputValue(cpError)} ${currentUnit.name}${ceError == null ? '' : `; Ce ${formatInputValue(ceError)} ${currentUnit.name}`}. Total delivered dose difference: ${doseDifference >= 0 ? '+' : ''}${formatInputValue(doseDifference)} mg/kg.`;
 
   const current = getCurrentState();
-  const assumptionsChanged = current.drug !== source.drug ||
+  const assumptionsChanged =
+    current.drug !== source.drug ||
     JSON.stringify(current.pk) !== JSON.stringify(source.pk) ||
     current.patient.weightKg !== source.patient.weightKg ||
     current.inputs.initialp !== source.inputs.initialp ||
     current.inputs.tfinal !== source.inputs.tfinal ||
     JSON.stringify(current.units) !== JSON.stringify(source.units);
   const warning = document.getElementById('tciReplayWarning');
-  if (warning) warning.textContent = assumptionsChanged
-    ? 'Model, weight, units, initial concentration, or final time changed since import; replay differences also reflect those changes.'
-    : compareMode && strategies.some(s => s.drug === currentDrug)
-      ? 'The original TCI overlay is hidden while strategy comparison is active; turn comparison off to view it.'
-      : '';
+  if (warning)
+    warning.textContent = assumptionsChanged
+      ? 'Model, weight, units, initial concentration, or final time changed since import; replay differences also reflect those changes.'
+      : compareMode && strategies.some((s) => s.drug === currentDrug)
+        ? 'The original TCI overlay is hidden while strategy comparison is active; turn comparison off to view it.'
+        : '';
 
   if (!document.getElementById('showTciReference')?.checked) return [];
-  const referenceTimes = original.ts.filter(time => time <= endTime + TIME_EPSILON);
+  const referenceTimes = original.ts.filter((time) => time <= endTime + TIME_EPSILON);
   if (referenceTimes.at(-1) < endTime - TIME_EPSILON) referenceTimes.push(endTime);
-  const sourceTraces = [{
-    x: referenceTimes, y: referenceTimes.map(time => interpolateSimulationValue(original, original.cp, time) * currentUnit.factor),
-    name: 'Original TCI Cp (model)', line: { color: '#2856b8', width: 2, dash: 'dash' }
-  }];
-  if (original.hasEffectSite) sourceTraces.push({
-    x: referenceTimes, y: referenceTimes.map(time => interpolateSimulationValue(original, original.ce, time) * currentUnit.factor),
-    name: 'Original TCI Ce (model)', line: { color: '#a85a16', width: 2, dash: 'dash' }
-  });
+  const sourceTraces = [
+    {
+      x: referenceTimes,
+      y: referenceTimes.map(
+        (time) => interpolateSimulationValue(original, original.cp, time) * currentUnit.factor,
+      ),
+      name: 'Original TCI Cp (model)',
+      line: { color: '#2856b8', width: 2, dash: 'dash' },
+    },
+  ];
+  if (original.hasEffectSite)
+    sourceTraces.push({
+      x: referenceTimes,
+      y: referenceTimes.map(
+        (time) => interpolateSimulationValue(original, original.ce, time) * currentUnit.factor,
+      ),
+      name: 'Original TCI Ce (model)',
+      line: { color: '#a85a16', width: 2, dash: 'dash' },
+    });
   return sourceTraces;
 }
 
@@ -2698,19 +3227,23 @@ let suppressIntermediateSolve = 0;
 
 function withoutIntermediateSolve(action) {
   suppressIntermediateSolve++;
-  try { return action(); }
-  finally { suppressIntermediateSolve--; }
+  try {
+    return action();
+  } finally {
+    suppressIntermediateSolve--;
+  }
 }
 
 function dfsolve() {
   if (suppressIntermediateSolve) return;
+  cancelDraftSave();
 
   updateTciControls();
   updateSchedulePage();
 
   if (!validateSimulationInputs()) return;
 
-  if (getPkInputMode() === "microconstants") syncClearanceInputsFromMicroInputs();
+  if (getPkInputMode() === 'microconstants') syncClearanceInputsFromMicroInputs();
   else syncMicroInputsFromClearanceInputs();
 
   const pk = getPkParametersFromInputs();
@@ -2718,7 +3251,7 @@ function dfsolve() {
   params.Vd1 = pk.V1; // mL/kg
   params.Vd2 = pk.V2; // mL/kg, derived in microconstant mode
   params.Vd3 = pk.V3; // mL/kg, derived in microconstant mode
-  params.Cl = pk.Cl;  // mL/kg/min
+  params.Cl = pk.Cl; // mL/kg/min
 
   const k10 = pk.k10; // 1/min
   const k12 = pk.k12; // 1/min
@@ -2742,11 +3275,11 @@ function dfsolve() {
       bolus: parseFloatSafe(bnum.value, 0),
       tbolus: params.tbolus,
       infusion: parseFloatSafe(infusionnum.value, 0),
-      tinfusion: params.tinfusion
+      tinfusion: params.tinfusion,
     },
     bolusUnit: currentBolusUnit,
     infusionUnit: currentInfusionUnit,
-    weightKg: params.weightKg
+    weightKg: params.weightKg,
   });
   const simulation = simulatePkModel({
     pk: { V1: params.Vd1, V2: params.Vd2, V3: params.Vd3, k10, k12, k21, k13, k31 },
@@ -2754,7 +3287,7 @@ function dfsolve() {
     initialConcentration: params.initialp / currentUnit.factor,
     finalTime: params.tfinal,
     dosingPlan,
-    tci
+    tci,
   });
   const { ts, xs1, xs2, xs3, ces } = simulation;
   const N = ts.length - 1;
@@ -2764,42 +3297,79 @@ function dfsolve() {
   const unitLabel = currentUnit.name;
   const hasEffectSite = simulation.hasEffectSite;
 
-  const trace_cp = { x: [], y: [], name: `Cp (${unitLabel})`, line: { color: '#1f77b4', width: 2 } };
-  const trace_ce = hasEffectSite ? { x: [], y: [], name: `Ce (${unitLabel})`, line: { color: '#ff7f0e', width: 2, dash: 'dot' } } : null;
-  const trace_target = tci.enabled ? { x: [], y: [], name: `${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target until ${formatInputValue(Math.min(tci.stopTime, params.tfinal))} min`, line: { color: '#198754', width: 2, dash: 'dash' } } : null;
-  const trace_p1 = { x: [], y: [], name: `Rapid peripheral compartment (${unitLabel})`, line: { width: 2 } };
-  const trace_p2 = { x: [], y: [], name: `Slow peripheral compartment (${unitLabel})`, line: { width: 2 } };
+  const trace_cp = {
+    x: [],
+    y: [],
+    name: `Cp (${unitLabel})`,
+    line: { color: '#1f77b4', width: 2 },
+  };
+  const trace_ce = hasEffectSite
+    ? { x: [], y: [], name: `Ce (${unitLabel})`, line: { color: '#ff7f0e', width: 2, dash: 'dot' } }
+    : null;
+  const trace_target = tci.enabled
+    ? {
+        x: [],
+        y: [],
+        name: `${tci.targetType === 'ce' ? 'Ce' : 'Cp'} target until ${formatInputValue(Math.min(tci.stopTime, params.tfinal))} min`,
+        line: { color: '#198754', width: 2, dash: 'dash', shape: 'hv' },
+      }
+    : null;
+  const trace_p1 = {
+    x: [],
+    y: [],
+    name: `Rapid peripheral compartment (${unitLabel})`,
+    line: { width: 2 },
+  };
+  const trace_p2 = {
+    x: [],
+    y: [],
+    name: `Slow peripheral compartment (${unitLabel})`,
+    line: { width: 2 },
+  };
 
   for (let i = 0; i < N + 1; i++) {
     const t = ts[i];
-    const cp = params.Vd1 > 0 ? (xs1[i] / params.Vd1) : 0;
-    const p1 = params.Vd2 > 0 ? (xs2[i] / params.Vd2) : 0;
-    const p2 = params.Vd3 > 0 ? (xs3[i] / params.Vd3) : 0;
-    const ce = (ces[i]);
+    const cp = params.Vd1 > 0 ? xs1[i] / params.Vd1 : 0;
+    const p1 = params.Vd2 > 0 ? xs2[i] / params.Vd2 : 0;
+    const p2 = params.Vd3 > 0 ? xs3[i] / params.Vd3 : 0;
+    const ce = ces[i];
 
-    trace_cp.x.push(t); trace_cp.y.push(cp * yFactor);
-    if (trace_ce) { trace_ce.x.push(t); trace_ce.y.push(ce * yFactor); }
-    trace_p1.x.push(t); trace_p1.y.push(p1 * yFactor);
-    trace_p2.x.push(t); trace_p2.y.push(p2 * yFactor);
-    if (trace_target) { trace_target.x.push(t); trace_target.y.push(t <= tci.stopTime ? tci.target : null); }
+    trace_cp.x.push(t);
+    trace_cp.y.push(cp * yFactor);
+    if (trace_ce) {
+      trace_ce.x.push(t);
+      trace_ce.y.push(ce * yFactor);
+    }
+    trace_p1.x.push(t);
+    trace_p1.y.push(p1 * yFactor);
+    trace_p2.x.push(t);
+    trace_p2.y.push(p2 * yFactor);
+    if (trace_target) {
+      trace_target.x.push(t);
+      trace_target.y.push(t <= tci.stopTime ? tciTargetAt(tci, t) * yFactor : null);
+    }
   }
 
   let layout1 = {
-    title: { text: hasEffectSite ? 'Central vs Effect-site' : 'Central concentration (effect site not modeled)' },
+    title: {
+      text: hasEffectSite
+        ? 'Central vs Effect-site'
+        : 'Central concentration (effect site not modeled)',
+    },
     xaxis: { title: { text: 'Time (min)' } },
-    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' }
+    yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' },
   };
   let layout2 = {
     title: { text: 'Rapid peripheral compartment' },
     xaxis: { title: { text: 'Time (min)' } },
     yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' },
-    showlegend: false
+    showlegend: false,
   };
   let layout3 = {
     title: { text: 'Slow peripheral compartment' },
     xaxis: { title: { text: 'Time (min)' } },
     yaxis: { title: { text: `Concentration (${unitLabel})` }, type: isLogScale ? 'log' : 'linear' },
-    showlegend: false
+    showlegend: false,
   };
 
   layout1 = addEventMarkers(layout1);
@@ -2809,13 +3379,18 @@ function dfsolve() {
   layout1 = legendOutsideBottom(layout1);
 
   const { shapes: therShapes } = buildTherapeuticShapes(params.tfinal);
-  layout1.shapes = [ ...(layout1.shapes || []), ...therShapes ];
+  layout1.shapes = [...(layout1.shapes || []), ...therShapes];
 
   const originalTciTraces = updateTciReplayComparison(simulation, schedule, tci);
-  const panel1Traces = [trace_cp, ...(trace_ce ? [trace_ce] : []), ...(trace_target ? [trace_target] : []), ...originalTciTraces];
+  const panel1Traces = [
+    trace_cp,
+    ...(trace_ce ? [trace_ce] : []),
+    ...(trace_target ? [trace_target] : []),
+    ...originalTciTraces,
+  ];
   renderTherapeuticRangeKey();
 
-  if (compareMode && strategies.some(s => s.drug === currentDrug)) {
+  if (compareMode && strategies.some((s) => s.drug === currentDrug)) {
     plotComparisonFromCurrent();
   } else {
     renderPlot('myDiv1', panel1Traces, layout1);
@@ -2829,47 +3404,67 @@ function dfsolve() {
   const tciRatePanel = document.getElementById('tciRatePanel');
   if (tciRatePanel) tciRatePanel.hidden = !(tci.enabled || schedule.enabled);
   const deliveryRateHeading = document.getElementById('deliveryRateHeading');
-  if (deliveryRateHeading) deliveryRateHeading.textContent = tci.enabled ? 'Educational TCI calculated infusion rate' : 'Scheduled delivery rate';
+  if (deliveryRateHeading)
+    deliveryRateHeading.textContent = tci.enabled
+      ? 'Educational TCI calculated infusion rate'
+      : 'Scheduled delivery rate';
   if (tci.enabled || schedule.enabled) {
     const rateTrace = {
       x: ts.slice(0, N),
-      y: simulation.intervalRates.map(rate => convertMgKgMinToInfusionValue(rate, currentInfusionUnit, params.weightKg)),
+      y: simulation.intervalRates.map((rate) =>
+        convertMgKgMinToInfusionValue(rate, currentInfusionUnit, params.weightKg),
+      ),
       name: `${tci.enabled ? 'Calculated' : 'Scheduled'} rate (${currentInfusionUnit.name})`,
       line: { color: '#198754', width: 2, shape: 'hv' },
       fill: 'tozeroy',
-      fillcolor: 'rgba(25, 135, 84, .12)'
+      fillcolor: 'rgba(25, 135, 84, .12)',
     };
     renderPlot('tciRatePlot', [rateTrace], {
       margin: { l: 60, r: 30, t: 12, b: 42 },
       xaxis: { title: { text: 'Time (min)' } },
       yaxis: { title: { text: `Rate (${currentInfusionUnit.name})` } },
-      showlegend: false
+      showlegend: false,
     });
   }
 
   // Results
-  const finalCp = roundToSignificantFigures(yFactor * xs1[N] / params.Vd1, 3);
+  const finalCp = roundToSignificantFigures((yFactor * xs1[N]) / params.Vd1, 3);
   const finalCe = hasEffectSite ? roundToSignificantFigures(yFactor * ces[N], 3) : null;
   pfinalhtml.innerHTML = finalCp;
   document.getElementById('keyFinalCp').textContent = finalCp;
   document.getElementById('keyFinalCe').textContent = hasEffectSite ? finalCe : 'Not modeled';
   document.getElementById('keyFinalCpUnit').textContent = unitLabel;
   document.getElementById('keyFinalCeUnit').textContent = hasEffectSite ? unitLabel : '';
-  const peakCpIndex = trace_cp.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0);
-  const peakCeIndex = trace_ce ? trace_ce.y.reduce((best, value, index, values) => value > values[best] ? index : best, 0) : null;
-  document.getElementById('keyPeakCp').textContent = roundToSignificantFigures(trace_cp.y[peakCpIndex], 3);
-  document.getElementById('keyPeakCe').textContent = trace_ce ? roundToSignificantFigures(trace_ce.y[peakCeIndex], 3) : 'Not modeled';
+  const peakCpIndex = trace_cp.y.reduce(
+    (best, value, index, values) => (value > values[best] ? index : best),
+    0,
+  );
+  const peakCeIndex = trace_ce
+    ? trace_ce.y.reduce((best, value, index, values) => (value > values[best] ? index : best), 0)
+    : null;
+  document.getElementById('keyPeakCp').textContent = roundToSignificantFigures(
+    trace_cp.y[peakCpIndex],
+    3,
+  );
+  document.getElementById('keyPeakCe').textContent = trace_ce
+    ? roundToSignificantFigures(trace_ce.y[peakCeIndex], 3)
+    : 'Not modeled';
   document.getElementById('keyPeakCpUnit').textContent = unitLabel;
   document.getElementById('keyPeakCeUnit').textContent = hasEffectSite ? unitLabel : '';
-  document.getElementById('keyTmaxCe').textContent = trace_ce ? roundToSignificantFigures(ts[peakCeIndex], 3) : 'N/A';
-  const pss = params.Cl > 0 && simulation.finalActiveRate > 1e-12 ? simulation.finalActiveRate / params.Cl : null;
+  document.getElementById('keyTmaxCe').textContent = trace_ce
+    ? roundToSignificantFigures(ts[peakCeIndex], 3)
+    : 'N/A';
+  const pss =
+    params.Cl > 0 && simulation.finalActiveRate > 1e-12
+      ? simulation.finalActiveRate / params.Cl
+      : null;
   psshtml.textContent = pss == null ? 'N/A' : roundToSignificantFigures(yFactor * pss, 3);
 
   // Eigenvalues
   const Axyz = math.matrix([
     [-(k10 + k12 + k13), k21, k31],
     [k12, -k21, 0],
-    [k13, 0, -k31]
+    [k13, 0, -k31],
   ]);
 
   let evalsRaw = [];
@@ -2880,16 +3475,23 @@ function dfsolve() {
     console.error('eigs failed:', e);
   }
 
-  let evalsReal = evalsRaw.map(v => math.re(v)).filter(v => Number.isFinite(v) && v < 0);
+  let evalsReal = evalsRaw.map((v) => math.re(v)).filter((v) => Number.isFinite(v) && v < 0);
   if (evalsReal.length === 0) {
     alphahtml.innerHTML = betahtml.innerHTML = gammahtml.innerHTML = 0;
     termhalflifehtml.innerHTML = 0;
   } else {
-    evalsReal.sort((a,b) => Math.abs(b) - Math.abs(a));
+    evalsReal.sort((a, b) => Math.abs(b) - Math.abs(a));
     const alpha = -(evalsReal[0] ?? 0);
     const beta = -(evalsReal[1] ?? 0);
     const gamma = -(evalsReal[2] ?? 0);
-    const termhalflife = (gamma > 0 ? Math.log(2)/gamma : (beta > 0 ? Math.log(2)/beta : (alpha > 0 ? Math.log(2)/alpha : 0)));
+    const termhalflife =
+      gamma > 0
+        ? Math.log(2) / gamma
+        : beta > 0
+          ? Math.log(2) / beta
+          : alpha > 0
+            ? Math.log(2) / alpha
+            : 0;
     alphahtml.innerHTML = roundToSignificantFigures(alpha, 3);
     betahtml.innerHTML = roundToSignificantFigures(beta, 3);
     gammahtml.innerHTML = roundToSignificantFigures(gamma, 3);
@@ -2905,21 +3507,27 @@ function dfsolve() {
   Vd1numhtml.innerHTML = roundToSignificantFigures(params.Vd1, 3);
   Vd2numhtml.innerHTML = roundToSignificantFigures(params.Vd2, 3);
   Vd3numhtml.innerHTML = roundToSignificantFigures(params.Vd3, 3);
-  Q2numhtml.innerHTML = roundToSignificantFigures(params.Vd1*k12, 3);
-  Q3numhtml.innerHTML = roundToSignificantFigures(params.Vd1*k13, 3);
-  Clnumhtml.innerHTML = roundToSignificantFigures(params.Vd1*k10, 3);
+  Q2numhtml.innerHTML = roundToSignificantFigures(params.Vd1 * k12, 3);
+  Q3numhtml.innerHTML = roundToSignificantFigures(params.Vd1 * k13, 3);
+  Clnumhtml.innerHTML = roundToSignificantFigures(params.Vd1 * k10, 3);
 
   // Context-sensitive half-time is defined here only after a nonzero rate-based
   // input. An isolated instantaneous bolus does not have an infusion context.
   let cshl = null;
   if (simulation.lastRateEndIndex != null) {
     const startIdx = clamp(simulation.lastRateEndIndex, 0, N);
-    const x1 = xs1[startIdx], x2 = xs2[startIdx], x3 = xs3[startIdx];
+    const x1 = xs1[startIdx],
+      x2 = xs2[startIdx],
+      x3 = xs3[startIdx];
     if (Number.isFinite(x1) && x1 > 0) {
       const target = x1 / 2;
-      const washoutCpAt = duration => {
-        const transition = createTransition({ V1: params.Vd1, k10, k12, k21, k13, k31 }, 0, duration);
-        return transition.a11*x1 + transition.a12*x2 + transition.a13*x3;
+      const washoutCpAt = (duration) => {
+        const transition = createTransition(
+          { V1: params.Vd1, k10, k12, k21, k13, k31 },
+          0,
+          duration,
+        );
+        return transition.a11 * x1 + transition.a12 * x2 + transition.a13 * x3;
       };
       let lower = 0;
       let upper = params.dt;
@@ -2938,12 +3546,12 @@ function dfsolve() {
     }
   }
 
-  contextsensitivehalflifehtml.textContent = cshl == null ? 'N/A' : roundToSignificantFigures(cshl, 3);
-  document.getElementById('keyContextHalfLife').textContent = contextsensitivehalflifehtml.textContent;
-
+  contextsensitivehalflifehtml.textContent =
+    cshl == null ? 'N/A' : roundToSignificantFigures(cshl, 3);
+  document.getElementById('keyContextHalfLife').textContent =
+    contextsensitivehalflifehtml.textContent;
+  queueDraftSave();
 }
-
-window.dfsolve = dfsolve;
 
 function onecompartment() {
   markPresetModified();
@@ -2957,17 +3565,16 @@ function onecompartment() {
 }
 
 // ============================
-// Drug presets (kept from your file; unchanged values)
+// Drug presets
 // ============================
 // Optional educational starting points. Other models permit TCI only after
 // the user supplies a target and maximum rate; never use this to control a pump.
-const TCI_PRESETS = Object.freeze({
-  propofol: { targetType: 'cp', target: 2, maxRate: 200, note: 'Educational Propofol/Marsh starting point: Cp 2 µg/mL; maximum 200 µg/kg/min. Adjust only for simulation exploration.' },
-  dexmedetomidine: { targetType: 'cp', target: 0.6, maxRate: 6, note: 'Educational dexmedetomidine starting point: Cp 0.6 ng/mL; maximum 6 µg/kg/hr. This is not a clinical prescription.' },
-  remifentanil: { targetType: 'ce', target: 2, maxRate: 0.5, note: 'Educational remifentanil/Minto starting point: Ce 2 ng/mL; maximum 0.5 µg/kg/min. This is not a clinical prescription.' }
-});
+const TCI_PRESETS = Object.fromEntries(
+  PHYSIO_DRUG_REGISTRY.drugs.filter((d) => d.tci).map((d) => [d.id, d.tci]),
+);
 
 function applyTciPreset(id) {
+  setTciTargetChanges();
   const profile = TCI_PRESETS[id];
   const enabled = document.getElementById('tciEnabled');
   const targetType = document.getElementById('tciTargetType');
@@ -2977,7 +3584,9 @@ function applyTciPreset(id) {
   const note = document.getElementById('tciPresetNote');
   if (!id) {
     if (enabled) enabled.disabled = false;
-    if (note) note.textContent = 'Custom model: enter an educational target and maximum rate based on your own model assumptions.';
+    if (note)
+      note.textContent =
+        'Custom model: enter an educational target and maximum rate based on your own model assumptions.';
     updateTciControls();
     return;
   }
@@ -2990,11 +3599,13 @@ function applyTciPreset(id) {
     if (target) target.value = '';
     if (maxRate) maxRate.value = '';
     if (stopTime) stopTime.value = formatInputValue(parseFloatSafe(tfinalnum?.value, 120));
-    if (note) note.textContent = id === 'bupivacaine'
-      ? 'No TCI starting profile. Enter your own target and maximum rate. Bupivacaine has no routine IV dosing example; this is a theoretical systemic PK simulation, not an IV regimen or pump program.'
-      : id === 'vasopressin'
-        ? 'No TCI starting profile. Enter your own target and maximum rate. Vasopressin is clinically dosed in units/min, which these mass-based inputs do not convert; this is not a dosing or pump recommendation.'
-        : 'No TCI starting profile for this drug. Enter your own positive concentration target and maximum infusion rate in the displayed units. Ce targeting also requires a valid ke0. Educational simulation only—not a dosing recommendation or pump program.';
+    if (note)
+      note.textContent =
+        id === 'bupivacaine'
+          ? 'No TCI starting profile. Enter your own target and maximum rate. Bupivacaine has no routine IV dosing example; this is a theoretical systemic PK simulation, not an IV regimen or pump program.'
+          : id === 'vasopressin'
+            ? 'No TCI starting profile. Enter your own target and maximum rate. Vasopressin is clinically dosed in units/min, which these mass-based inputs do not convert; this is not a dosing or pump recommendation.'
+            : 'No TCI starting profile for this drug. Enter your own positive concentration target and maximum infusion rate in the displayed units. Ce targeting also requires a valid ke0. Educational simulation only—not a dosing recommendation or pump program.';
     updateTciControls();
     return;
   }
@@ -3010,524 +3621,139 @@ function applyTciPreset(id) {
   updateTciControls();
 }
 
+function applyRegistryPreset(id) {
+  const preset = PHYSIO_DRUG_REGISTRY.drugs.find((drug) => drug.id === id);
+  if (!preset) return;
+  currentDrug = id;
+  setDisplayUnit(preset.units.conc);
+  setBolusUnit(preset.units.bolus);
+  setInfusionUnit(preset.units.infusion);
+  Object.entries(preset.pk).forEach(([key, value]) => {
+    const ids = { Vd1: 'Vd1', Vd2: 'Vd2', Vd3: 'Vd3', Cl: 'Cl', Q2: 'Q2', Q3: 'Q3', ke0: 'ke0' };
+    document.getElementById(ids[key]).value = value;
+  });
+  syncMicroInputsFromClearanceInputs();
+  dfsolve();
+}
+
 function propofol() {
-  currentDrug = 'propofol';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('µg/kg/min');
-
-  // Marsh model (validated)
-  Vd1num.value = 228;
-  Vd2num.value = 464;
-  Vd3num.value = 2895;
-
-  Clnum.value  = 27.1;
-  Q2num.value  = 25.5;
-  Q3num.value  = 9.6;
-
-  ke0num.value = 0.26;
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('propofol');
 }
 
-function etomidate() { // Arden
-  currentDrug = 'etomidate';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-
-  Vd1num.value = 64;
-  Vd2num.value = 214;
-  Vd3num.value = 700;   // refined from 857 for slightly less deep accumulation
-
-  Clnum.value  = 9;
-  Q2num.value  = 43;
-  Q3num.value  = 7;
-
-  ke0num.value = 0.45;
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+function etomidate() {
+  applyRegistryPreset('etomidate');
 }
 
-function ketamine() { // Domino / Clements / Hijazi-type models
-  currentDrug = 'ketamine';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-
-  Vd1num.value = 286;
-  Vd2num.value = 571;
-  Vd3num.value = 1500;
-
-  Clnum.value  = 17;
-  Q2num.value  = 18;
-  Q3num.value  = 4;
-
-  ke0num.value = 0.3;
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+function ketamine() {
+  applyRegistryPreset('ketamine');
 }
 
-function dexmedetomidine() { // Dyck / Hannivoort-type models
-  currentDrug = 'dexmedetomidine';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/hr');
-
-  // Slightly adjusted, literature-consistent
-  Vd1num.value = 360;     // ↑ slightly
-  Vd2num.value = 491;
-  Vd3num.value = 934;
-
-  Clnum.value  = 12.9;
-  Q2num.value  = 24;
-  Q3num.value  = 8.9;
-
-  ke0num.value = 0.06;   // critical fix
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+function dexmedetomidine() {
+  applyRegistryPreset('dexmedetomidine');
 }
 
-function midazolam() { // Greenblatt
-  currentDrug = 'midazolam';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('µg/kg/min');
-
-  Vd1num.value = 250;    // slightly reduced
-  Vd2num.value = 700;
-  Vd3num.value = 1800;
-
-  Clnum.value  = 6.4;
-  Q2num.value  = 15;     // slightly reduced
-  Q3num.value  = 4;
-
-  ke0num.value = 0.07;
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+function midazolam() {
+  applyRegistryPreset('midazolam');
 }
 
 function diazepam() {
-  currentDrug = 'diazepam';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 500;
-  Vd2num.value = 1667; // 18/70*1000;
-  Vd3num.value = 7500; // 38.5/70*1000;
-  Clnum.value = 5; // 39.3/70;
-  Q2num.value = 25; // 300/70;
-  Q3num.value = 7.5; // 76.7/70;
-  ke0num.value = 0.2;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('diazepam');
 }
 
 function fentanyl() {
-  currentDrug = 'fentanyl';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/hr');
-
-  // Improved Shafer-type approximation
-  Vd1num.value = 80;
-  Vd2num.value = 400;
-  Vd3num.value = 3000;   // reduced
-
-  Clnum.value  = 8;      // reduced
-  Q2num.value  = 12;
-  Q3num.value  = 4;
-
-  ke0num.value = 0.11;
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('fentanyl');
 }
 
 function hydromorphone() {
-  currentDrug = 'hydromorphone';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 150;
-  Vd2num.value = 600;
-  Vd3num.value = 1500;
-  Clnum.value = 8;
-  Q2num.value = 25;
-  Q3num.value = 5;
-  ke0num.value = 0.5;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('hydromorphone');
 }
 
-function remifentanil() { // Minto
-  currentDrug = 'remifentanil';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-
-  // Improved weight-normalized approximation of Minto
-  Vd1num.value = 65;    // ↓ smaller central
-  Vd2num.value = 150;   // similar
-  Vd3num.value = 350;   // ↑ slightly larger deep compartment
-
-  Clnum.value  = 30;    // ↓ more realistic
-  Q2num.value  = 25;    // slightly reduced
-  Q3num.value  = 10;
-
-  ke0num.value = 0.6;   // keep
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+function remifentanil() {
+  applyRegistryPreset('remifentanil');
 }
 
 function sufentanil() {
-  currentDrug = 'sufentanil';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/hr');
-  Vd1num.value = 100;
-  Vd2num.value = 250;
-  Vd3num.value = 833;
-  Clnum.value = 3;
-  Q2num.value = 15;
-  Q3num.value = 5;
-  ke0num.value = 1.5;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('sufentanil');
 }
 
 function alfentanil() {
-  currentDrug = 'alfentanil';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 150;
-  Vd2num.value = 300;
-  Vd3num.value = 600;
-  Clnum.value = 5.25;
-  Q2num.value = 30;
-  Q3num.value = 9;
-  ke0num.value = 2;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('alfentanil');
 }
 
 function methadone() {
-  currentDrug = 'methadone';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 21.5/70*1000;
-  Vd2num.value = 75.1/70*1000;
-  Vd3num.value = 484/70*1000;
-  Clnum.value = 2.25;
-  Q2num.value = 77.4;
-  Q3num.value = 32.4;
-  ke0num.value = 0.087;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('methadone');
 }
 
 function rocuronium() {
-  currentDrug = 'rocuronium';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 80;
-  Vd2num.value = 300;
-  Vd3num.value = 400;
-  Clnum.value = 3.2;
-  Q2num.value = 20;
-  Q3num.value = 5;
-  ke0num.value = 0.2;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('rocuronium');
 }
 
 function vecuronium() {
-  currentDrug = 'vecuronium';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 10.25/70*1000;
-  Vd2num.value = 7.92/70*1000;
-  Vd3num.value = 41.99/70*1000;
-  Clnum.value = 0.51/70*1000;
-  Q2num.value = 0.51/70*1000;
-  Q3num.value = 0.095/70*1000;
-  ke0num.value = 0.3;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('vecuronium');
 }
 
 function cisatracurium() {
-  currentDrug = 'cisatracurium';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 40;
-  Vd2num.value = 60;
-  Vd3num.value = 45;
-  Clnum.value = 5;
-  Q2num.value = 10;
-  Q3num.value = 2;
-  ke0num.value = 0.0575;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('cisatracurium');
 }
 
 function pancuronium() {
-  currentDrug = 'pancuronium';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-  Vd1num.value = 60;
-  Vd2num.value = 180;
-  Vd3num.value = 600;
-  Clnum.value = 1.5;
-  Q2num.value = 9;
-  Q3num.value = 3;
-  ke0num.value = 0.05;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('pancuronium');
 }
 
 function succinylcholine() {
-  currentDrug = 'succinylcholine';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/min');
-  Vd1num.value = 50;
-  Vd2num.value = 100;
-  Vd3num.value = 150;
-  Clnum.value = 300;
-  Q2num.value = 25;
-  Q3num.value = 10;
-  ke0num.value = 0.197;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('succinylcholine');
 }
 
 function lidocaine() {
-  currentDrug = 'lidocaine';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/hr');
-
-  // Standard PK (no effect-site model)
-  Vd1num.value = 500;    // mL/kg
-  Vd2num.value = 1000;   // mL/kg
-  Vd3num.value = 1500;   // mL/kg
-
-  Clnum.value  = 10;     // mL/kg/min
-  Q2num.value  = 10;     // mL/kg/min
-  Q3num.value  = 5;      // mL/kg/min
-
-  ke0num.value = null;     // no effect-site
-
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('lidocaine');
 }
 
 function bupivacaine() {
-  currentDrug = 'bupivacaine';
-  setDisplayUnit('µg/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 150;
-  Vd2num.value = 300;
-  Vd3num.value = 600;
-  Clnum.value = 3;
-  Q2num.value = 15;
-  Q3num.value = 6;
-  ke0num.value = null;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('bupivacaine');
 }
 
 function phenylephrine() {
-  currentDrug = 'phenylephrine';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 214 + 2.0/7;
-  Vd2num.value = 357 + 1.0/7;
-  Vd3num.value = 714 + 2.0/7;
-  Clnum.value = 17 + 1.0/7;
-  Q2num.value = 17 + 1.0/7;
-  Q3num.value = 11 + 3.0/7;
-  ke0num.value = 0.4;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('phenylephrine');
 }
 
 function ephedrine() {
-  currentDrug = 'ephedrine';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('mg/kg');
-  setInfusionUnit('mg/kg/min');
-  Vd1num.value = 285 + 5.0/7;
-  Vd2num.value = 857 + 1.0/7;
-  Vd3num.value = 1714 + 2.0/7;
-  Clnum.value = 5 + 5.0/7;
-  Q2num.value = 10;
-  Q3num.value = 7 + 1.0/7;
-  ke0num.value = 0.06;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('ephedrine');
 }
 
 function epinephrine() {
-  currentDrug = 'epinephrine';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 171 + 3.0/7;
-  Vd2num.value = 357 + 1.0/7;
-  Vd3num.value = 571 + 3.0/7;
-  Clnum.value = 21 + 3.0/7;
-  Q2num.value = 21 + 3.0/7;
-  Q3num.value = 14 + 2.0/7;
-  ke0num.value = 0.8;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('epinephrine');
 }
 
 function dobutamine() {
-  currentDrug = 'dobutamine';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 214 + 2.0/7;
-  Vd2num.value = 428 + 4.0/7;
-  Vd3num.value = 714 + 2.0/7;
-  Clnum.value = 14 + 2.0/7;
-  Q2num.value = 14 + 2.0/7;
-  Q3num.value = 10;
-  ke0num.value = 0.3;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('dobutamine');
 }
 
 function dopamine() {
-  currentDrug = 'dopamine';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 228 + 4.0/7;
-  Vd2num.value = 428 + 4.0/7;
-  Vd3num.value = 785 + 5.0/7;
-  Clnum.value = 12 + 6.0/7;
-  Q2num.value = 12 + 6.0/7;
-  Q3num.value = 8 + 4.0/7;
-  ke0num.value = 0.2;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('dopamine');
 }
 
 function milrinone() {
-  currentDrug = 'milrinone';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 285 + 5.0/7;
-  Vd2num.value = 1000;
-  Vd3num.value = 2142 + 6.0/7;
-  Clnum.value = 2 + 6.0/7;
-  Q2num.value = 7 + 1.0/7;
-  Q3num.value = 4 + 2.0/7;
-  ke0num.value = 0.03;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('milrinone');
 }
 
 function vasopressin() {
-  currentDrug = 'vasopressin';
-  setDisplayUnit('ng/mL');
-  setBolusUnit('µg/kg');
-  setInfusionUnit('µg/kg/min');
-  Vd1num.value = 171 + 3.0/7;
-  Vd2num.value = 357 + 1.0/7;
-  Vd3num.value = 571 + 3.0/7;
-  Clnum.value = 4 + 2.0/7;
-  Q2num.value = 8 + 4.0/7;
-  Q3num.value = 5 + 5.0/7;
-  ke0num.value = 0.05;
-  syncMicroInputsFromClearanceInputs();
-  dfsolve();
+  applyRegistryPreset('vasopressin');
 }
 
 // ============================
 // Drug preset library
 // ============================
-const DRUGS = [
-  { id: 'propofol', label: 'Propofol', group: 'Hypnotics & sedatives', note: 'Marsh model (validated preset parameters).' },
-  { id: 'etomidate', label: 'Etomidate', group: 'Hypnotics & sedatives', note: 'Arden-derived preset; V3 is refined for less deep accumulation.' },
-  { id: 'ketamine', label: 'Ketamine', group: 'Hypnotics & sedatives', note: 'Domino / Clements / Hijazi-type preset.' },
-  { id: 'dexmedetomidine', label: 'Dexmedetomidine', group: 'Hypnotics & sedatives', note: 'Dyck / Hannivoort-type preset; literature-consistent adjustment.' },
-  { id: 'midazolam', label: 'Midazolam', group: 'Hypnotics & sedatives', note: 'Greenblatt-derived preset with adjusted V1 and Q2.' },
-  { id: 'diazepam', label: 'Diazepam', group: 'Hypnotics & sedatives', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'fentanyl', label: 'Fentanyl', group: 'Opioid analgesics', note: 'Shafer-type approximation preset.' },
-  { id: 'hydromorphone', label: 'Hydromorphone', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'remifentanil', label: 'Remifentanil', group: 'Opioid analgesics', note: 'Weight-normalized Minto approximation preset.' },
-  { id: 'sufentanil', label: 'Sufentanil', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'alfentanil', label: 'Alfentanil', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'methadone', label: 'Methadone', group: 'Opioid analgesics', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'rocuronium', label: 'Rocuronium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'vecuronium', label: 'Vecuronium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'cisatracurium', label: 'Cisatracurium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'pancuronium', label: 'Pancuronium', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'succinylcholine', label: 'Succinylcholine', group: 'Neuromuscular blockers', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'lidocaine', label: 'Lidocaine', group: 'Local anesthetics', note: 'Standard PK preset; no validated effect-site model is assumed.' },
-  { id: 'bupivacaine', label: 'Bupivacaine', group: 'Local anesthetics', note: 'Site preset parameters; no validated effect-site model is assumed.' },
-  { id: 'phenylephrine', label: 'Phenylephrine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'ephedrine', label: 'Ephedrine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'epinephrine', label: 'Epinephrine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'dobutamine', label: 'Dobutamine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'dopamine', label: 'Dopamine', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'milrinone', label: 'Milrinone', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' },
-  { id: 'vasopressin', label: 'Vasopressin', group: 'Vasoactive & inotropic agents', note: 'Site preset parameters; verify model applicability for the intended patient.' }
-];
+const DRUGS = PHYSIO_DRUG_REGISTRY.drugs.map((drug) => ({
+  ...drug,
+  apply: () => applyRegistryPreset(drug.id),
+}));
 
 // Illustrative adult IV inputs in each preset's displayed units. These make a
 // useful starting curve, not a regimen for clinical use. Zero means no example
 // for that route or dose unit, not a recommendation to omit treatment.
-const DRUG_DOSE_EXAMPLES = Object.freeze({
-  propofol: { bolus: 1, bolusMinutes: 1, infusion: 100, infusionMinutes: 60, finalMinutes: 255 },
-  etomidate: { bolus: 0.3, bolusMinutes: 1 },
-  ketamine: { bolus: 1, bolusMinutes: 1, infusion: 1, infusionMinutes: 60 },
-  dexmedetomidine: { bolus: 1, bolusMinutes: 10, infusion: 0.5, infusionMinutes: 60 },
-  midazolam: { bolus: 0.05, bolusMinutes: 2, infusion: 1, infusionMinutes: 60 },
-  diazepam: { bolus: 0.1, bolusMinutes: 2 },
-  fentanyl: { bolus: 1, bolusMinutes: 1, infusion: 1, infusionMinutes: 60 },
-  hydromorphone: { bolus: 0.005, bolusMinutes: 2 },
-  remifentanil: { bolus: 0.5, bolusMinutes: 1, infusion: 0.1, infusionMinutes: 60 },
-  sufentanil: { bolus: 0.2, bolusMinutes: 1, infusion: 0.3, infusionMinutes: 60 },
-  alfentanil: { bolus: 10, bolusMinutes: 1, infusion: 0.5, infusionMinutes: 60 },
-  methadone: { bolus: 0.05, bolusMinutes: 2 },
-  rocuronium: { bolus: 0.6, bolusMinutes: 1 },
-  vecuronium: { bolus: 0.1, bolusMinutes: 1 },
-  cisatracurium: { bolus: 0.15, bolusMinutes: 1, infusion: 1, infusionMinutes: 60 },
-  pancuronium: { bolus: 0.08, bolusMinutes: 1 },
-  succinylcholine: { bolus: 1, bolusMinutes: 0.5 },
-  lidocaine: { bolus: 1, bolusMinutes: 2, infusion: 1, infusionMinutes: 60 },
-  // No routine IV bupivacaine example; systemic exposure here is a modeling aid only.
-  bupivacaine: {},
-  phenylephrine: { bolus: 1, bolusMinutes: 0, infusion: 0.5, infusionMinutes: 60 },
-  ephedrine: { bolus: 0.1, bolusMinutes: 0 },
-  epinephrine: { infusion: 0.05, infusionMinutes: 60 },
-  dobutamine: { infusion: 5, infusionMinutes: 60 },
-  dopamine: { infusion: 5, infusionMinutes: 60 },
-  milrinone: { bolus: 50, bolusMinutes: 10, infusion: 0.375, infusionMinutes: 60 },
-  // Vasopressin is dosed in units/min; a mass-based default would be misleading.
-  vasopressin: {}
-});
+const DRUG_DOSE_EXAMPLES = Object.fromEntries(
+  PHYSIO_DRUG_REGISTRY.drugs.map((d) => [d.id, d.example]),
+);
 
 function applyDrugDoseExample(id) {
   const example = DRUG_DOSE_EXAMPLES[id];
@@ -3540,7 +3766,7 @@ function applyDrugDoseExample(id) {
 }
 
 function populateDrugPicker() {
-  ['drugPicker', 'drawerDrugPicker'].forEach(id => {
+  ['drugPicker', 'drawerDrugPicker'].forEach((id) => {
     const picker = document.getElementById(id);
     if (!picker) return;
     picker.textContent = '';
@@ -3548,11 +3774,11 @@ function populateDrugPicker() {
     custom.value = '';
     custom.textContent = 'Custom model (keep current parameters)';
     picker.appendChild(custom);
-    const groups = [...new Set(DRUGS.map(d => d.group))];
-    groups.forEach(groupName => {
+    const groups = [...new Set(DRUGS.map((d) => d.group))];
+    groups.forEach((groupName) => {
       const group = document.createElement('optgroup');
       group.label = groupName;
-      DRUGS.filter(d => d.group === groupName).forEach(d => {
+      DRUGS.filter((d) => d.group === groupName).forEach((d) => {
         const opt = document.createElement('option');
         opt.value = d.id;
         opt.textContent = d.label;
@@ -3563,19 +3789,25 @@ function populateDrugPicker() {
   });
 }
 
-
 function setCurrentDrugLabel() {
   const label = document.getElementById('currentDrugLabel');
   if (!label) return;
-  const pickers = [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')].filter(Boolean);
-  const d = DRUGS.find(x => x.id === currentDrug);
+  const pickers = [
+    document.getElementById('drugPicker'),
+    document.getElementById('drawerDrugPicker'),
+  ].filter(Boolean);
+  const d = DRUGS.find((x) => x.id === currentDrug);
   if (!d) {
     label.textContent = 'Custom model';
-    pickers.forEach(picker => { picker.value = ''; });
+    pickers.forEach((picker) => {
+      picker.value = '';
+    });
     return;
   }
   label.textContent = `${d.label}${presetIsModified ? ' — modified' : ''} — units: ${currentUnit.name}`;
-  pickers.forEach(picker => { picker.value = d.id; });
+  pickers.forEach((picker) => {
+    picker.value = d.id;
+  });
 }
 
 function clearDosingForDrugSwitch() {
@@ -3597,7 +3829,7 @@ function clearDosingForDrugSwitch() {
 
 function applyDrugById(id, { clearDosing = true } = {}) {
   if (!id) return;
-  const fn = window[id];
+  const fn = DRUGS.find((drug) => drug.id === id)?.apply;
   if (typeof fn !== 'function') return;
   chartRevision++;
 
@@ -3608,16 +3840,22 @@ function applyDrugById(id, { clearDosing = true } = {}) {
   applyTciPreset(id);
   setCurrentDrugLabel();
   dfsolve();
-  if (clearDosing) setSimulationStatus(
-    id === 'bupivacaine' ? 'Bupivacaine has no routine IV dosing example; dosing remains zero. This systemic PK model is educational only.' :
-    id === 'vasopressin' ? 'Vasopressin is dosed in units/min, which this mass-based model does not support; dosing remains zero.' :
-    'Drug preset loaded with an illustrative adult IV dosing example. Previous dosing was replaced; TCI is off.', 'ok');
+  if (clearDosing)
+    setSimulationStatus(
+      id === 'bupivacaine'
+        ? 'Bupivacaine has no routine IV dosing example; dosing remains zero. This systemic PK model is educational only.'
+        : id === 'vasopressin'
+          ? 'Vasopressin is dosed in units/min, which this mass-based model does not support; dosing remains zero.'
+          : 'Drug preset loaded with an illustrative adult IV dosing example. Previous dosing was replaced; TCI is off.',
+      'ok',
+    );
 
   [document.getElementById('drugPicker'), document.getElementById('drawerDrugPicker')]
     .filter(Boolean)
-    .forEach(picker => { picker.value = id; });
+    .forEach((picker) => {
+      picker.value = id;
+    });
 }
-
 
 // ============================
 // Reset + init
@@ -3642,8 +3880,20 @@ function reset() {
   try {
     setScheduleToDOM({
       enabled: false,
-      boluses: [{ time: 0, dose: parseFloatSafe(bnum.value,0), duration: parseFloatSafe(tbolusnum.value,0) }],
-      infusions: [{ start: parseFloatSafe(tbolusnum.value,0), end: parseFloatSafe(tbolusnum.value,0) + parseFloatSafe(tinfusionnum.value,0), rate: parseFloatSafe(infusionnum.value,0) }]
+      boluses: [
+        {
+          time: 0,
+          dose: parseFloatSafe(bnum.value, 0),
+          duration: parseFloatSafe(tbolusnum.value, 0),
+        },
+      ],
+      infusions: [
+        {
+          start: parseFloatSafe(tbolusnum.value, 0),
+          end: parseFloatSafe(tbolusnum.value, 0) + parseFloatSafe(tinfusionnum.value, 0),
+          rate: parseFloatSafe(infusionnum.value, 0),
+        },
+      ],
     });
   } catch (e) {}
 
@@ -3656,35 +3906,29 @@ function reset() {
   setSimulationStatus('Default propofol example loaded.', 'ok');
 }
 
-function getQuickScheduleRow(type) {
-  const table = document.getElementById(type === 'bolus' ? 'bolusEventsTable' : 'infusionEventsTable');
-  const amount = type === 'bolus' ? 'dose' : 'rate';
-  const time = type === 'bolus' ? 'time' : 'start';
-  return [...table.tBodies[0].rows]
-    .filter(row => {
-      const value = row.querySelector(`[data-field="${amount}"]`).value;
-      return value.trim() === '' || Number(value) !== 0;
-    })
-    .sort((a, b) => Number(a.querySelector(`[data-field="${time}"]`).value) - Number(b.querySelector(`[data-field="${time}"]`).value))[0];
-}
-
 function applyMainDoseAdjustment(type) {
   const input = document.getElementById(type === 'bolus' ? 'mainBolusAmount' : 'mainInfusionRate');
   if (document.getElementById('useSchedule').checked) {
-    const row = getQuickScheduleRow(type);
+    const event = getQuickScheduleEntry(type);
     const field = type === 'bolus' ? 'dose' : 'rate';
-    if (!row) return;
-    row.querySelector(`[data-field="${field}"]`).value = input.value;
+    if (!event) return;
+    event[field] = scheduleNumber(input.value);
+    renderScheduleTables();
   } else {
     document.getElementById(MAIN_INPUT_LINKS[input.id]).value = input.value;
   }
   dfsolve();
 }
 
-
 function wireInputs() {
-  $$('[data-chart-window]').forEach(button => button.addEventListener('click', () => setChartWindow(button.dataset.chartWindow)));
-  document.getElementById('downloadChartBtn').addEventListener('click', () => Plotly.downloadImage('myDiv1', { format: 'png', filename: 'physio-concentrations' }));
+  $$('[data-chart-window]').forEach((button) =>
+    button.addEventListener('click', () => setChartWindow(button.dataset.chartWindow)),
+  );
+  document
+    .getElementById('downloadChartBtn')
+    .addEventListener('click', () =>
+      Plotly.downloadImage('myDiv1', { format: 'png', filename: 'physio-concentrations' }),
+    );
   Object.entries(MAIN_INPUT_LINKS).forEach(([mainId, sourceId]) => {
     const input = document.getElementById(mainId);
     const error = document.createElement('span');
@@ -3693,14 +3937,27 @@ function wireInputs() {
     error.hidden = true;
     input.after(error);
     input.setAttribute('aria-describedby', error.id);
-    if (['mainBolusAmount', 'mainInfusionRate', 'mainTciTarget', 'mainTciMaxRate', 'mainTciStopTime'].includes(mainId)) return;
+    if (
+      [
+        'mainBolusAmount',
+        'mainInfusionRate',
+        'mainTciTarget',
+        'mainTciMaxRate',
+        'mainTciStopTime',
+      ].includes(mainId)
+    )
+      return;
     input.addEventListener('change', () => {
       document.getElementById(sourceId).value = input.value;
       dfsolve();
     });
   });
-  $$('input[name="dosingMode"]').forEach(input => input.addEventListener('change', () => setDosingMode(input.value)));
-  document.getElementById('mainConvertBasicBtn').addEventListener('click', () => document.getElementById('loadScheduleExampleBtn').click());
+  $$('input[name="dosingMode"]').forEach((input) =>
+    input.addEventListener('change', () => setDosingMode(input.value)),
+  );
+  document
+    .getElementById('mainConvertBasicBtn')
+    .addEventListener('click', () => document.getElementById('loadScheduleExampleBtn').click());
   document.getElementById('reviewInvalidInputsBtn').addEventListener('click', () => {
     const field = document.querySelector('#paramsDrawer .is-invalid');
     document.getElementById('paramsBtn').click();
@@ -3709,21 +3966,31 @@ function wireInputs() {
     setTimeout(() => field?.focus(), 0);
   });
   [
-    Vd1num, Vd2num, Vd3num,
-    Clnum, Q2num, Q3num,
-    k10inputnum, k12inputnum, k21inputnum, k13inputnum, k31inputnum, ke0num
-  ].forEach(el => el?.addEventListener('change', () => {
-    markPresetModified();
-    dfsolve();
-  }));
+    Vd1num,
+    Vd2num,
+    Vd3num,
+    Clnum,
+    Q2num,
+    Q3num,
+    k10inputnum,
+    k12inputnum,
+    k21inputnum,
+    k13inputnum,
+    k31inputnum,
+    ke0num,
+  ].forEach((el) =>
+    el?.addEventListener('change', () => {
+      markPresetModified();
+      dfsolve();
+    }),
+  );
 
-  [
-    bnum, tbolusnum, tinfusionnum, infusionnum,
-    initialpnum, tfinalnum, weightnum
-  ].forEach(el => el?.addEventListener('change', () => dfsolve()));
+  [bnum, tbolusnum, tinfusionnum, infusionnum, initialpnum, tfinalnum, weightnum].forEach((el) =>
+    el?.addEventListener('change', () => dfsolve()),
+  );
 
-  pkInputModeSelect?.addEventListener("change", () => {
-    if (getPkInputMode() === "microconstants") syncMicroInputsFromClearanceInputs();
+  pkInputModeSelect?.addEventListener('change', () => {
+    if (getPkInputMode() === 'microconstants') syncMicroInputsFromClearanceInputs();
     else syncClearanceInputsFromMicroInputs();
     updatePkInputVisibility();
     dfsolve();
@@ -3738,15 +4005,18 @@ function wireInputs() {
     dfsolve();
   });
 
-  ['tciTargetType', 'tciTarget', 'tciMaxRate', 'tciStopTime'].forEach(id => {
+  ['tciTargetType', 'tciTarget', 'tciMaxRate', 'tciStopTime'].forEach((id) => {
     document.getElementById(id)?.addEventListener('change', () => dfsolve());
   });
-  document.getElementById('tciEnabled')?.addEventListener('change', event => {
+  document.getElementById('tciEnabled')?.addEventListener('change', (event) => {
     if (event.target.checked) {
       const useSchedule = document.getElementById('useSchedule');
       if (useSchedule) useSchedule.checked = false;
       disableLegacyBolusInfusionInputs(true);
-      setSimulationStatus('Educational TCI mode is active; manual dosing inputs are not used.', 'ok');
+      setSimulationStatus(
+        'Educational TCI mode is active; manual dosing inputs are not used.',
+        'ok',
+      );
     } else {
       disableLegacyBolusInfusionInputs(Boolean(document.getElementById('useSchedule')?.checked));
     }
@@ -3756,7 +4026,7 @@ function wireInputs() {
   document.getElementById('scaleToggleBtnTop')?.addEventListener('click', () => toggleScale());
   document.getElementById('darkModeBtnTop')?.addEventListener('click', () => toggleDarkMode());
 
-  ['drugPicker', 'drawerDrugPicker'].forEach(id => {
+  ['drugPicker', 'drawerDrugPicker'].forEach((id) => {
     const drugPicker = document.getElementById(id);
     drugPicker?.addEventListener('change', () => {
       if (drugPicker.value) {
@@ -3772,27 +4042,43 @@ function wireInputs() {
     });
   });
 
-  document.getElementById('mainBolusAmount')?.addEventListener('change', () => applyMainDoseAdjustment('bolus'));
-  document.getElementById('mainInfusionRate')?.addEventListener('change', () => applyMainDoseAdjustment('infusion'));
+  document
+    .getElementById('mainBolusAmount')
+    ?.addEventListener('change', () => applyMainDoseAdjustment('bolus'));
+  document
+    .getElementById('mainInfusionRate')
+    ?.addEventListener('change', () => applyMainDoseAdjustment('infusion'));
   document.getElementById('undoTimelineBtn')?.addEventListener('click', undoTimelineDeletion);
   document.getElementById('mainResetBtn')?.addEventListener('click', reset);
-  document.getElementById('timelineEventSaveBtn')?.addEventListener('click', saveSelectedTimelineEvent);
-  document.getElementById('timelineEventDuplicateBtn')?.addEventListener('click', duplicateSelectedTimelineEvent);
-  document.getElementById('timelineEventDeleteBtn')?.addEventListener('click', deleteSelectedTimelineEvent);
-  document.getElementById('generateTestRegimenBtn')?.addEventListener('click', generateModelDerivedTestRegimen);
-  ['mainTciTargetType', 'mainTciTarget', 'mainTciMaxRate', 'mainTciStopTime'].forEach(id => {
+  document
+    .getElementById('timelineEventSaveBtn')
+    ?.addEventListener('click', saveSelectedTimelineEvent);
+  document
+    .getElementById('timelineEventDuplicateBtn')
+    ?.addEventListener('click', duplicateSelectedTimelineEvent);
+  document
+    .getElementById('timelineEventDeleteBtn')
+    ?.addEventListener('click', deleteSelectedTimelineEvent);
+  document
+    .getElementById('generateTestRegimenBtn')
+    ?.addEventListener('click', generateModelDerivedTestRegimen);
+  ['mainTciTargetType', 'mainTciTarget', 'mainTciMaxRate', 'mainTciStopTime'].forEach((id) => {
     document.getElementById(id)?.addEventListener('change', applyMainTciAdjustment);
   });
 
   document.getElementById('resetBtn')?.addEventListener('click', () => reset());
   document.getElementById('oneCompBtn')?.addEventListener('click', () => onecompartment());
-  document.getElementById('summaryParamsBtn')?.addEventListener('click', () => document.getElementById('paramsBtn')?.click());
+  document
+    .getElementById('summaryParamsBtn')
+    ?.addEventListener('click', () => document.getElementById('paramsBtn')?.click());
   document.getElementById('exportPdfBtn')?.addEventListener('click', exportSimulationPdf);
 }
 
 (function init() {
   const desktopWorkspace = window.matchMedia('(min-width: 992px)');
-  const setSummaryVisibility = () => { document.getElementById('regimenMore').open = desktopWorkspace.matches; };
+  const setSummaryVisibility = () => {
+    document.getElementById('regimenMore').open = desktopWorkspace.matches;
+  };
   setSummaryVisibility();
   desktopWorkspace.addEventListener('change', setSummaryVisibility);
   window.matchMedia('(max-width: 690px)').addEventListener('change', () => dfsolve());
@@ -3807,15 +4093,17 @@ function wireInputs() {
   initDistributionDetails();
   wireInputs();
   initRegimenFiles();
+  initTciTargetSchedule();
   window.addEventListener('beforeprint', () => {
     if (latestPdfContext) updatePdfDoseProtocol(latestPdfContext.params, latestPdfContext.schedule);
   });
   updatePkInputVisibility();
   syncMicroInputsFromClearanceInputs();
   reset();
+  initDraftRecovery();
 
   window.addEventListener('resize', () => {
-    ['myDiv1','myDiv2','myDiv3','tciRatePlot'].forEach(id => {
+    ['myDiv1', 'myDiv2', 'myDiv3', 'tciRatePlot'].forEach((id) => {
       const el = document.getElementById(id);
       if (el && window.Plotly) Plotly.Plots.resize(el);
     });
