@@ -160,6 +160,37 @@
           app.Plotly.react = rawReact;
           app.simulatePkModel = rawSolve;
           app.clearStrategies();
+          change('mainFinalTime', '10');
+          input('inspectionSlider').value = '6.0839482';
+          input('inspectionSlider').dispatchEvent(new app.Event('input', { bubbles: true }));
+          check(
+            'dragging the slider snaps to the simulation timestep',
+            input('inspectionTime').value === '6.1' &&
+              input('inspectionSlider').getAttribute('aria-valuetext') === '6.1 min',
+          );
+          input('inspectionSlider').value = '6.0039482';
+          input('inspectionSlider').dispatchEvent(new app.Event('input', { bubbles: true }));
+          check(
+            'whole-minute slider points retain one decimal place',
+            input('inspectionTime').value === '6.0',
+          );
+          input('inspectionSlider').dispatchEvent(
+            new app.KeyboardEvent('keydown', {
+              key: 'ArrowRight',
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+          check('slider arrow keys move one timestep', input('inspectionTime').value === '6.1');
+          app.setInspectionTime(0.35);
+          input('inspectionSlider').dispatchEvent(
+            new app.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }),
+          );
+          check(
+            'slider arrows return fractional event times to the timestep grid',
+            input('inspectionTime').value === '0.3',
+          );
+          change('mainFinalTime', '3');
 
           app.setScheduleToDOM({
             enabled: true,

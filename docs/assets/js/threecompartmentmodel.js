@@ -821,6 +821,18 @@ function updateRegimenOverview(params, schedule) {
   const track = document.getElementById('doseTimelineTrack');
   if (!track) return;
   track.textContent = '';
+  const lanes = {};
+  for (const type of ['bolus', 'infusion']) {
+    const lane = document.createElement('div');
+    lane.className = `dose-timeline__lane dose-timeline__lane--${type}`;
+    lane.dataset.timelineLane = type;
+    const label = document.createElement('span');
+    label.className = 'dose-timeline__lane-label';
+    label.textContent = type === 'bolus' ? 'Bolus' : 'Infusion';
+    lane.append(label);
+    track.append(lane);
+    lanes[type] = lane;
+  }
   const validSegments = segments.filter(
     (segment) =>
       Number.isFinite(segment.start) &&
@@ -863,7 +875,7 @@ function updateRegimenOverview(params, schedule) {
           ? `B ${formatInputValue(start)}m`
           : `Infusion ${formatInputValue(start)}–${formatInputValue(end)} min`;
     marker.appendChild(label);
-    track.appendChild(marker);
+    lanes[segment.type].appendChild(marker);
   });
 
   track.dataset.tciMode = String(tci.enabled);

@@ -1,5 +1,14 @@
 /* Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT */
 let inspectionTime = 0;
+function snapInspectionTime(time) {
+  return Number((Math.round(time / SIMULATION_STEP_MINUTES) * SIMULATION_STEP_MINUTES).toFixed(12));
+}
+
+function formatInspectionTime(time) {
+  return Math.abs(time - snapInspectionTime(time)) < TIME_EPSILON
+    ? time.toFixed(Math.max(0, Math.ceil(-Math.log10(SIMULATION_STEP_MINUTES))))
+    : formatInputValue(time);
+}
 const formatInspectionValue = (value) => String(roundToSignificantFigures(value, 4));
 const DELIVERY_STATUS_LABELS = {
   capped: 'At the maximum infusion rate',
@@ -49,8 +58,9 @@ function updateSimulationInspection() {
     slider = document.getElementById('inspectionSlider');
   clearInvalidInput(timeInput);
   timeInput.max = slider.max = String(simulation.ts.at(-1));
-  timeInput.value = formatInputValue(inspectionTime);
+  timeInput.value = formatInspectionTime(inspectionTime);
   slider.value = String(inspectionTime);
+  slider.setAttribute('aria-valuetext', `${formatInspectionTime(inspectionTime)} min`);
   set('inspectionCp', concentration(sample.cp));
   set('inspectionCe', sample.ce == null ? 'Not modeled' : concentration(sample.ce));
   set(
@@ -211,9 +221,29 @@ function initSimulationInspection() {
   document
     .getElementById('inspectionTime')
     .addEventListener('change', (event) => setInspectionTime(event.target.value));
-  document
-    .getElementById('inspectionSlider')
-    .addEventListener('input', (event) => setInspectionTime(event.target.value));
+  document.getElementById('inspectionSlider').addEventListener('input', (event) => {
+    const end = latestSimulationContext?.result.simulation.ts.at(-1);
+    if (end == null) return;
+    setInspectionTime(clamp(snapInspectionTime(Number(event.target.value)), 0, end));
+  });
+  document.getElementById('inspectionSlider').addEventListener('keydown', (event) => {
+    if (!latestSimulationContext) return;
+    const end = latestSimulationContext.result.simulation.ts.at(-1);
+    let time;
+    if (['ArrowRight', 'ArrowUp'].includes(event.key))
+      time =
+        (Math.floor((inspectionTime + TIME_EPSILON) / SIMULATION_STEP_MINUTES) + 1) *
+        SIMULATION_STEP_MINUTES;
+    else if (['ArrowLeft', 'ArrowDown'].includes(event.key))
+      time =
+        (Math.ceil((inspectionTime - TIME_EPSILON) / SIMULATION_STEP_MINUTES) - 1) *
+        SIMULATION_STEP_MINUTES;
+    else if (event.key === 'Home') time = 0;
+    else if (event.key === 'End') time = end;
+    else return;
+    event.preventDefault();
+    setInspectionTime(clamp(Number(time.toFixed(12)), 0, end));
+  });
   document.getElementById('exportResultsCsvBtn').addEventListener('click', () => {
     if (!validateSimulationInputs()) {
       setResultsValidity(false);

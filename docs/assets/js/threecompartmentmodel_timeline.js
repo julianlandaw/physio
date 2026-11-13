@@ -152,18 +152,21 @@ function getEditableTimelineSchedule() {
   const current = getScheduleFromDOM();
   if (current.enabled) return current;
   const bolusDuration = Math.max(0, parseFloatSafe(tbolusnum?.value, 0));
+  const bolusDose = Math.max(0, parseFloatSafe(bnum?.value, 0));
+  const infusionRate = Math.max(0, parseFloatSafe(infusionnum?.value, 0));
   return {
     enabled: true,
-    boluses: [
-      { time: 0, dose: Math.max(0, parseFloatSafe(bnum?.value, 0)), duration: bolusDuration },
-    ],
-    infusions: [
-      {
-        start: bolusDuration,
-        end: bolusDuration + Math.max(0, parseFloatSafe(tinfusionnum?.value, 0)),
-        rate: Math.max(0, parseFloatSafe(infusionnum?.value, 0)),
-      },
-    ],
+    boluses: bolusDose > 0 ? [{ time: 0, dose: bolusDose, duration: bolusDuration }] : [],
+    infusions:
+      infusionRate > 0
+        ? [
+            {
+              start: bolusDuration,
+              end: bolusDuration + Math.max(0, parseFloatSafe(tinfusionnum?.value, 0)),
+              rate: infusionRate,
+            },
+          ]
+        : [],
   };
 }
 
@@ -217,7 +220,7 @@ function ensureTimelineEditor() {
     if (!draft) {
       draft = document.createElement('span');
       draft.className = 'dose-timeline__draft';
-      track.appendChild(draft);
+      track.querySelector('[data-timeline-lane="infusion"]').appendChild(draft);
     }
     const tfinal = Math.max(0.1, parseFloatSafe(tfinalnum?.value, 0.1));
     const left = Math.min(start, end);

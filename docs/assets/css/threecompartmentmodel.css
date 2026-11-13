@@ -2298,18 +2298,39 @@ body.dark-mode .simulation-status[data-state='error'] {
   position: relative;
   /* Keep the event labels clear of the instructional text above. */
   margin-top: 22px;
-  height: 11px;
+  height: 72px;
   overflow: visible;
-  border-radius: 999px;
-  background: var(--border);
   cursor: crosshair;
   touch-action: none;
 }
 
+.dose-timeline__lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--border);
+}
+.dose-timeline__lane--bolus {
+  top: 0;
+}
+.dose-timeline__lane--infusion {
+  top: 44px;
+}
+.dose-timeline__lane-label {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 5px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
 .dose-timeline__segment {
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 8px;
+  bottom: 8px;
   min-width: 3px;
   border-radius: 999px;
   cursor: pointer;

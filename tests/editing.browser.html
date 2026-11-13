@@ -418,6 +418,97 @@
             JSON.parse(app.localStorage.getItem('physio.regimen.draft.v1')).current.patient
               .weightKg === 84,
           );
+          app.applyDrugById('propofol');
+          change('mainFinalTime', '2');
+          change('mainBolusAmount', '0');
+          change('mainLoadingDuration', '0');
+          change('mainInfusionRate', '100');
+          change('mainInfusionDuration', '2');
+          const beforeBolusState = app.getCurrentState(),
+            beforeBolus = app.simulateStrategy(beforeBolusState);
+          const track = input('doseTimelineTrack');
+          track.scrollIntoView({ block: 'center' });
+          const bolusLane = track.querySelector('[data-timeline-lane="bolus"]');
+          const infusionLane = track.querySelector('[data-timeline-lane="infusion"]');
+          const upper = bolusLane.getBoundingClientRect(),
+            lower = infusionLane.getBoundingClientRect();
+          const x = upper.left + upper.width / 2,
+            y = upper.top + upper.height / 2;
+          check(
+            'bolus and infusion events occupy separate clickable lanes',
+            upper.bottom < lower.top && d.elementFromPoint(x, y) === bolusLane,
+          );
+          // Synthetic pointer events do not create a native captured pointer.
+          const capture = track.setPointerCapture;
+          track.setPointerCapture = () => {};
+          const gesture = (target, clientX, clientY) => {
+            for (const type of ['pointerdown', 'pointerup'])
+              target.dispatchEvent(
+                new app.PointerEvent(type, {
+                  pointerId: 1,
+                  button: 0,
+                  clientX,
+                  clientY,
+                  bubbles: true,
+                }),
+              );
+          };
+          gesture(bolusLane, x, y);
+          track.setPointerCapture = capture;
+          const overlapped = app.getScheduleFromDOM();
+          check(
+            'clicking the bolus lane adds a bolus during an ongoing basic infusion',
+            overlapped.enabled &&
+              overlapped.boluses.length === 1 &&
+              overlapped.boluses[0].time === 1 &&
+              overlapped.infusions[0].start === 0 &&
+              overlapped.infusions[0].end === 2 &&
+              overlapped.infusions[0].rate === 100,
+          );
+          check(
+            'the new bolus opens for editing even when there was no initial bolus',
+            !input('timelineEventEditor').hidden &&
+              app.getSelectedTimelineEvent()?.type === 'bolus',
+          );
+          const afterBolusState = app.getCurrentState(),
+            afterBolus = app.simulateStrategy(afterBolusState);
+          const beforePoint = app.sampleSimulation(
+            beforeBolus,
+            app.prepareSimulationInput(beforeBolusState),
+            1,
+          );
+          const afterPoint = app.sampleSimulation(
+            afterBolus,
+            app.prepareSimulationInput(afterBolusState),
+            1,
+          );
+          const extraDose = overlapped.boluses[0].dose;
+          check(
+            'the added bolus increases Cp and dose without changing infusion delivery',
+            approx(afterBolus.totalDoseMgKg - beforeBolus.totalDoseMgKg, extraDose) &&
+              approx(afterPoint.cp - beforePoint.cp, extraDose / afterBolusState.pk.Vd1) &&
+              afterPoint.rateBase === beforePoint.rateBase,
+          );
+          undo();
+          check(
+            'Undo removes the additional bolus and preserves the original infusion',
+            !input('useSchedule').checked && app.getCurrentState().inputs.infusion === 100,
+          );
+          redo();
+          check(
+            'Redo restores the bolus and the unchanged infusion together',
+            app.getScheduleFromDOM().boluses[0].time === 1 &&
+              app.getScheduleFromDOM().infusions[0].rate === 100,
+          );
+          track.scrollIntoView({ block: 'center' });
+          const infusionMarker = track.querySelector('.dose-timeline__segment--infusion');
+          const rect = infusionMarker.getBoundingClientRect();
+          gesture(infusionMarker, rect.left + rect.width / 2, rect.top + rect.height / 2);
+          check(
+            'clicking an infusion bar still edits that infusion',
+            app.getSelectedTimelineEvent()?.type === 'infusion' &&
+              app.getScheduleFromDOM().boluses.length === 1,
+          );
           document.body.dataset.result = 'passed';
         } catch (error) {
           checks.push(`FAIL ${error.message}`);
