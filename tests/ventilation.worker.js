@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT */
-importScripts('../docs/assets/js/ventilation_engine.js');
+importScripts('../docs/assets/js/ventilation_co2.js', '../docs/assets/js/ventilation_engine.js');
 const checks = [];
 const check = (name, value) => {
   checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
@@ -216,36 +216,35 @@ try {
     const run = Ventilation.simulate({ ...Ventilation.defaults, mode, T: 5 }),
       q = run.timing,
       shape = run.capnogramTiming,
-      et = run.gasExchange.EtCO2;
+      et = run.metrics.EtCO2;
     const at = (local, side) => Ventilation.sample(run, local, side);
     check(
       `${mode}: capnogram remains within zero and estimated end-tidal CO2`,
       run.co2.length === run.t.length &&
-        run.co2.every((v) => Number.isFinite(v) && v >= 0 && v <= et + 1e-8),
+        run.co2.every((v) => Number.isFinite(v) && v >= 0 && v < 713),
     );
     check(
-      `${mode}: inspiratory and hold CO2 are at baseline`,
-      run.co2.every((v, i) => run.phase[i] === 'expiration' || v === 0),
+      `${mode}: first inspiration starts with fresh airway gas`,
+      run.co2[0] === 0 && Ventilation.sample(run, 0.5).co2 < 0.1,
     );
     check(
       `${mode}: capnogram phase I precedes the expiratory upstroke`,
-      at(q.Ti + shape.delay / 2).co2 === 0 && at(q.Ti + shape.delay / 2).co2Phase === 'phase I',
+      at(q.Ti + 0.02).co2 < 0.1 && at(4.5).co2 > 10,
     );
     const rise = at(q.Ti + (shape.delay + shape.riseEnd) / 2);
     check(
-      `${mode}: phase II and phase III values match the defined teaching shape`,
-      near(rise.co2, (et * shape.plateauLevel) / 2) &&
-        rise.co2Phase === 'phase II' &&
-        near(at(q.Ti + (shape.riseEnd + q.Te) / 2).co2, (et * (shape.plateauLevel + 1)) / 2),
+      `${mode}: transported CO2 retains a mass balance`,
+      Math.abs(run.co2Balance.residual) < 1e-9 &&
+        run.co2Balance.produced > 0 &&
+        run.co2Balance.exhaled > 0,
     );
     check(`${mode}: end-expiratory capnogram equals displayed EtCO2`, near(at(5).co2, et));
     const multiple = Ventilation.simulate({ ...run.settings, T: 10 });
     check(
       `${mode}: breath boundary retains the end-tidal peak and inspiratory reset`,
       near(Ventilation.sample(multiple, 5, 'left').co2, et) &&
-        Ventilation.sample(multiple, 5, 'right').co2 === 0 &&
-        multiple.t.some((t, i) => t === 5 && near(multiple.co2[i], et)) &&
-        multiple.t.some((t, i) => t === 5 && multiple.co2[i] === 0),
+        near(Ventilation.sample(multiple, 5, 'right').co2, et) &&
+        Ventilation.sample(multiple, 5.4).co2 < et / 10,
     );
     check(
       `${mode}: capnogram phase boundaries are included exactly in chart samples`,
@@ -258,14 +257,15 @@ try {
       `${mode}: obstructive shape has a longer upstroke and steeper phase III`,
       obstructive.capnogramTiming.riseEnd > shape.riseEnd &&
         obstructive.capnogramTiming.plateauLevel < shape.plateauLevel &&
-        Ventilation.sample(obstructive, normalizedTime).co2 < at(normalizedTime).co2 &&
-        near(obstructive.gasExchange.EtCO2, et),
+        !near(Ventilation.sample(obstructive, normalizedTime).co2, at(normalizedTime).co2) &&
+        near(obstructive.metrics.EtCO2, et),
     );
   }
   const noCO2 = Ventilation.simulate({ ...Ventilation.defaults, VD: 400 });
   check(
-    'unavailable CO2 is missing data rather than a fabricated flat zero trace',
-    noCO2.co2.every((v) => v === null) && Ventilation.sample(noCO2, 4).co2Phase === 'unavailable',
+    'low ventilation retains CO2 with finite stores rather than fabricating missing data',
+    noCO2.co2.every((v) => Number.isFinite(v) && v >= 0) &&
+      Math.abs(noCO2.co2Balance.residual) < 1e-9,
   );
   const autoShape = Ventilation.simulate({ ...Ventilation.defaults, Rexp: 40 });
   const overrideShape = Ventilation.simulate({
@@ -281,6 +281,95 @@ try {
     Ventilation.validate({ ...Ventilation.defaults, capnogramShape: 'unknown' }).some(
       (e) => e.field === 'capnogramShape',
     ),
+  );
+  const dynamic = Ventilation.simulate({ ...Ventilation.defaults, T: 120 });
+  check(
+    'dynamic CO2 changes over breaths rather than repeating one amplitude',
+    Math.abs(dynamic.breaths[0].metrics.EtCO2 - dynamic.metrics.EtCO2) > 1,
+  );
+  const fastDynamic = Ventilation.simulate({ ...Ventilation.defaults, RR: 24, T: 120 });
+  check(
+    'increased VCV ventilation lowers CO2 after the same initial conditions',
+    fastDynamic.metrics.EtCO2 < dynamic.metrics.EtCO2,
+  );
+  const highProduction = Ventilation.simulate({ ...Ventilation.defaults, VCO2: 400, T: 120 });
+  check(
+    'higher metabolic production increases stored and end-tidal CO2',
+    highProduction.metrics.EtCO2 > dynamic.metrics.EtCO2 &&
+      highProduction.co2Balance.produced > dynamic.co2Balance.produced,
+  );
+  const continued = Ventilation.simulate(
+    { ...Ventilation.defaults, RR: 24, T: 20 },
+    { co2State: dynamic.co2Balance.state },
+  );
+  check(
+    'continuation starts at the captured CO2 sensor value without a jump',
+    near(continued.co2[0], dynamic.co2.at(-1)) && Math.abs(continued.co2Balance.residual) < 1e-9,
+  );
+  const gradientOnly = Ventilation.simulate({ ...Ventilation.defaults, CO2Gradient: 12, T: 5 });
+  check(
+    'the assumed Pa-Et gradient changes only the arterial display estimate',
+    near(gradientOnly.metrics.EstimatedPaCO2 - gradientOnly.metrics.EtCO2, 12) &&
+      near(
+        gradientOnly.metrics.EtCO2,
+        Ventilation.simulate({ ...Ventilation.defaults, T: 5 }).metrics.EtCO2,
+      ),
+  );
+  const noAirway = Ventilation.simulate({ ...Ventilation.defaults, VD: 0, T: 5 });
+  check(
+    'zero dead space is supported without a transport division by zero',
+    noAirway.co2.every(Number.isFinite) && Math.abs(noAirway.co2Balance.residual) < 1e-9,
+  );
+  const extreme = Ventilation.simulate({
+    ...Ventilation.defaults,
+    VT: 1000,
+    RR: 40,
+    IF: 0.05,
+    HF: 0.8,
+    VD: 0.1,
+    T: 5,
+  });
+  check(
+    'very short high-flow inspiration and tiny dead space conserve CO2',
+    Math.abs(extreme.co2Balance.residual) < 1e-9 && extreme.co2.every(Number.isFinite),
+  );
+  const refined = Ventilation.simulate({ ...Ventilation.defaults, T: 20 }, { co2Step: 0.002 });
+  const normalStep = Ventilation.simulate({ ...Ventilation.defaults, T: 20 });
+  check(
+    'CO2 time-step refinement changes end-tidal pressure by less than 0.2 mmHg',
+    Math.abs(refined.metrics.EtCO2 - normalStep.metrics.EtCO2) < 0.2,
+  );
+  const store = VentilationCO2.create(
+    { ...Ventilation.defaults, VCO2: 0, VD: 0, FRC: 2, CO2Store: 10 },
+    0,
+    { lungFraction: 0.04, tissueFraction: 0.08 },
+  );
+  const mixed = store.advance(20, () => ({ v: 0 }));
+  const meanFraction = (2 * 0.04 + 10 * 0.08) / 12;
+  const expectedFraction =
+    meanFraction + (0.04 - meanFraction) * Math.exp(-0.5 * (1 / 2 + 1 / 10) * 20);
+  check(
+    'isolated lung/tissue exchange matches the analytical mixing solution',
+    Math.abs(mixed.alveolar / 713 - expectedFraction) < 1e-5 && Math.abs(mixed.residual) < 1e-10,
+  );
+  const checkpointRun = Ventilation.simulate({ ...Ventilation.defaults, T: 17.9 });
+  const rapidEmptying = Ventilation.simulate({
+    ...Ventilation.defaults,
+    R: 1,
+    Rexp: 1,
+    C: 5,
+    VD: 0,
+    T: 5,
+  });
+  check(
+    'a fast fully emptied compartment retains its sampled capnogram until inspiration',
+    rapidEmptying.metrics.EtCO2 > 5 && Math.abs(rapidEmptying.co2Balance.residual) < 1e-9,
+  );
+  const checkpoint = checkpointRun.completeBreaths[0];
+  check(
+    'each complete breath captures its own CO2 continuation state',
+    near(checkpoint.co2State.measured, checkpoint.metrics.EtCO2) &&
+      Math.abs(checkpoint.co2State.measured - checkpointRun.co2Balance.measured) > 0.01,
   );
   self.postMessage({ passed: true, checks });
 } catch (error) {

@@ -19,7 +19,10 @@ const Ventilation = (() => {
     VCO2: 200,
     VD: 150,
     CO2Gradient: 5,
-    capnogramShape: 'auto',
+    capnogramShape: 'transport',
+    FRC: 2.5,
+    CO2Store: 20,
+    CO2Initial: 40,
   };
   const limits = {
     VT: [50, 1000],
@@ -35,6 +38,9 @@ const Ventilation = (() => {
     VCO2: [50, 500],
     VD: [0, 500],
     CO2Gradient: [0, 30],
+    FRC: [1, 6],
+    CO2Store: [5, 60],
+    CO2Initial: [5, 100],
   };
   function validate(p) {
     const errors = [];
@@ -56,7 +62,7 @@ const Ventilation = (() => {
     }
     if (!['startup', 'steady'].includes(p.initial))
       errors.push({ field: 'initial', message: 'Choose an initial lung state.' });
-    if (!['auto', 'reference', 'obstructive'].includes(p.capnogramShape))
+    if (!['transport', 'auto', 'reference', 'obstructive'].includes(p.capnogramShape))
       errors.push({ field: 'capnogramShape', message: 'Choose a supported capnogram shape.' });
     return errors;
   }
@@ -201,7 +207,7 @@ const Ventilation = (() => {
       ...capnogram(q, shape, gas, local, phase),
     };
   }
-  function sample(run, rawTime, side) {
+  function mechanicalSample(run, rawTime, side) {
     const time = Math.max(0, Math.min(run.settings.T, rawTime));
     side ||= Math.abs(time - run.settings.T) < EPS ? 'left' : 'right';
     let index = Math.floor((time + EPS) / run.timing.cycle);
@@ -216,6 +222,38 @@ const Ventilation = (() => {
       run.gasExchange,
       run.capnogramTiming,
     );
+  }
+  function sample(run, time, side) {
+    const point = mechanicalSample(run, time, side);
+    if (!run.co2.length) return point;
+    let lo = 0,
+      hi = run.t.length - 1;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (run.t[mid] <= point.t) lo = mid;
+      else hi = mid - 1;
+    }
+    if (side === 'left' || (side == null && Math.abs(point.t - run.settings.T) < EPS))
+      while (lo > 0 && Math.abs(run.t[lo] - run.t[lo - 1]) < EPS) lo--;
+    const next = Math.min(lo + 1, run.t.length - 1),
+      span = run.t[next] - run.t[lo];
+    const interpolate = (values) =>
+      values[lo] == null || values[next] == null
+        ? null
+        : values[lo] + (values[next] - values[lo]) * (span > 0 ? (point.t - run.t[lo]) / span : 0);
+    point.co2 = interpolate(run.co2);
+    point.alveolarCO2 = interpolate(run.alveolarCO2);
+    point.co2Phase =
+      point.phase !== 'expiration'
+        ? 'inspiratory washout / baseline'
+        : point.co2 == null
+          ? 'unavailable'
+          : point.co2 < 2
+            ? 'phase I'
+            : point.co2 < 0.85 * point.alveolarCO2
+              ? 'phase II'
+              : 'phase III';
+    return point;
   }
   // A steady-state ventilation estimate, independent of startup/selected breath.
   // VCO2 is mL/min STPD; alveolar ventilation is L/min BTPS. No CO2 stores,
@@ -241,7 +279,7 @@ const Ventilation = (() => {
     if (pressure <= p.CO2Gradient) return { ...result, status: 'gradient' };
     return { ...result, EtCO2: pressure - p.CO2Gradient, status: 'ok' };
   }
-  function simulate(settings) {
+  function simulate(settings, options = {}) {
     const p = { ...defaults, ...settings };
     const errors = validate(p);
     if (errors.length) throw Error(errors.map((error) => error.message).join(' '));
@@ -264,6 +302,7 @@ const Ventilation = (() => {
       palv: [],
       phase: [],
       co2: [],
+      alveolarCO2: [],
       gasExchange: gasExchange(p, q),
       capnogramTiming: capnogramTiming(p, q),
     };
@@ -273,8 +312,10 @@ const Ventilation = (() => {
       if (p.mode === 'vcv' && q.Th > 0) events.push(b.start + q.Tflow);
       events.push(b.start + q.Ti, b.end);
       events.push(
-        b.start + q.Ti + run.capnogramTiming.delay,
-        b.start + q.Ti + run.capnogramTiming.riseEnd,
+        b.start + q.Ti + q.Te * 0.04,
+        b.start + q.Ti + q.Te * 0.12,
+        b.start + q.Ti + q.Te * 0.38,
+        b.start + q.Ti + capnogramTiming({ ...p, capnogramShape: 'auto' }, q).riseEnd,
       );
     }
     const boundaries = events
@@ -287,6 +328,7 @@ const Ventilation = (() => {
     times.sort((a, b) => a - b);
     const unique = times.filter((t, i) => !i || t - times[i - 1] > EPS);
     let nextBoundary = 0;
+    const co2Model = VentilationCO2.create(p, breaths[0].V0, options.co2State, options.co2Step);
     for (const time of unique) {
       while (nextBoundary < boundaries.length && boundaries[nextBoundary] < time - EPS)
         nextBoundary++;
@@ -297,10 +339,36 @@ const Ventilation = (() => {
           ? ['left', 'right']
           : [time >= p.T - EPS ? 'left' : 'right'];
       for (const side of sides) {
-        const point = sample(run, Math.min(time, p.T), side);
-        for (const key of ['t', 'p', 'v', 'f', 'palv', 'phase', 'co2']) run[key].push(point[key]);
+        const point = mechanicalSample(run, Math.min(time, p.T), side);
+        const gas = co2Model.advance(point.t, (t) => mechanicalSample(run, t, 'left'));
+        const currentBreath = breaths[point.breath - 1];
+        if (Math.abs(point.t - currentBreath.end) < EPS && !currentBreath.co2State)
+          currentBreath.co2State = co2Model.read().state;
+        point.co2 = gas.measured;
+        point.alveolarCO2 = gas.alveolar;
+        for (const key of ['t', 'p', 'v', 'f', 'palv', 'phase', 'co2', 'alveolarCO2'])
+          run[key].push(point[key]);
       }
     }
+    run.co2Balance = co2Model.read();
+    for (const b of breaths) {
+      b.metrics.EtCO2 = b.complete ? sample(run, b.end, 'left').co2 : null;
+      b.metrics.EstimatedPaCO2 = b.metrics.EtCO2 == null ? null : b.metrics.EtCO2 + p.CO2Gradient;
+    }
+    // Optional legacy illustrative shapes use the evolving breath amplitude.
+    // The transport trace remains the default and is the mass-audited output.
+    if (p.capnogramShape !== 'transport')
+      run.co2 = run.t.map((time, i) => {
+        const point = mechanicalSample(run, time, i && run.t[i - 1] === time ? 'right' : 'left');
+        const b = breaths[point.breath - 1];
+        return capnogram(
+          q,
+          run.capnogramTiming,
+          { EtCO2: b.metrics.EtCO2 ?? run.co2[i] },
+          time - b.start,
+          point.phase,
+        ).co2;
+      });
     run.completeBreaths = breaths.filter((b) => b.complete);
     run.metrics = run.completeBreaths.at(-1)?.metrics || null;
     return run;

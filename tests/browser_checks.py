@@ -121,6 +121,7 @@ def main():
             "editing.browser.html",
             "results.browser.html",
             "ventilation.browser.html",
+            "ventilation_features.browser.html",
         )
         for suite in suites:
             with tempfile.TemporaryDirectory(prefix="physio-browser-") as profile:

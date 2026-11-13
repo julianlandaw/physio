@@ -1,0 +1,231 @@
+<!-- Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ventilator interaction checks</title>
+  </head>
+  <body data-result="running">
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Ventilator under test"
+      style="position: absolute; left: -2000px; width: 390px; height: 1000px"
+    ></iframe>
+    <script>
+      const checks = [],
+        frame = document.getElementById('app');
+      const check = (name, value) => {
+        checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
+        if (!value) throw Error(name);
+      };
+      const near = (a, b, tol = 1e-7) => Number.isFinite(a) && Math.abs(a - b) < tol;
+      const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+      const load = (page) =>
+        new Promise((resolve) => {
+          frame.onload = () => resolve(frame.contentWindow);
+          frame.src = '../docs/Respiratory/' + page;
+        });
+      (async () => {
+        try {
+          for (const [mode, page] of [
+            ['vcv', 'volume_control_simulator.html'],
+            ['pcv', 'pressure_control_simulator.html'],
+          ]) {
+            const app = await load(page),
+              d = app.document,
+              el = (id) => d.getElementById(id),
+              run = () => app.eval('ventRun');
+            const change = (id, value) => {
+              el(id).value = value;
+              el(id).dispatchEvent(
+                new app.Event(el(id).tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }),
+              );
+            };
+            check(
+              `${mode}: transport model is the default`,
+              run().settings.capnogramShape === 'transport' && run().co2Balance.valid,
+            );
+            change('timingMode', 'ti');
+            change('timingValue', '1');
+            check(`${mode}: direct Ti sets the solved timing`, near(run().timing.Ti, 1));
+            change(`${mode}RR`, '20');
+            check(
+              `${mode}: direct Ti remains fixed across rate changes`,
+              near(run().timing.Ti, 1) && near(run().settings.IF, 1 / 3),
+            );
+            change('timingMode', 'ie');
+            change('timingValue', '3');
+            check(
+              `${mode}: I:E input sets inspiration and expiration`,
+              near(run().timing.Te / run().timing.Ti, 3),
+            );
+            el('keepTi').click();
+            const fixedTi = run().timing.Ti;
+            change(`${mode}RR`, '24');
+            check(`${mode}: keep-Ti works in I:E entry mode`, near(run().timing.Ti, fixedTi));
+            const valid = run();
+            change('timingValue', '0.01');
+            check(
+              `${mode}: impossible timing keeps last valid results and explains the error`,
+              run() === valid &&
+                !el('ventilationErrors').hidden &&
+                el('timingError').textContent.length > 0,
+            );
+            el('resetBtn').click();
+            const engine = app.eval('Ventilation'),
+              solve = engine.simulate;
+            let calls = 0;
+            engine.simulate = (...args) => {
+              calls++;
+              return solve(...args);
+            };
+            el('showTeaching').click();
+            el('loopsPanel').open = true;
+            await pause(80);
+            check(
+              `${mode}: teaching overlay labels pressure and CO2 phases without solving again`,
+              calls === 0 && el('plot').querySelectorAll('.teaching-label').length >= 5,
+            );
+            check(
+              `${mode}: both loops distinguish inspiration from expiration`,
+              ['pvLoop', 'fvLoop'].every(
+                (id) =>
+                  el(id).querySelector('[data-loop-phase="inspiration"]') &&
+                  el(id).querySelector('[data-loop-phase="expiration"]'),
+              ),
+            );
+            change('viewWindow', 'breath');
+            const t = run().completeBreaths.at(-1).start + 0.5;
+            app.updateVentCursor(t);
+            check(
+              `${mode}: loop markers follow the shared inspection cursor`,
+              ['pvLoop', 'fvLoop'].every(
+                (id) =>
+                  el(id).querySelector('.loop-cursor').getAttribute('visibility') === 'visible',
+              ),
+            );
+            const oldTime = app.eval('ventCursorTime');
+            el('pvLoop').dispatchEvent(
+              new app.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
+            );
+            check(
+              `${mode}: loop keyboard inspection changes time`,
+              app.eval('ventCursorTime') > oldTime && calls === 0,
+            );
+            el('playVent').click();
+            app.eval(
+              'cancelAnimationFrame(ventPlayback.frame);ventPlayback.last=1000;advanceVentPlayback(3500);cancelAnimationFrame(ventPlayback.frame);',
+            );
+            check(
+              `${mode}: playback advances and uses a moving monitor window without solving`,
+              near(app.eval('ventPlayback.time'), 2.5, 0.05) &&
+                el('viewWindow').value === 'monitor' &&
+                calls === 0,
+            );
+            change('playbackSpeed', '2');
+            app.eval('advanceVentPlayback(4500);cancelAnimationFrame(ventPlayback.frame);');
+            check(
+              `${mode}: playback speed scales simulated time`,
+              near(app.eval('ventPlayback.time'), 4.5, 0.05),
+            );
+            el('playVent').click();
+            check(
+              `${mode}: pause cancels playback`,
+              !app.eval('ventPlayback.active') && el('playVent').textContent === 'Play',
+            );
+            el('rewindVent').click();
+            check(
+              `${mode}: rewind hides completed-breath measurements`,
+              app.eval('ventPlayback.time') === 0 &&
+                el('metrics').textContent.includes('—') &&
+                el('freezeBaseline').disabled,
+            );
+            change('viewWindow', 'three');
+            change('breathSelect', String(run().completeBreaths.length - 1));
+            el('freezeBaseline').click();
+            const baseline = app.eval('ventBaseline');
+            change(`${mode}RR`, '18');
+            change('comparisonMode', 'aligned');
+            check(
+              `${mode}: alignment shares inspiration start without stretching time`,
+              app.eval('ventAligned()') &&
+                near(app.ventWindow()[1] - app.ventWindow()[0], 5) &&
+                el('plot').textContent.includes('Time from inspiration'),
+            );
+            check(
+              `${mode}: baseline changes and deltas are explicit`,
+              el('settingsChanges').textContent.includes('Respiratory rate: 12 → 18') &&
+                el('metrics').textContent.includes('Δ') &&
+                el('baselineNote').textContent.includes('unscaled seconds'),
+            );
+            check(
+              `${mode}: baseline appears in loops`,
+              ['pvLoop', 'fvLoop'].every((id) => el(id).querySelector('[data-baseline="true"]')),
+            );
+            const before = run().co2[0];
+            el('continueCO2').click();
+            check(
+              `${mode}: CO2 response can start from the baseline endpoint`,
+              near(run().co2[0], baseline.breath.co2State.measured) &&
+                el('co2StartNote').textContent.includes('frozen run') &&
+                run().co2[0] !== before,
+            );
+            check(
+              `${mode}: continued CO2 remains mass-conserving`,
+              Math.abs(run().co2Balance.residual) < 1e-9,
+            );
+            const continuedRun = run();
+            change(`${mode}CO2Initial`, '');
+            check(
+              `${mode}: invalid initial CO2 edits preserve the continued run`,
+              run() === continuedRun && !el('ventilationErrors').hidden,
+            );
+            change(`${mode}CO2Initial`, '40');
+            check(
+              `${mode}: an explicit initial pressure replaces the baseline CO2 start`,
+              run().co2[0] === 0 && !app.eval('ventCO2Seed'),
+            );
+            el('resetBtn').click();
+            check(
+              `${mode}: reset restores initial CO2, timing and comparison state`,
+              run().co2[0] === 0 &&
+                run().settings.RR === 12 &&
+                el('timingMode').value === 'fraction' &&
+                !app.eval('ventCO2Seed') &&
+                !app.eval('ventBaseline'),
+            );
+            check(
+              `${mode}: mobile layout has no overflow`,
+              d.documentElement.scrollWidth <= app.innerWidth,
+            );
+            el('freezeBaseline').click();
+            el('continueCO2').click();
+            check(
+              `${mode}: unchanged settings can still start a new CO2 response`,
+              run().co2[0] > 0,
+            );
+            el('resetBtn').click();
+            check(
+              `${mode}: reset clears a continued state even with unchanged settings`,
+              run().co2[0] === 0,
+            );
+            el('playVent').click();
+            change(`${mode}RR`, '18');
+            check(
+              `${mode}: editing settings pauses and restarts the run consistently`,
+              !app.eval('ventPlayback.active') && el('viewWindow').value === 'three',
+            );
+            el('resetBtn').click();
+            engine.simulate = solve;
+          }
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push('FAIL ' + error.message);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      })();
+    </script>
+  </body>
+</html>

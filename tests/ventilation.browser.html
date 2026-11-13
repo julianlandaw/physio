@@ -73,19 +73,24 @@
                 el('timingReadout').textContent.includes('1:2.03') &&
                 el('breathCaption').textContent.includes('Breath 12'),
             );
-            const gas = run().gasExchange,
-              mechanics = JSON.stringify(run().metrics);
+            const gas = { ...run().metrics },
+              mechanics = JSON.stringify([
+                run().metrics.VT,
+                run().metrics.Peak,
+                run().metrics.Intrinsic,
+              ]);
             check(
-              `${mode}: CO2 estimate is visible and explicitly steady state`,
-              el('co2Heading').textContent.includes('Steady-state') &&
+              `${mode}: dynamic selected-breath CO2 is visible`,
+              el('co2Heading').textContent.includes('Selected-breath') &&
                 el('co2Readings').querySelector('.num').textContent === gas.EtCO2.toFixed(1) &&
-                el('co2Note').textContent.includes('not a breath-by-breath measurement'),
+                el('co2Note').textContent.includes('lung/tissue storage'),
             );
             change(`${prefix}VCO2`, '400');
             check(
               `${mode}: CO2 assumptions change the estimate without changing mechanics`,
-              near(run().gasExchange.PaCO2, 2 * gas.PaCO2) &&
-                JSON.stringify(run().metrics) === mechanics,
+              run().metrics.EtCO2 > gas.EtCO2 &&
+                JSON.stringify([run().metrics.VT, run().metrics.Peak, run().metrics.Intrinsic]) ===
+                  mechanics,
             );
             const validCO2Run = run();
             change(`${prefix}VD`, '');
@@ -193,7 +198,7 @@
             change('lungCase', 'bronchospasm');
             check(
               `${mode}: CO2 baseline retains the original assumptions and estimate`,
-              frozen.run.gasExchange.EtCO2 === gas.EtCO2 &&
+              frozen.metrics.EtCO2 === gas.EtCO2 &&
                 el('co2Readings').textContent.includes(`Baseline ${gas.EtCO2.toFixed(1)}`),
             );
             check(
@@ -208,13 +213,13 @@
               el('plot').querySelector('[data-signal="co2"][data-baseline="true"]');
             const obstructivePath = co2Trace().getAttribute('d'),
               baselinePath = baselineCO2Trace().getAttribute('d');
-            const estimatedEt = run().gasExchange.EtCO2;
+            const estimatedEt = run().metrics.EtCO2;
             change('capnogramShape', 'reference');
             check(
               `${mode}: shape controls change the tracing while preserving EtCO2 and frozen CO2`,
               co2Trace().getAttribute('d') !== obstructivePath &&
                 baselineCO2Trace().getAttribute('d') === baselinePath &&
-                run().gasExchange.EtCO2 === estimatedEt &&
+                run().metrics.EtCO2 === estimatedEt &&
                 el('plot').querySelectorAll('.vent-etco2-marker').length === 3,
             );
             change('capnogramShape', 'auto');
@@ -264,12 +269,11 @@
             );
             change(`${prefix}${mode === 'vcv' ? 'VT' : 'PC'}`, mode === 'vcv' ? '50' : '0.1');
             check(
-              `${mode}: absent alveolar ventilation shows unavailable CO2 with an explanation`,
+              `${mode}: low ventilation retains finite dynamic CO2 and conserves mass`,
               run().gasExchange.EtCO2 === null &&
-                el('co2Readings').querySelector('.num').textContent === '—' &&
-                el('co2Note').textContent.includes('alveolar ventilation is zero') &&
-                !co2Trace() &&
-                el('plot').textContent.includes('CO₂ unavailable') &&
+                Number.isFinite(run().metrics.EtCO2) &&
+                Math.abs(run().co2Balance.residual) < 1e-9 &&
+                co2Trace() &&
                 [...el('plot').querySelectorAll('path')].every(
                   (p) => !/NaN|Infinity/.test(p.getAttribute('d')),
                 ),

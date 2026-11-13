@@ -17,6 +17,9 @@ function ventNiceCeiling(value) {
   return (unit <= 1 ? 1 : unit <= 2 ? 2 : unit <= 5 ? 5 : 10) * power;
 }
 function ventVisiblePoints(run, start, end) {
+  start = Math.max(0, start);
+  end = Math.min(run.settings.T, end);
+  if (end < start) return [];
   const points = [Ventilation.sample(run, start)];
   for (let i = 0; i < run.t.length; i++)
     if (run.t[i] > start && run.t[i] < end)
@@ -27,6 +30,7 @@ function ventVisiblePoints(run, start, end) {
         f: run.f[i],
         palv: run.palv[i],
         co2: run.co2[i],
+        alveolarCO2: run.alveolarCO2[i],
       });
   points.push(Ventilation.sample(run, end, 'left'));
   return points;
@@ -39,12 +43,24 @@ function drawVentilation() {
   const [start, end] = ventWindow(),
     scale = ventElement('flowUnit').value === 'L/min' ? 60 : 1,
     showAlveolar = ventElement('showAlveolar').checked;
-  const current = ventVisiblePoints(ventRun, start, end),
-    before = ventBaseline
+  const selected = ventRun.completeBreaths[ventBreathIndex];
+  const limit =
+    ventElement('viewWindow').value === 'monitor'
+      ? ventPlayback.time
+      : ventAligned()
+        ? selected.end
+        : end;
+  const current = ventVisiblePoints(ventRun, start, Math.min(end, limit));
+  const before = ventAligned()
+    ? ventVisiblePoints(ventBaseline.run, ventBaseline.breath.start, ventBaseline.breath.end).map(
+        (p) => ({ ...p, t: p.t + selected.start - ventBaseline.breath.start }),
+      )
+    : ventBaseline
       ? ventVisiblePoints(ventBaseline.run, start, Math.min(end, ventBaseline.run.settings.T))
       : [];
   // Only draw baseline data in the time range actually simulated for it.
-  const baselinePoints = ventBaseline && start < ventBaseline.run.settings.T ? before : [];
+  const baselinePoints =
+    ventAligned() || (ventBaseline && start < ventBaseline.run.settings.T) ? before : [];
   let pressure = 1,
     volume = 1,
     flow = 0.1,
@@ -88,7 +104,12 @@ function drawVentilation() {
     ['p', 'Airway pressure (cm H₂O)'],
     ['v', 'Volume above set-PEEP equilibrium (mL)'],
     ['f', `Flow (${ventElement('flowUnit').value})`],
-    ['co2', 'CO₂ capnogram (mmHg; illustrative)'],
+    [
+      'co2',
+      ventSettings.capnogramShape === 'transport'
+        ? 'CO₂ capnogram (mmHg; dynamic model)'
+        : 'CO₂ capnogram (mmHg; illustrative)',
+    ],
   ];
   const definitions = ventSvg('defs');
   svg.append(definitions);
@@ -109,7 +130,7 @@ function drawVentilation() {
         phases.push([b.start + ventRun.timing.Tflow, b.start + ventRun.timing.Ti, '#b7791f', 0.1]);
       for (const [from, to, color, opacity] of phases) {
         const a = Math.max(start, from),
-          z = Math.min(end, to);
+          z = Math.min(end, to, limit);
         if (z > a)
           group.append(
             ventSvg('rect', {
@@ -203,7 +224,7 @@ function drawVentilation() {
     trace(baselinePoints, key, '#718096', true);
     trace(current, key, ventColors[key]);
     if (key === 'co2') {
-      const et = ventRun.gasExchange.EtCO2;
+      const et = selected?.metrics.EtCO2;
       svg.append(
         ventSvg(
           'text',
@@ -214,17 +235,22 @@ function drawVentilation() {
             'font-size': 10,
             'text-anchor': 'end',
           },
-          et == null ? 'CO₂ unavailable — check assumptions' : `EtCO₂ ${ventFormat(et, 1)} mmHg`,
+          et == null ? 'EtCO₂: complete a breath' : `Selected EtCO₂ ${ventFormat(et, 1)} mmHg`,
         ),
       );
       if (et != null)
         for (const b of ventRun.breaths) {
-          if (b.end > start && b.end <= end + 1e-9)
+          if (
+            b.complete &&
+            b.metrics.EtCO2 != null &&
+            b.end > start &&
+            b.end <= Math.min(end, limit) + 1e-9
+          )
             group.append(
               ventSvg('circle', {
                 class: 'vent-etco2-marker',
                 cx: x(b.end),
-                cy: y(et),
+                cy: y(b.metrics.EtCO2),
                 r: 2.6,
                 fill: ventColors.co2,
               }),
@@ -235,6 +261,8 @@ function drawVentilation() {
       trace(baselinePoints, 'palv', '#a6768a', true);
       trace(current, 'palv', ventColors.palv);
     }
+    if (ventElement('showTeaching').checked && selected && selected.end <= limit + 1e-9)
+      drawVentAnnotations(svg, group, key, selected, x, y, top, panelHeight, width, pad);
     for (let g = 0; g <= 4; g++) {
       const time = start + ((end - start) * g) / 4;
       svg.append(
@@ -267,7 +295,7 @@ function drawVentilation() {
       ventSvg(
         'text',
         { x: x(time), y: height - 15, 'text-anchor': 'middle', 'font-size': 10, fill: '#52627a' },
-        Number(time.toFixed(2)),
+        Number((ventAligned() ? time - start : time).toFixed(2)),
       ),
     );
   }
@@ -281,12 +309,12 @@ function drawVentilation() {
         'font-size': 10,
         fill: '#52627a',
       },
-      'Time (s)',
+      ventAligned() ? 'Time from inspiration (s)' : 'Time (s)',
     ),
   );
   ventElement('alveolarLegend').hidden = !showAlveolar;
   ventPlotCoordinates = { x, start, end, pad, width };
-  ventCursorTime = Math.max(start, Math.min(end, ventCursorTime));
+  ventCursorTime = Math.max(start, Math.min(end, ventSettings.T, ventCursorTime));
   updateVentCursor();
   if (!svg.dataset.cursorReady) {
     svg.dataset.cursorReady = 'true';
@@ -317,6 +345,79 @@ function drawVentilation() {
               ),
       );
     });
+  }
+}
+function drawVentAnnotations(svg, group, key, b, x, y, top, panelHeight, width, pad) {
+  const q = ventRun.timing,
+    m = b.metrics;
+  const label = (text, row = 0) =>
+    svg.append(
+      ventSvg(
+        'text',
+        {
+          class: 'teaching-label',
+          x: pad.l + 5,
+          y: top + 13 + row * 13,
+          'font-size': 10,
+          fill: '#172033',
+          stroke: '#fff',
+          'stroke-width': 3,
+          'paint-order': 'stroke',
+        },
+        text,
+      ),
+    );
+  const mark = (t, value) =>
+    group.append(ventSvg('circle', { cx: x(t), cy: y(value), r: 3, fill: '#b42355' }));
+  if (key === 'p') {
+    label(
+      `Peak ${ventFormat(m.Peak)}${m.Plateau == null ? '' : ` · plateau ${ventFormat(m.Plateau)}`} cm H₂O`,
+    );
+    label(
+      m.Plateau == null
+        ? 'Plateau requires a VCV hold'
+        : `Resistive drop ${ventFormat(m.Peak - m.Plateau)} cm H₂O`,
+      1,
+    );
+    const t = b.start + (ventMode === 'vcv' ? q.Tflow : q.Ti / 2);
+    mark(t, m.Peak);
+    if (m.Plateau != null) mark(b.start + q.Tflow + q.Th / 2, m.Plateau);
+    label(`End total PEEP (alveolar) ${ventFormat(ventSettings.PEEP + m.Intrinsic)} cm H₂O`, 2);
+  }
+  if (key === 'f') {
+    const scale = ventElement('flowUnit').value === 'L/min' ? 60 : 1,
+      f = (-b.Vend / q.tauE) * scale;
+    mark(b.end, f);
+    label(`End-expiratory flow ${ventFormat(f, 2)} ${ventElement('flowUnit').value}`);
+    if (Math.abs(f) > 0.1) label('Flow persists at the next inspiration', 1);
+  }
+  if (key === 'v') {
+    label(`Delivered ${ventFormat(m.VT, 0)} mL · expired ${ventFormat(m.Expired, 0)} mL`);
+    if (q.Th > 0) label(`Inspiratory hold ${ventFormat(q.Th, 2)} s: flow = 0`, 1);
+  }
+  if (key === 'co2') {
+    const data = ventVisiblePoints(ventRun, b.start + q.Ti, b.end);
+    for (const [name, test] of [
+      ['I', (p) => p.co2 < 2],
+      ['II', (p) => p.co2 >= 2 && p.co2 < 0.85 * p.alveolarCO2],
+      ['III', (p) => p.co2 >= 0.85 * p.alveolarCO2],
+    ]) {
+      const point = data.find((p) => p.co2 != null && test(p));
+      if (point)
+        svg.append(
+          ventSvg(
+            'text',
+            {
+              class: 'teaching-label',
+              x: x(point.t) + 2,
+              y: top + panelHeight - 5 - (name.length - 1) * 13,
+              'font-size': 10,
+              fill: '#7c3aed',
+            },
+            name,
+          ),
+        );
+    }
   }
 }
 function updateVentCursorLines(time) {
