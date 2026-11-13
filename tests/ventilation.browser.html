@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ventilation simulator checks</title>
+  </head>
+  <body data-result="running">
+    <h1>Ventilation simulator checks</h1>
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Ventilator simulator under test"
+      style="position: absolute; left: -2000px; width: 390px; height: 844px"
+    ></iframe>
+    <script>
+      const checks = [],
+        frame = document.getElementById('app');
+      const check = (name, value) => {
+        checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
+        if (!value) throw Error(name);
+      };
+      const near = (a, b, tol = 1e-7) => Number.isFinite(a) && Math.abs(a - b) < tol;
+      const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const load = (path) =>
+        new Promise((resolve) => {
+          frame.onload = () => resolve(frame.contentWindow);
+          frame.src = '../docs/Respiratory/' + path;
+        });
+      (async () => {
+        try {
+          const worker = new Worker('ventilation.worker.js');
+          const data = await new Promise((resolve, reject) => {
+            worker.onmessage = (e) => resolve(e.data);
+            worker.onerror = (e) => reject(Error(e.message));
+          });
+          worker.terminate();
+          checks.push(...data.checks);
+          check('analytical ventilation tests complete', data.passed);
+          for (const [mode, page] of [
+            ['vcv', 'volume_control_simulator.html'],
+            ['pcv', 'pressure_control_simulator.html'],
+          ]) {
+            const app = await load(page),
+              d = app.document,
+              el = (id) => d.getElementById(id),
+              prefix = mode;
+            const change = (id, value) => {
+              el(id).value = value;
+              el(id).dispatchEvent(
+                new app.Event(el(id).tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }),
+              );
+            };
+            const run = () => app.eval('ventRun');
+            check(
+              `${mode}: shared renderer displays three waveforms`,
+              el('plot').querySelectorAll('path').length === 3,
+            );
+            check(
+              `${mode}: visible labels include mechanics units`,
+              d.querySelector(`label[for="${prefix}R"]`).textContent.includes('cm H₂O/(L/s)') &&
+                d.querySelector(`label[for="${prefix}C"]`).textContent.includes('mL/cm H₂O'),
+            );
+            check(
+              `${mode}: each slider has an accessible label`,
+              [...d.querySelectorAll('.control input[type=range]')].every((input) =>
+                d.getElementById(input.getAttribute('aria-labelledby')),
+              ),
+            );
+            check(
+              `${mode}: timing and breath number are exposed`,
+              el('timingReadout').textContent.includes('Ti') &&
+                el('timingReadout').textContent.includes('1:2.03') &&
+                el('breathCaption').textContent.includes('Breath 12'),
+            );
+            const gas = run().gasExchange,
+              mechanics = JSON.stringify(run().metrics);
+            check(
+              `${mode}: CO2 estimate is visible and explicitly steady state`,
+              el('co2Heading').textContent.includes('Steady-state') &&
+                el('co2Readings').querySelector('.num').textContent === gas.EtCO2.toFixed(1) &&
+                el('co2Note').textContent.includes('not a breath-by-breath measurement'),
+            );
+            change(`${prefix}VCO2`, '400');
+            check(
+              `${mode}: CO2 assumptions change the estimate without changing mechanics`,
+              near(run().gasExchange.PaCO2, 2 * gas.PaCO2) &&
+                JSON.stringify(run().metrics) === mechanics,
+            );
+            const validCO2Run = run();
+            change(`${prefix}VD`, '');
+            check(
+              `${mode}: blank CO2 assumptions retain the last valid estimate with an error`,
+              run() === validCO2Run &&
+                !el('ventilationErrors').hidden &&
+                el(`${prefix}VD`).getAttribute('aria-invalid') === 'true',
+            );
+            change(`${prefix}VD`, '150');
+            change(`${prefix}VCO2`, '200');
+            const before = run(),
+              metric = el('metrics').textContent;
+            change(`${prefix}C`, '');
+            check(
+              `${mode}: blanks remain invalid without replacing predictions`,
+              el(`${prefix}C`).value === '' &&
+                el(`${prefix}C`).getAttribute('aria-invalid') === 'true' &&
+                !el('ventilationErrors').hidden &&
+                run() === before &&
+                el('metrics').textContent === metric,
+            );
+            change(`${prefix}C`, '200');
+            check(
+              `${mode}: out-of-range entries are explained rather than clamped`,
+              el(`${prefix}C`).value === '200' &&
+                !el('ventilationErrors').hidden &&
+                run() === before,
+            );
+            change(`${prefix}C`, '50');
+            check(
+              `${mode}: correcting a setting restores a valid view`,
+              el('ventilationErrors').hidden,
+            );
+            const engine = app.eval('Ventilation'),
+              solve = engine.simulate;
+            let calls = 0;
+            engine.simulate = function (...args) {
+              calls++;
+              return solve(...args);
+            };
+            frame.style.width = '900px';
+            app.dispatchEvent(new app.Event('resize'));
+            await pause(120);
+            check(
+              `${mode}: resizing redraws without resimulating`,
+              calls === 0 &&
+                run() === before &&
+                el('plot')
+                  .getAttribute('viewBox')
+                  .split(' ')
+                  .every((value) => Number.isFinite(Number(value))),
+            );
+            frame.style.width = '390px';
+            app.dispatchEvent(new app.Event('resize'));
+            await pause(120);
+            change('viewWindow', 'breath');
+            change('flowUnit', 'L/s');
+            el('showAlveolar').click();
+            app.updateVentCursor(app.ventWindow()[0] + 0.1);
+            check(
+              `${mode}: chart options and inspection reuse predictions`,
+              calls === 0 &&
+                el('plot').querySelectorAll('path').length === 4 &&
+                el('ventCursorValues').textContent.includes('L/s'),
+            );
+            check(
+              `${mode}: all panels have a synchronized cursor`,
+              el('plot').querySelectorAll('.vent-cursor-line').length === 3 &&
+                new Set(
+                  [...el('plot').querySelectorAll('.vent-cursor-line')].map((line) =>
+                    line.getAttribute('x1'),
+                  ),
+                ).size === 1,
+            );
+            el('showAlveolar').click();
+            change('viewWindow', 'three');
+            change('flowUnit', 'L/min');
+            el('freezeBaseline').click();
+            const frozen = app.eval('ventBaseline');
+            change('lungCase', 'copd');
+            check(
+              `${mode}: COPD-like scenario loads sourced mechanics only`,
+              run().settings.R === 20 &&
+                run().settings.C === 60 &&
+                run().settings.PEEP === 5 &&
+                run().settings.RR === 12 &&
+                el('scenarioNote').querySelector('a').href.includes('PMC11107031'),
+            );
+            check(
+              `${mode}: frozen baseline survives scenario edits`,
+              app.eval('ventBaseline') === frozen &&
+                el('plot').querySelectorAll('path').length === 6 &&
+                el('metrics').textContent.includes('Baseline'),
+            );
+            change('lungCase', 'bronchospasm');
+            check(
+              `${mode}: CO2 baseline retains the original assumptions and estimate`,
+              frozen.run.gasExchange.EtCO2 === gas.EtCO2 &&
+                el('co2Readings').textContent.includes(`Baseline ${gas.EtCO2.toFixed(1)}`),
+            );
+            check(
+              `${mode}: bronchospasm example is explicitly illustrative`,
+              run().settings.R === 30 &&
+                run().settings.C === 50 &&
+                el('scenarioNote').textContent.includes('not a validated'),
+            );
+            el('clearBaseline').click();
+            check(
+              `${mode}: clearing baseline removes its overlays`,
+              el('plot').querySelectorAll('path').length === 3 &&
+                el('baselineNote').textContent === '',
+            );
+            el('linkResistance').click();
+            change(`${prefix}Rexp`, '40');
+            check(
+              `${mode}: separate expiratory resistance changes the time constant`,
+              near(run().timing.tauE, 2) && near(run().timing.tauI, 1.5),
+            );
+            change('initialState', 'steady');
+            check(
+              `${mode}: steady initialization yields equal inspired and expired volumes`,
+              near(run().metrics.VT, run().metrics.Expired),
+            );
+            change('viewWindow', 'full');
+            el('lockAxes').click();
+            const locked = JSON.stringify(app.eval('ventCurrentAxes'));
+            change(`${prefix}C`, '5');
+            check(
+              `${mode}: scale lock persists across mechanics edits`,
+              JSON.stringify(app.eval('ventCurrentAxes')) === locked,
+            );
+            el('lockAxes').click();
+            change(`${prefix}RR`, '1');
+            change(`${prefix}T`, '5');
+            check(
+              `${mode}: incomplete breaths show no invented metrics`,
+              run().metrics === null &&
+                el('breathCaption').textContent.includes('No complete breath') &&
+                [...el('metrics').querySelectorAll('.num')].every(
+                  (node) => node.textContent === '—',
+                ) &&
+                el('freezeBaseline').disabled,
+            );
+            el('resetBtn').click();
+            check(
+              `${mode}: reset restores the reference settings and metrics`,
+              run().settings.C === 50 &&
+                run().settings.R === 10 &&
+                el('metrics').textContent === metric,
+            );
+            change(`${prefix}${mode === 'vcv' ? 'VT' : 'PC'}`, mode === 'vcv' ? '50' : '0.1');
+            check(
+              `${mode}: absent alveolar ventilation shows unavailable CO2 with an explanation`,
+              run().gasExchange.EtCO2 === null &&
+                el('co2Readings').querySelector('.num').textContent === '—' &&
+                el('co2Note').textContent.includes('alveolar ventilation is zero'),
+            );
+            el('resetBtn').click();
+            change('lungCase', 'copd');
+            change(`${prefix}VCO2`, '250');
+            change(`${prefix}VD`, '175');
+            change(`${prefix}CO2Gradient`, '7');
+            const link = d.querySelector(`[data-mode-link="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`);
+            const shared = new URL(link.href);
+            const other = await load(shared.pathname.split('/').at(-1) + shared.search);
+            check(
+              `${mode}: mode navigation preserves shared lung and timing settings`,
+              other.eval('ventRun.settings.R') === 20 &&
+                other.eval('ventRun.settings.C') === 60 &&
+                other.eval('ventRun.settings.IF') === 0.33,
+            );
+            check(
+              `${mode}: mode navigation preserves the CO2 assumptions`,
+              other.eval('ventRun.settings.VCO2') === 250 &&
+                other.eval('ventRun.settings.VD') === 175 &&
+                other.eval('ventRun.settings.CO2Gradient') === 7,
+            );
+            engine.simulate = solve;
+          }
+          const mobile = frame.contentWindow,
+            d = mobile.document;
+          const settings = d.getElementById('settingsPanel');
+          check(
+            'mobile settings start collapsed with the active values visible',
+            !settings.open && d.getElementById('settingsSummary').textContent.includes('400 mL'),
+          );
+          settings.querySelector('summary').click();
+          check(
+            'mobile settings can be opened for editing',
+            settings.open && d.getElementById('vcvVT').getBoundingClientRect().height > 0,
+          );
+          settings.querySelector('summary').click();
+          check(
+            'mobile layout has no horizontal overflow',
+            d.documentElement.scrollWidth <= mobile.innerWidth,
+          );
+          check(
+            'mobile waveforms are closer to the first screen',
+            d.getElementById('plot').getBoundingClientRect().top < 1100,
+          );
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push(`FAIL ${error.message}`);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      })();
+    </script>
+  </body>
+</html>

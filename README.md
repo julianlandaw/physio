@@ -120,7 +120,7 @@ References distinguish the live registry from background literature. Repository 
 
 ### `docs/Respiratory/`
 
-This directory contains self-contained respiratory physiology pages:
+This directory contains respiratory physiology pages:
 
 | File                              | Purpose                                            |
 | --------------------------------- | -------------------------------------------------- |
@@ -128,7 +128,27 @@ This directory contains self-contained respiratory physiology pages:
 | `pressure_control_simulator.html` | Interactive pressure-control ventilator simulator. |
 | `volume_control_simulator.html`   | Interactive volume-control ventilator simulator.   |
 
-Each ventilator simulator contains its controls, solver, and SVG chart code in its HTML page. Related diagrams are in `docs/assets/imgs/`.
+The ventilator pages share `ventilation_engine.js` (DOM-independent exact phase solutions), `ventilation_cases.js` (teaching mechanics and references), `ventilation.js` (controls and measurements), `ventilation_charts.js` (SVG waveforms), and `ventilation.css` in `docs/assets/`. Both pages work directly from disk. Related diagrams are in `docs/assets/imgs/`.
+
+Controls expose inspiratory/expiratory resistance, compliance, breath timing, and startup or periodic steady-state initialization. Selecting a lung-mechanics example preserves ventilator settings. Mode links carry the current settings in the URL. Invalid edits retain the last valid results with an explicit message. Measurements belong to the selected complete breath; partial breaths do not produce full-breath measurements. Expired tidal volume is calculated from the actual volume change, and plateau/driving pressures require a VCV hold. Volume is measured above equilibrium at set PEEP.
+
+The waveform view supports one or three breaths or the full run, phase shading, optional alveolar pressure, locked scales, a shared inspection cursor, and a frozen baseline with its own breath measurements. Viewing and resizing charts do not rerun the solver.
+
+Both ventilator pages also show a **steady-state EtCO₂ estimate**, estimated PaCO₂ and alveolar ventilation. Under **CO₂ estimate assumptions**, adjust CO₂ production (default 200 mL/min STPD), physiologic dead space (150 mL/breath BTPS) and the assumed PaCO₂–EtCO₂ gradient (5 mmHg). The calculation uses periodic steady-state tidal volume, including PCV air trapping: `VA = max(VTsteady − VD, 0) × RR / 1000` L/min; `PaCO2 ≈ 0.863 × VCO2 / VA`; `EtCO2 ≈ PaCO2 − gradient`. It is separate from the selected breath and is unchanged by startup state or run duration. Baselines and mode links retain the CO₂ assumptions. Mechanics presets do not infer disease-specific dead space or gradients.
+
+This is a ventilation-based teaching estimate, not a simulated measurement, capnogram or transient CO₂ washout model. It assumes zero inspired CO₂ and omits CO₂ stores, perfusion and V/Q heterogeneity. Zero alveolar ventilation has no finite steady solution; impossible sea-level pressures and gradients yielding nonpositive EtCO₂ are marked unavailable. Background: [CO₂ mass-balance modeling](https://pmc.ncbi.nlm.nih.gov/articles/PMC4737892/) and [arterial-to-end-tidal gradient modeling](https://pubmed.ncbi.nlm.nih.gov/14633572/). These papers do not validate this estimator.
+
+Example mechanics use resistance in cm H₂O/(L/s) and compliance in mL/cm H₂O:
+
+| Example                               | Inspiratory / expiratory resistance | Compliance | Expiratory time constant |
+| ------------------------------------- | ----------------------------------- | ---------- | ------------------------ |
+| Reference                             | 10 / 10                             | 50         | 0.5 s                    |
+| COPD-like obstruction                 | 20 / 20                             | 60         | 1.2 s                    |
+| Bronchospasm-like resistance increase | 30 / 30                             | 50         | 1.5 s                    |
+| Low compliance                        | 10 / 10                             | 25         | 0.25 s                   |
+| High compliance with obstruction      | 20 / 20                             | 100        | 2 s                      |
+
+The COPD-like combination is supported by a [2024 PCV bench study](https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/). The low-compliance combination comes from a [2021 respiratory mechanics bench study](https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/). Bronchospasm-like and high-compliance examples are illustrative choices, not validated disease models. Shortening expiration relative to its time constant demonstrates incomplete emptying and intrinsic PEEP. The model assumes a passive linear compartment and does not reproduce dynamic airway collapse, expiratory flow limitation, heterogeneous lungs, gas exchange, or patient effort. These are teaching mechanics, not recommended ventilator settings.
 
 ### `docs/PhysiologyDiscussion/`
 
@@ -166,6 +186,7 @@ Do not edit minified or vendored files unless deliberately upgrading a dependenc
 - `tests/recovery.browser.html` checks timed targets, exact TCI replay, file compatibility, and local recovery across reloads, including invalid edits and unavailable storage.
 - `tests/editing.browser.html` checks shared validation, timeline editing, offscreen error navigation, Undo/Redo, history limits, and recovery at the current history position. It also runs `tests/engine.worker.js` to verify analytical solutions and TCI replay with no document or application UI loaded.
 - `tests/results.browser.html` checks cache reuse, chart-only updates, cursor values, results CSV data and metadata, TCI status, physical replay comparison, and provenance round-trips. Standalone engine checks also verify cumulative dose and sampling around bolus discontinuities.
+- `tests/ventilation.browser.html` checks both ventilator interfaces, validation, mode switching, baselines, chart-only updates, presets, and mobile layout. Its standalone worker checks analytical phase solutions, boundary handling, volume conservation, pressure measurements, short time constants, partial breaths, and air trapping.
 
 Install Node.js 22 or later, Python 3, and Chromium or Google Chrome. From the repository root, run:
 
@@ -174,7 +195,7 @@ npm ci
 npm run check
 ```
 
-This checks formatting, generated presets, local links and anchors, duplicate IDs, and all six browser suites, including the full-length TCI tests. It serves the repository temporarily on localhost and uses a separate browser profile for each suite. `npm run format` formats maintained source files. GitHub Actions runs the same checks for pushes and pull requests using `.github/workflows/checks.yml`.
+This checks formatting, generated presets, local links and anchors, duplicate IDs, and all seven browser suites, including the full-length TCI tests. It serves the repository temporarily on localhost and uses a separate browser profile for each suite. `npm run format` formats maintained source files. GitHub Actions runs the same checks for pushes and pull requests using `.github/workflows/checks.yml`.
 
 The simulator uses classic script modules so it also works when opened directly from disk. Numerical tests can load Math.js, the unit module, and the engine independently; UI modules access their shared declarations after application initialization. Keep numerical functions independent of form fields and pass units and patient weight explicitly. Run the browser suites through HTTP because the test harnesses use fetch and workers.
 
