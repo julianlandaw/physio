@@ -42,8 +42,10 @@ function buildVentilator() {
           <label class="check"><input id="linkResistance" type="checkbox" checked> Use the same resistance for inspiration and expiration</label>
           <label class="scenario-label" for="initialState">Initial lung state</label><select id="initialState"><option value="startup">Start from rest at set PEEP</option><option value="steady">Periodic steady state</option></select>
         </details>
-        <details class="advanced"><summary>CO₂ estimate assumptions</summary>
+        <details class="advanced"><summary>CO₂ &amp; capnogram options</summary>
           <div class="controls" id="co2Controls"></div>
+          <label class="scenario-label" for="capnogramShape">Illustrative capnogram shape</label>
+          <select id="capnogramShape"><option value="auto">Auto: follows expiratory resistance</option><option value="reference">Reference</option><option value="obstructive">Obstructive / shark fin</option></select>
           <p class="small">Illustrative defaults: V̇CO₂ 200 mL/min, dead space 150 mL, Pa–Et gradient 5 mmHg. Lung-mechanics examples preserve these values; they do not set disease-specific gas exchange.</p>
         </details>
         <div class="timing" id="timingReadout" aria-label="Calculated breath timing"></div>
@@ -53,11 +55,6 @@ function buildVentilator() {
         <p id="breathCaption" class="breath-caption"></p><section class="metrics" id="metrics" aria-label="Selected breath measurements"></section>
         <details class="additional"><summary>Plateau, mean pressure &amp; additional measurements</summary><div id="additionalMetrics" class="metrics"></div></details>
         <p id="emptyingNote" class="emptying-note"></p>
-        <section class="card co2-card" aria-labelledby="co2Heading">
-          <h2 id="co2Heading">Steady-state EtCO₂ estimate</h2>
-          <div class="co2-readings" id="co2Readings"></div>
-          <p class="small" id="co2Note"></p>
-        </section>
         <section class="card plot-card" aria-label="Ventilator waveforms">
           <div class="chart-toolbar">
             <label for="viewWindow">View<select id="viewWindow"><option value="three">Three breaths</option><option value="breath">Selected breath</option><option value="full">Full run</option></select></label>
@@ -66,11 +63,17 @@ function buildVentilator() {
             <label class="check"><input id="showAlveolar" type="checkbox"> Alveolar pressure</label>
             <label class="check"><input id="lockAxes" type="checkbox"> Lock scales</label>
           </div>
-          <svg class="plot" id="plot" role="img" aria-label="Pressure, volume, and flow waveforms"></svg>
-          <div class="legend"><span style="--line:#2563eb">Airway pressure</span><span style="--line:#0f766e">Volume</span><span style="--line:#9a5105">Flow</span><span id="alveolarLegend" style="--line:#b42355" hidden>Alveolar pressure</span><span class="dash" id="baselineLegend" hidden>Frozen baseline</span></div>
+          <svg class="plot" id="plot" role="img" aria-label="Pressure, volume, flow, and CO₂ capnogram waveforms"></svg>
+          <div class="legend"><span style="--line:#2563eb">Airway pressure</span><span style="--line:#0f766e">Volume</span><span style="--line:#9a5105">Flow</span><span style="--line:#7c3aed">CO₂ capnogram</span><span id="alveolarLegend" style="--line:#b42355" hidden>Alveolar pressure</span><span class="dash" id="baselineLegend" hidden>Frozen baseline</span></div>
           <p class="phase-key">Blue shading: inspiration · amber shading: hold · unshaded: expiration. Dashed pressure reference: set PEEP.</p>
+          <p class="phase-key" id="capnogramNote"></p>
           <p class="axis-note" id="axisNote" hidden>Some values exceed the locked scales. Unlock scales to see their full range.</p>
           <div class="inspection"><div class="inspection-controls"><label for="ventCursor">Inspect time (s)<input id="ventCursor" type="number" min="0" step="any" value="0"></label><label for="ventCursorSlider" class="sr-only">Inspection time in seconds</label><input id="ventCursorSlider" type="range" min="0" step="any" value="0"></div><div class="inspection-values" id="ventCursorValues" role="status"></div></div>
+        </section>
+        <section class="card co2-card" aria-labelledby="co2Heading">
+          <h2 id="co2Heading">Steady-state EtCO₂ estimate</h2>
+          <div class="co2-readings" id="co2Readings"></div>
+          <p class="small" id="co2Note"></p>
         </section>
         <div class="button-row" style="margin-top:10px"><div><button type="button" id="freezeBaseline">Freeze baseline</button> <button type="button" id="clearBaseline" disabled>Clear baseline</button></div></div><p id="baselineNote" class="baseline-note"></p>
       </section>
@@ -80,7 +83,8 @@ function buildVentilator() {
       <p><code>τ = R × C; PCV: V(t) = C × ΔP + [V₀ − C × ΔP] × exp(−t/τᵢ); VCV flow: V(t) = V₀ + flow × t; expiration: V(t) = Vₑᵢ × exp(−t/τₑ).</code> Holds have zero flow. Each phase is solved exactly, including its boundaries.</p>
       <p>Metrics describe the selected complete breath, including actual volume change during inspiration and expiration. Plateau pressure requires a VCV hold. In PCV, pressure at the airway opening is not assumed to be a plateau if flow continues. Driving pressure, when available, uses plateau minus total PEEP at breath start. Changing respiratory rate keeps the inspiratory fraction fixed.</p>
       <p>These examples illustrate mechanics, not recommended ventilator settings. Real COPD and bronchospasm involve heterogeneity, nonlinear resistance, and sometimes dynamic expiratory flow limitation that this model does not reproduce.</p>
-      <p>CO₂ is a separate steady-state estimate: <code>V̇A = max(VTsteady − VD, 0) × RR / 1000; PaCO₂ ≈ 0.863 × V̇CO₂ / V̇A; EtCO₂ ≈ PaCO₂ − assumed gradient.</code> VTsteady comes from the periodic steady-state mechanics, in mL; V̇A is L/min BTPS and V̇CO₂ is mL/min STPD. Thus startup, run duration and selected breath do not change this estimate. Inspired CO₂ is assumed zero. No body CO₂ stores, washout dynamics, perfusion, V/Q distribution or capnogram shape are modeled. The positive Pa–Et gradient is user-assumed, not predicted from resistance or compliance. There is no finite steady-state estimate when VTsteady ≤ VD. Impossible sea-level pressures (≥713 mmHg) and gradients that would give nonpositive EtCO₂ are reported as unavailable, without clamping.</p>
+      <p>CO₂ is a separate steady-state estimate: <code>V̇A = max(VTsteady − VD, 0) × RR / 1000; PaCO₂ ≈ 0.863 × V̇CO₂ / V̇A; EtCO₂ ≈ PaCO₂ − assumed gradient.</code> VTsteady comes from the periodic steady-state mechanics, in mL; V̇A is L/min BTPS and V̇CO₂ is mL/min STPD. Thus startup, run duration and selected breath do not change this estimate. Inspired CO₂ is assumed zero. No body CO₂ stores, washout dynamics, perfusion or V/Q distribution are modeled. The positive Pa–Et gradient is user-assumed, not predicted from resistance or compliance. There is no finite steady-state estimate when VTsteady ≤ VD. Impossible sea-level pressures (≥713 mmHg) and gradients that would give nonpositive EtCO₂ are reported as unavailable, without clamping.</p>
+      <p>The time capnogram is an illustrative overlay: zero during inspiration/hold, a phase I baseline, a phase II upstroke and a rising phase III plateau ending at estimated EtCO₂. It falls to zero when the next inspiration starts. The end-tidal dots mark the end-expiratory value. The same estimated amplitude is repeated from the first breath; it does not show CO₂ washout or mass-conserving gas transport. Shape uses fractions of expiration, not measured airway transit. Auto shape interpolates from reference at Rₑ ≤10 to obstructive at Rₑ ≥40; this mapping and the phase fractions are teaching choices, not a validated resistance-to-capnogram relationship. Shape may be selected independently under CO₂ &amp; capnogram options. Background on obstructive shape: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10115549/">bronchospasm capnogram case study</a>.</p>
       <p>CO₂ background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4737892/">CO₂ gas-exchange modeling study</a> (mass balance and unit conversion); <a href="https://pubmed.ncbi.nlm.nih.gov/14633572/">arterial-to-end-tidal gradient modeling study</a>. These references support the concepts, not validation of this simplified estimator.</p>
       <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
       <ul><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/">2024 PCV bench study</a>: COPD bench compliance 60 with obstructive resistances including 20. This supports the COPD-like mechanics example, not all of its clinical behavior.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/">2021 respiratory-mechanics bench study</a>: obstructive R 20/C 50 and restrictive R 10/C 25 examples. Our bronchospasm-like R 30/C 50 is an illustrative extension, not a validated disease parameter set.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3376482/">Respiratory compartment model equations</a>.</li></ul>
@@ -168,7 +172,12 @@ function readVentNumber(value) {
   return String(value).trim() === '' ? NaN : Number(value);
 }
 function readVentSettings() {
-  const p = { ...ventSettings, mode: ventMode, initial: ventElement('initialState').value };
+  const p = {
+    ...ventSettings,
+    mode: ventMode,
+    initial: ventElement('initialState').value,
+    capnogramShape: ventElement('capnogramShape').value,
+  };
   for (const [field, control] of ventInputs) p[field] = readVentNumber(control.number.value);
   if (ventElement('linkResistance').checked) p.Rexp = p.R;
   return p;
@@ -204,6 +213,7 @@ function setVentSettings(p, caseId = 'custom') {
   ventElement('linkResistance').checked = linked;
   ventInputs.get('Rexp').number.disabled = ventInputs.get('Rexp').range.disabled = linked;
   ventElement('initialState').value = next.initial;
+  ventElement('capnogramShape').value = next.capnogramShape;
   ventElement('lungCase').value = caseId;
   ventBreathIndex = -1;
   simulateAndDraw();
@@ -355,6 +365,8 @@ function renderVentCO2() {
   };
   ventElement('co2Note').textContent =
     `${notes[gas.status]} Based on steady VT ${ventFormat(gas.steadyVT, 0)} mL, V̇CO₂ ${ventFormat(ventSettings.VCO2, 0)} mL/min, VD ${ventFormat(ventSettings.VD, 0)} mL and assumed Pa–Et gradient ${ventFormat(ventSettings.CO2Gradient)} mmHg.`;
+  ventElement('capnogramNote').textContent =
+    `CO₂ tracing: illustrative ${ventSettings.capnogramShape === 'auto' ? 'shape follows expiratory resistance' : ventSettings.capnogramShape + ' shape'}. Dots mark estimated EtCO₂ at end expiration. Amplitude repeats the steady-state estimate; no CO₂ washout is simulated.`;
 }
 function renderTiming() {
   const q = ventRun.timing,
@@ -411,7 +423,7 @@ function updateVentCursor(rawTime = ventCursorTime) {
   const point = Ventilation.sample(ventRun, time),
     scale = ventElement('flowUnit').value === 'L/min' ? 60 : 1;
   ventElement('ventCursorValues').textContent =
-    `${ventFormat(time, 2)} s · breath ${point.breath} · ${point.phase} · Paw ${ventFormat(point.p, 2)} cm H₂O · Palv ${ventFormat(point.palv, 2)} cm H₂O · V ${ventFormat(point.v, 1)} mL · Flow ${ventFormat(point.f * scale, 2)} ${ventElement('flowUnit').value}${ventValid ? '' : ' · last valid run'}`;
+    `${ventFormat(time, 2)} s · breath ${point.breath} · ${point.phase} · Paw ${ventFormat(point.p, 2)} cm H₂O · Palv ${ventFormat(point.palv, 2)} cm H₂O · V ${ventFormat(point.v, 1)} mL · Flow ${ventFormat(point.f * scale, 2)} ${ventElement('flowUnit').value} · CO₂ ${ventFormat(point.co2, 1)} mmHg (${point.co2Phase})${ventValid ? '' : ' · last valid run'}`;
   updateVentCursorLines(time);
 }
 function refreshVentView() {
@@ -442,6 +454,7 @@ function refreshVentView() {
     simulateAndDraw();
   });
   ventElement('initialState').addEventListener('change', simulateAndDraw);
+  ventElement('capnogramShape').addEventListener('change', simulateAndDraw);
   ventElement('breathSelect').addEventListener('change', (event) => {
     ventBreathIndex = Number(event.target.value);
     refreshVentView();

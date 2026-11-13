@@ -67,8 +67,8 @@
               metrics = d.getElementById('metrics'),
               before = metrics.textContent;
             check(
-              `${page}: renders three waveforms`,
-              d.querySelectorAll('#plot path').length === 3,
+              `${page}: renders pressure, volume, flow and CO2 waveforms`,
+              d.querySelectorAll('#plot path').length === 4,
             );
             const input = d.getElementById(id);
             input.value = value;

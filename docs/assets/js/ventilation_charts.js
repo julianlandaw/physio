@@ -3,7 +3,7 @@ let ventLockedAxes = null,
   ventCurrentAxes = null,
   ventAxesFlowScale = 60,
   ventPlotCoordinates = null;
-const ventColors = { p: '#2563eb', v: '#0f766e', f: '#9a5105', palv: '#b42355' };
+const ventColors = { p: '#2563eb', v: '#0f766e', f: '#9a5105', palv: '#b42355', co2: '#7c3aed' };
 function ventSvg(tag, attributes = {}, text) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
   Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
@@ -20,7 +20,14 @@ function ventVisiblePoints(run, start, end) {
   const points = [Ventilation.sample(run, start)];
   for (let i = 0; i < run.t.length; i++)
     if (run.t[i] > start && run.t[i] < end)
-      points.push({ t: run.t[i], p: run.p[i], v: run.v[i], f: run.f[i], palv: run.palv[i] });
+      points.push({
+        t: run.t[i],
+        p: run.p[i],
+        v: run.v[i],
+        f: run.f[i],
+        palv: run.palv[i],
+        co2: run.co2[i],
+      });
   points.push(Ventilation.sample(run, end, 'left'));
   return points;
 }
@@ -28,7 +35,7 @@ function drawVentilation() {
   if (!ventRun) return;
   const svg = ventElement('plot'),
     width = svg.clientWidth || 800,
-    height = svg.clientHeight || 490;
+    height = svg.clientHeight || 660;
   const [start, end] = ventWindow(),
     scale = ventElement('flowUnit').value === 'L/min' ? 60 : 1,
     showAlveolar = ventElement('showAlveolar').checked;
@@ -40,16 +47,19 @@ function drawVentilation() {
   const baselinePoints = ventBaseline && start < ventBaseline.run.settings.T ? before : [];
   let pressure = 1,
     volume = 1,
-    flow = 0.1;
+    flow = 0.1,
+    co2 = 40;
   for (const point of [...current, ...baselinePoints]) {
     pressure = Math.max(pressure, point.p, showAlveolar ? point.palv : 0);
     volume = Math.max(volume, point.v);
     flow = Math.max(flow, Math.abs(point.f * scale));
+    if (point.co2 != null) co2 = Math.max(co2, point.co2);
   }
   const fresh = {
     p: [0, ventNiceCeiling(pressure * 1.08)],
     v: [0, ventNiceCeiling(volume * 1.08)],
     f: [-ventNiceCeiling(flow * 1.08), ventNiceCeiling(flow * 1.08)],
+    co2: [0, ventNiceCeiling(co2 * 1.08)],
   };
   if (ventElement('lockAxes').checked) {
     if (!ventLockedAxes) ventLockedAxes = structuredClone(ventCurrentAxes || fresh);
@@ -61,7 +71,8 @@ function drawVentilation() {
   ventAxesFlowScale = scale;
   let clipped = false;
   for (const point of [...current, ...baselinePoints])
-    for (const key of ['p', 'v', 'f', ...(showAlveolar ? ['palv'] : [])]) {
+    for (const key of ['p', 'v', 'f', 'co2', ...(showAlveolar ? ['palv'] : [])]) {
+      if (point[key] == null) continue;
       const axis = axes[key === 'palv' ? 'p' : key],
         value = point[key] * (key === 'f' ? scale : 1);
       if (value < axis[0] - 1e-9 || value > axis[1] + 1e-9) clipped = true;
@@ -71,12 +82,13 @@ function drawVentilation() {
   svg.replaceChildren();
   const pad = { l: 49, r: 12, t: 20, b: 32 },
     gap = 32,
-    panelHeight = (height - pad.t - pad.b - 2 * gap) / 3;
+    panelHeight = (height - pad.t - pad.b - 3 * gap) / 4;
   const x = (time) => pad.l + ((time - start) / (end - start)) * (width - pad.l - pad.r);
   const panels = [
     ['p', 'Airway pressure (cm H₂O)'],
     ['v', 'Volume above set-PEEP equilibrium (mL)'],
     ['f', `Flow (${ventElement('flowUnit').value})`],
+    ['co2', 'CO₂ capnogram (mmHg; illustrative)'],
   ];
   const definitions = ventSvg('defs');
   svg.append(definitions);
@@ -163,24 +175,62 @@ function drawVentilation() {
     }
     const trace = (points, field, color, baseline = false) => {
       if (!points.length) return;
+      let connected = false;
       const path = points
-        .map(
-          (point, i) =>
-            `${i ? 'L' : 'M'}${x(point.t).toFixed(3)},${y(point[field] * (field === 'f' ? scale : 1)).toFixed(3)}`,
-        )
+        .map((point) => {
+          if (point[field] == null || !Number.isFinite(point[field])) {
+            connected = false;
+            return '';
+          }
+          const command = connected ? 'L' : 'M';
+          connected = true;
+          return `${command}${x(point.t).toFixed(3)},${y(point[field] * (field === 'f' ? scale : 1)).toFixed(3)}`;
+        })
         .join(' ');
+      if (!path.trim()) return;
       group.append(
         ventSvg('path', {
           d: path,
           fill: 'none',
           stroke: color,
           'stroke-width': baseline ? 1.7 : 2.2,
+          'data-signal': field,
+          'data-baseline': baseline,
           ...(baseline ? { 'stroke-dasharray': '5 4', opacity: 0.8 } : {}),
         }),
       );
     };
     trace(baselinePoints, key, '#718096', true);
     trace(current, key, ventColors[key]);
+    if (key === 'co2') {
+      const et = ventRun.gasExchange.EtCO2;
+      svg.append(
+        ventSvg(
+          'text',
+          {
+            x: width - pad.r - 3,
+            y: top + 12,
+            fill: ventColors.co2,
+            'font-size': 10,
+            'text-anchor': 'end',
+          },
+          et == null ? 'CO₂ unavailable — check assumptions' : `EtCO₂ ${ventFormat(et, 1)} mmHg`,
+        ),
+      );
+      if (et != null)
+        for (const b of ventRun.breaths) {
+          if (b.end > start && b.end <= end + 1e-9)
+            group.append(
+              ventSvg('circle', {
+                class: 'vent-etco2-marker',
+                cx: x(b.end),
+                cy: y(et),
+                r: 2.6,
+                fill: ventColors.co2,
+              }),
+            );
+        }
+    }
     if (key === 'p' && showAlveolar) {
       trace(baselinePoints, 'palv', '#a6768a', true);
       trace(current, 'palv', ventColors.palv);

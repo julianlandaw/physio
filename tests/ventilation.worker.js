@@ -212,6 +212,76 @@ try {
       Ventilation.validate({ ...Ventilation.defaults, [field]: -1 }).some((e) => e.field === field),
     ),
   );
+  for (const mode of ['vcv', 'pcv']) {
+    const run = Ventilation.simulate({ ...Ventilation.defaults, mode, T: 5 }),
+      q = run.timing,
+      shape = run.capnogramTiming,
+      et = run.gasExchange.EtCO2;
+    const at = (local, side) => Ventilation.sample(run, local, side);
+    check(
+      `${mode}: capnogram remains within zero and estimated end-tidal CO2`,
+      run.co2.length === run.t.length &&
+        run.co2.every((v) => Number.isFinite(v) && v >= 0 && v <= et + 1e-8),
+    );
+    check(
+      `${mode}: inspiratory and hold CO2 are at baseline`,
+      run.co2.every((v, i) => run.phase[i] === 'expiration' || v === 0),
+    );
+    check(
+      `${mode}: capnogram phase I precedes the expiratory upstroke`,
+      at(q.Ti + shape.delay / 2).co2 === 0 && at(q.Ti + shape.delay / 2).co2Phase === 'phase I',
+    );
+    const rise = at(q.Ti + (shape.delay + shape.riseEnd) / 2);
+    check(
+      `${mode}: phase II and phase III values match the defined teaching shape`,
+      near(rise.co2, (et * shape.plateauLevel) / 2) &&
+        rise.co2Phase === 'phase II' &&
+        near(at(q.Ti + (shape.riseEnd + q.Te) / 2).co2, (et * (shape.plateauLevel + 1)) / 2),
+    );
+    check(`${mode}: end-expiratory capnogram equals displayed EtCO2`, near(at(5).co2, et));
+    const multiple = Ventilation.simulate({ ...run.settings, T: 10 });
+    check(
+      `${mode}: breath boundary retains the end-tidal peak and inspiratory reset`,
+      near(Ventilation.sample(multiple, 5, 'left').co2, et) &&
+        Ventilation.sample(multiple, 5, 'right').co2 === 0 &&
+        multiple.t.some((t, i) => t === 5 && near(multiple.co2[i], et)) &&
+        multiple.t.some((t, i) => t === 5 && multiple.co2[i] === 0),
+    );
+    check(
+      `${mode}: capnogram phase boundaries are included exactly in chart samples`,
+      run.t.some((t) => near(t, q.Ti + shape.delay)) &&
+        run.t.some((t) => near(t, q.Ti + shape.riseEnd)),
+    );
+    const obstructive = Ventilation.simulate({ ...run.settings, capnogramShape: 'obstructive' });
+    const normalizedTime = q.Ti + q.Te / 2;
+    check(
+      `${mode}: obstructive shape has a longer upstroke and steeper phase III`,
+      obstructive.capnogramTiming.riseEnd > shape.riseEnd &&
+        obstructive.capnogramTiming.plateauLevel < shape.plateauLevel &&
+        Ventilation.sample(obstructive, normalizedTime).co2 < at(normalizedTime).co2 &&
+        near(obstructive.gasExchange.EtCO2, et),
+    );
+  }
+  const noCO2 = Ventilation.simulate({ ...Ventilation.defaults, VD: 400 });
+  check(
+    'unavailable CO2 is missing data rather than a fabricated flat zero trace',
+    noCO2.co2.every((v) => v === null) && Ventilation.sample(noCO2, 4).co2Phase === 'unavailable',
+  );
+  const autoShape = Ventilation.simulate({ ...Ventilation.defaults, Rexp: 40 });
+  const overrideShape = Ventilation.simulate({
+    ...autoShape.settings,
+    capnogramShape: 'reference',
+  });
+  check(
+    'automatic shape responds to expiratory resistance and permits independent override',
+    autoShape.capnogramTiming.severity === 1 && overrideShape.capnogramTiming.severity === 0,
+  );
+  check(
+    'unsupported capnogram shapes are rejected',
+    Ventilation.validate({ ...Ventilation.defaults, capnogramShape: 'unknown' }).some(
+      (e) => e.field === 'capnogramShape',
+    ),
+  );
   self.postMessage({ passed: true, checks });
 } catch (error) {
   self.postMessage({ passed: false, checks, error: error.message });

@@ -52,8 +52,9 @@
             };
             const run = () => app.eval('ventRun');
             check(
-              `${mode}: shared renderer displays three waveforms`,
-              el('plot').querySelectorAll('path').length === 3,
+              `${mode}: shared renderer displays four waveforms including CO2`,
+              el('plot').querySelectorAll('path').length === 4 &&
+                el('plot').querySelector('[data-signal="co2"]'),
             );
             check(
               `${mode}: visible labels include mechanics units`,
@@ -148,12 +149,12 @@
             check(
               `${mode}: chart options and inspection reuse predictions`,
               calls === 0 &&
-                el('plot').querySelectorAll('path').length === 4 &&
+                el('plot').querySelectorAll('path').length === 5 &&
                 el('ventCursorValues').textContent.includes('L/s'),
             );
             check(
               `${mode}: all panels have a synchronized cursor`,
-              el('plot').querySelectorAll('.vent-cursor-line').length === 3 &&
+              el('plot').querySelectorAll('.vent-cursor-line').length === 4 &&
                 new Set(
                   [...el('plot').querySelectorAll('.vent-cursor-line')].map((line) =>
                     line.getAttribute('x1'),
@@ -161,6 +162,15 @@
                 ).size === 1,
             );
             el('showAlveolar').click();
+            const inspectTime = app.ventWindow()[0] + run().timing.Ti + 0.8 * run().timing.Te;
+            app.updateVentCursor(inspectTime);
+            const sampledCO2 = engine.sample(run(), inspectTime).co2;
+            check(
+              `${mode}: cursor reports sampled capnogram CO2 and its phase`,
+              el('ventCursorValues').textContent.includes(
+                `CO₂ ${sampledCO2.toFixed(1)} mmHg (phase III)`,
+              ) && calls === 0,
+            );
             change('viewWindow', 'three');
             change('flowUnit', 'L/min');
             el('freezeBaseline').click();
@@ -177,7 +187,7 @@
             check(
               `${mode}: frozen baseline survives scenario edits`,
               app.eval('ventBaseline') === frozen &&
-                el('plot').querySelectorAll('path').length === 6 &&
+                el('plot').querySelectorAll('path').length === 8 &&
                 el('metrics').textContent.includes('Baseline'),
             );
             change('lungCase', 'bronchospasm');
@@ -192,10 +202,26 @@
                 run().settings.C === 50 &&
                 el('scenarioNote').textContent.includes('not a validated'),
             );
+            const co2Trace = () =>
+              el('plot').querySelector('[data-signal="co2"][data-baseline="false"]');
+            const baselineCO2Trace = () =>
+              el('plot').querySelector('[data-signal="co2"][data-baseline="true"]');
+            const obstructivePath = co2Trace().getAttribute('d'),
+              baselinePath = baselineCO2Trace().getAttribute('d');
+            const estimatedEt = run().gasExchange.EtCO2;
+            change('capnogramShape', 'reference');
+            check(
+              `${mode}: shape controls change the tracing while preserving EtCO2 and frozen CO2`,
+              co2Trace().getAttribute('d') !== obstructivePath &&
+                baselineCO2Trace().getAttribute('d') === baselinePath &&
+                run().gasExchange.EtCO2 === estimatedEt &&
+                el('plot').querySelectorAll('.vent-etco2-marker').length === 3,
+            );
+            change('capnogramShape', 'auto');
             el('clearBaseline').click();
             check(
               `${mode}: clearing baseline removes its overlays`,
-              el('plot').querySelectorAll('path').length === 3 &&
+              el('plot').querySelectorAll('path').length === 4 &&
                 el('baselineNote').textContent === '',
             );
             el('linkResistance').click();
@@ -241,13 +267,19 @@
               `${mode}: absent alveolar ventilation shows unavailable CO2 with an explanation`,
               run().gasExchange.EtCO2 === null &&
                 el('co2Readings').querySelector('.num').textContent === '—' &&
-                el('co2Note').textContent.includes('alveolar ventilation is zero'),
+                el('co2Note').textContent.includes('alveolar ventilation is zero') &&
+                !co2Trace() &&
+                el('plot').textContent.includes('CO₂ unavailable') &&
+                [...el('plot').querySelectorAll('path')].every(
+                  (p) => !/NaN|Infinity/.test(p.getAttribute('d')),
+                ),
             );
             el('resetBtn').click();
             change('lungCase', 'copd');
             change(`${prefix}VCO2`, '250');
             change(`${prefix}VD`, '175');
             change(`${prefix}CO2Gradient`, '7');
+            change('capnogramShape', 'obstructive');
             const link = d.querySelector(`[data-mode-link="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`);
             const shared = new URL(link.href);
             const other = await load(shared.pathname.split('/').at(-1) + shared.search);
@@ -261,7 +293,8 @@
               `${mode}: mode navigation preserves the CO2 assumptions`,
               other.eval('ventRun.settings.VCO2') === 250 &&
                 other.eval('ventRun.settings.VD') === 175 &&
-                other.eval('ventRun.settings.CO2Gradient') === 7,
+                other.eval('ventRun.settings.CO2Gradient') === 7 &&
+                other.eval('ventRun.settings.capnogramShape') === 'obstructive',
             );
             engine.simulate = solve;
           }

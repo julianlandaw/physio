@@ -19,6 +19,7 @@ const Ventilation = (() => {
     VCO2: 200,
     VD: 150,
     CO2Gradient: 5,
+    capnogramShape: 'auto',
   };
   const limits = {
     VT: [50, 1000],
@@ -55,6 +56,8 @@ const Ventilation = (() => {
     }
     if (!['startup', 'steady'].includes(p.initial))
       errors.push({ field: 'initial', message: 'Choose an initial lung state.' });
+    if (!['auto', 'reference', 'obstructive'].includes(p.capnogramShape))
+      errors.push({ field: 'capnogramShape', message: 'Choose a supported capnogram shape.' });
     return errors;
   }
   function timing(p) {
@@ -125,7 +128,41 @@ const Ventilation = (() => {
       },
     };
   }
-  function sampleBreath(p, q, b, time, side = 'right') {
+  // Illustrative time capnogram, not a heterogeneous gas-exchange model.
+  // Shape fractions are teaching choices, not fitted disease parameters.
+  function capnogramTiming(p, q) {
+    const severity =
+      p.capnogramShape === 'reference'
+        ? 0
+        : p.capnogramShape === 'obstructive'
+          ? 1
+          : Math.max(0, Math.min(1, (p.Rexp - 10) / 30));
+    return {
+      delay: q.Te * 0.04,
+      riseEnd: q.Te * (0.12 + 0.26 * severity),
+      plateauLevel: 0.95 - 0.35 * severity,
+      severity,
+    };
+  }
+  function capnogram(q, shape, gas, local, phase) {
+    if (gas.EtCO2 == null) return { co2: null, co2Phase: 'unavailable' };
+    if (phase !== 'expiration') return { co2: 0, co2Phase: 'inspiratory baseline' };
+    const expiredTime = Math.max(0, local - q.Ti);
+    if (expiredTime <= shape.delay) return { co2: 0, co2Phase: 'phase I' };
+    if (expiredTime < shape.riseEnd)
+      return {
+        co2:
+          (gas.EtCO2 * shape.plateauLevel * (expiredTime - shape.delay)) /
+          (shape.riseEnd - shape.delay),
+        co2Phase: 'phase II',
+      };
+    const progress = Math.min(1, (expiredTime - shape.riseEnd) / (q.Te - shape.riseEnd));
+    return {
+      co2: gas.EtCO2 * (shape.plateauLevel + (1 - shape.plateauLevel) * progress),
+      co2Phase: 'phase III',
+    };
+  }
+  function sampleBreath(p, q, b, time, side, gas, shape) {
     const local = Math.max(0, Math.min(q.cycle, time - b.start));
     const before = (boundary) =>
       local < boundary - EPS || (side === 'left' && local <= boundary + EPS);
@@ -161,6 +198,7 @@ const Ventilation = (() => {
       palv: p.PEEP + volume / q.C,
       phase,
       breath: b.index + 1,
+      ...capnogram(q, shape, gas, local, phase),
     };
   }
   function sample(run, rawTime, side) {
@@ -169,11 +207,19 @@ const Ventilation = (() => {
     let index = Math.floor((time + EPS) / run.timing.cycle);
     if (side === 'left' && time > 0 && Math.abs(time - index * run.timing.cycle) < EPS) index--;
     index = Math.max(0, Math.min(run.breaths.length - 1, index));
-    return sampleBreath(run.settings, run.timing, run.breaths[index], time, side);
+    return sampleBreath(
+      run.settings,
+      run.timing,
+      run.breaths[index],
+      time,
+      side,
+      run.gasExchange,
+      run.capnogramTiming,
+    );
   }
   // A steady-state ventilation estimate, independent of startup/selected breath.
   // VCO2 is mL/min STPD; alveolar ventilation is L/min BTPS. No CO2 stores,
-  // perfusion or capnogram are simulated. The Pa–Et gradient is an assumption.
+  // perfusion are simulated. The Pa–Et gradient is an assumption.
   function gasExchange(p, q) {
     const V0 = initialVolume({ ...p, initial: 'steady' }, q);
     const steadyVT =
@@ -217,13 +263,19 @@ const Ventilation = (() => {
       f: [],
       palv: [],
       phase: [],
+      co2: [],
       gasExchange: gasExchange(p, q),
+      capnogramTiming: capnogramTiming(p, q),
     };
     const events = [0, p.T];
     for (const b of breaths) {
       events.push(b.start);
       if (p.mode === 'vcv' && q.Th > 0) events.push(b.start + q.Tflow);
       events.push(b.start + q.Ti, b.end);
+      events.push(
+        b.start + q.Ti + run.capnogramTiming.delay,
+        b.start + q.Ti + run.capnogramTiming.riseEnd,
+      );
     }
     const boundaries = events
       .filter((t) => t >= 0 && t <= p.T + EPS)
@@ -246,7 +298,7 @@ const Ventilation = (() => {
           : [time >= p.T - EPS ? 'left' : 'right'];
       for (const side of sides) {
         const point = sample(run, Math.min(time, p.T), side);
-        for (const key of ['t', 'p', 'v', 'f', 'palv', 'phase']) run[key].push(point[key]);
+        for (const key of ['t', 'p', 'v', 'f', 'palv', 'phase', 'co2']) run[key].push(point[key]);
       }
     }
     run.completeBreaths = breaths.filter((b) => b.complete);
