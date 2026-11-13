@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Regimen validation and history checks</title>
+  </head>
+  <body data-result="running">
+    <h1>Regimen validation and history checks</h1>
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Regimen editor under test"
+      src="../docs/Pharmacology/threecompartmentmodel.html"
+      style="width: 390px; height: 844px; position: absolute; left: -2000px"
+    ></iframe>
+    <script>
+      const checks = [];
+      const check = (name, condition) => {
+        checks.push(`${condition ? 'PASS' : 'FAIL'} ${name}`);
+        if (!condition) throw Error(name);
+      };
+      const approx = (a, b) => Number.isFinite(a) && Math.abs(a - b) < 1e-7;
+      document.getElementById('app').addEventListener('load', async () => {
+        const app = document.getElementById('app').contentWindow,
+          d = app.document;
+        const input = (id) => d.getElementById(id);
+        const change = (id, value) => {
+          input(id).value = value;
+          input(id).dispatchEvent(new app.Event('change', { bubbles: true }));
+        };
+        const undo = () => app.undoRegimenEdit();
+        const redo = () => app.redoRegimenEdit();
+        const snapshot = () => JSON.stringify(app.getScheduleFromDOM({ includeInactive: true }));
+        try {
+          const worker = new Worker('engine.worker.js');
+          const engine = await new Promise((resolve, reject) => {
+            worker.onmessage = (event) => resolve(event.data);
+            worker.onerror = (event) => reject(Error(event.message));
+          });
+          worker.terminate();
+          checks.push(...engine.checks);
+          check('standalone numerical checks complete', engine.passed);
+          check(
+            'history starts with a single baseline after initialization',
+            input('undoRegimenBtn').disabled && input('redoRegimenBtn').disabled,
+          );
+          check(
+            'numeric validation distinguishes blank from explicit zero',
+            Number.isNaN(app.readNumericInput('')) &&
+              app.readNumericInput('0') === 0 &&
+              app.numericInputError('0', 'Dose') === null,
+          );
+          check(
+            'numeric validation rejects malformed and non-finite entries',
+            ['1junk', 'Infinity', 'NaN'].every((value) => app.numericInputError(value, 'Dose')),
+          );
+          change('mainFinalTime', '3');
+          change('mainBolusAmount', '2');
+          change('mainBolusAmount', '3');
+          input('undoRegimenBtn').click();
+          check('Undo reverses the latest basic dose edit', input('mainBolusAmount').value === '2');
+          input('redoRegimenBtn').click();
+          check('Redo reapplies the basic dose edit', input('mainBolusAmount').value === '3');
+          change('mainBolusAmount', '');
+          check(
+            'incomplete basic edits remain invalid',
+            !app.validateSimulationInputs() && input('b').value === '',
+          );
+          undo();
+          check(
+            'Undo restores a valid dose from an incomplete edit',
+            input('mainBolusAmount').value === '3' && app.validateSimulationInputs(),
+          );
+          redo();
+          check(
+            'Redo restores the incomplete entry without replacing it with zero',
+            input('b').value === '' && !app.validateSimulationInputs(),
+          );
+          undo();
+          change('mainBolusAmount', '4');
+          check('a new edit after Undo discards the redo branch', input('redoRegimenBtn').disabled);
+          const beforeTheme = app.eval('regimenHistory.length');
+          app.toggleDarkMode();
+          app.toggleDarkMode();
+          check(
+            'presentation-only changes do not add regimen history',
+            app.eval('regimenHistory.length') === beforeTheme,
+          );
+          const native = new app.KeyboardEvent('keydown', {
+            key: 'z',
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+          });
+          input('mainBolusAmount').dispatchEvent(native);
+          check(
+            'inputs retain their native undo shortcuts',
+            !native.defaultPrevented && input('mainBolusAmount').value === '4',
+          );
+          d.dispatchEvent(
+            new app.KeyboardEvent('keydown', {
+              key: 'z',
+              ctrlKey: true,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+          check(
+            'keyboard Undo works outside form controls',
+            input('mainBolusAmount').value === '3',
+          );
+          d.dispatchEvent(
+            new app.KeyboardEvent('keydown', {
+              key: 'z',
+              ctrlKey: true,
+              shiftKey: true,
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+          check(
+            'keyboard Redo works outside form controls',
+            input('mainBolusAmount').value === '4',
+          );
+
+          app.setScheduleToDOM({
+            enabled: true,
+            boluses: [{ time: 0, dose: 1, duration: 0 }],
+            infusions: [{ start: 0, end: 2, rate: 10 }],
+          });
+          app.dfsolve();
+          app.selectTimelineEvent('bolus', 0);
+          const unchanged = snapshot();
+          const priorCurve = input('myDiv1').data[0].y.slice();
+          for (const id of ['timelineEventTime', 'timelineEventDose', 'timelineEventDuration']) {
+            const previous = input(id).value;
+            input(id).value = '';
+            input('timelineEventSaveBtn').click();
+            check(
+              `blank ${id} cannot change a timeline event`,
+              snapshot() === unchanged &&
+                input(id).getAttribute('aria-invalid') === 'true' &&
+                !input('timelineEventErrors').hidden,
+            );
+            input(id).value = previous;
+          }
+          check(
+            'invalid timeline edits leave model results intact',
+            input('myDiv1').data[0].y.every((value, i) => value === priorCurve[i]),
+          );
+          input('timelineEventDose').value = '0';
+          input('timelineEventSaveBtn').click();
+          check(
+            'timeline accepts an explicit zero dose',
+            app.getScheduleFromDOM().boluses.length === 0,
+          );
+          undo();
+          check('Undo restores a timeline edit', app.getScheduleFromDOM().boluses[0].dose === 1);
+          redo();
+          check('Redo reapplies a timeline edit', app.getScheduleFromDOM().boluses.length === 0);
+          undo();
+          app.selectTimelineEvent('infusion', 0);
+          for (const id of ['timelineEventStart', 'timelineEventEnd', 'timelineEventRate']) {
+            const previous = input(id).value;
+            input(id).value = '';
+            input('timelineEventSaveBtn').click();
+            check(
+              `blank ${id} cannot become a zero infusion value`,
+              app.getScheduleFromDOM().infusions[0].rate === 10 &&
+                input(id).getAttribute('aria-invalid') === 'true',
+            );
+            input(id).value = previous;
+          }
+          input('timelineEventStart').value = '2';
+          input('timelineEventEnd').value = '1';
+          input('timelineEventSaveBtn').click();
+          check(
+            'timeline rejects infusion end before start',
+            input('timelineEventEnd').classList.contains('is-invalid') &&
+              app.getScheduleFromDOM().infusions[0].start === 0,
+          );
+          app.selectTimelineEvent('infusion', 0);
+          input('timelineEventDuplicateBtn').click();
+          check(
+            'timeline duplication adds a history entry',
+            app.getScheduleFromDOM().infusions.length === 2,
+          );
+          input('timelineEventDeleteBtn').click();
+          undo();
+          check(
+            'Undo restores a deleted timeline event',
+            app.getScheduleFromDOM().infusions.length === 2,
+          );
+          undo();
+          check(
+            'multiple Undo steps reach the pre-duplication schedule',
+            app.getScheduleFromDOM().infusions.length === 1,
+          );
+          redo();
+          redo();
+          check(
+            'multiple Redo steps reapply duplication and deletion',
+            app.getScheduleFromDOM().infusions.length === 1,
+          );
+          input('bolusEventsTable').querySelector('[data-action="remove"]').click();
+          input('infusionEventsTable').querySelector('[data-action="remove"]').click();
+          check(
+            'the final schedule rows can be removed',
+            app.eval('scheduleState.boluses.length === 0 && scheduleState.infusions.length === 0'),
+          );
+          undo();
+          redo();
+          const emptyHistoryCount = app.eval('regimenHistory.length');
+          app.recordRegimenHistory();
+          check(
+            'Redo preserves empty tables without introducing placeholder edits',
+            app.eval(
+              'scheduleState.boluses.length === 0 && scheduleState.infusions.length === 0 && regimenHistory.length',
+            ) === emptyHistoryCount,
+          );
+          undo();
+          check(
+            'Undo continues to work after redoing an empty table',
+            app.getScheduleFromDOM().infusions.length === 1,
+          );
+
+          app.setScheduleToDOM({
+            enabled: true,
+            boluses: [],
+            infusions: Array.from({ length: 125 }, (_, i) => ({
+              start: i / 100,
+              end: (i + 1) / 100,
+              rate: 1,
+            })),
+          });
+          app.dfsolve();
+          input('mainEditScheduleBtn').click();
+          input('scheduleNextBtn').click();
+          const pageRate = input('infusionEventsTable').querySelector('[data-field="rate"]');
+          pageRate.value = '';
+          pageRate.dispatchEvent(new app.Event('change', { bubbles: true }));
+          input('scheduleNextBtn').click();
+          const errorButton = input('scheduleEditorErrorLinks').querySelector('button');
+          check(
+            'offscreen errors offer a direct link to the correct schedule page',
+            errorButton && errorButton.textContent.includes('infusion 51 (page 2)'),
+          );
+          errorButton.click();
+          check(
+            'error navigation opens, marks, and focuses the actual invalid field',
+            input('scheduleEditor').open &&
+              input('infusionEventsTable').tBodies[0].rows[0].dataset.index === '50' &&
+              d.activeElement.dataset.field === 'rate' &&
+              d.activeElement.getAttribute('aria-invalid') === 'true',
+          );
+          input('scheduleEditor').querySelector('[data-regimen-history="undo"]').click();
+          check(
+            'Undo in the schedule dialog restores an incomplete offscreen edit',
+            app.validateSimulationInputs() && app.getScheduleFromDOM().infusions.length === 125,
+          );
+          input('scheduleEditor').querySelector('[data-regimen-history="redo"]').click();
+          check(
+            'Redo in the schedule dialog restores an invalid offscreen entry',
+            !app.validateSimulationInputs(),
+          );
+          undo();
+          input('closeScheduleEditorBtn').click();
+          app.setInfusionUnit('mg/kg/min');
+          app.dfsolve();
+          undo();
+          check(
+            'Undo restores dosing units and all offscreen event values',
+            app.getCurrentState().units.infusion === 'µg/kg/min' &&
+              app.getScheduleFromDOM().infusions[124].rate === 1,
+          );
+          app.setScheduleToDOM({
+            enabled: true,
+            boluses: [],
+            infusions: [{ start: 0, end: 2, rate: 10 }],
+          });
+          app.dfsolve();
+          const tableRate = input('infusionEventsTable').querySelector('[data-field="rate"]');
+          tableRate.value = '20';
+          tableRate.dispatchEvent(new app.Event('input', { bubbles: true }));
+          undo();
+          check(
+            'Undo commits and reverses a pending debounced schedule edit',
+            app.getScheduleFromDOM().infusions[0].rate === 10,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          redo();
+          check(
+            'a pending debounce cannot overwrite the restored history state',
+            app.getScheduleFromDOM().infusions[0].rate === 20,
+          );
+          const incompleteRate = input('infusionEventsTable').querySelector('[data-field="rate"]');
+          incompleteRate.value = '';
+          incompleteRate.dispatchEvent(new app.Event('change', { bubbles: true }));
+          undo();
+          redo();
+          check(
+            'history restores an incomplete earliest rate in both editors',
+            input('mainInfusionRate').value === '' &&
+              input('infusionEventsTable').querySelector('[data-field="rate"]').value === '' &&
+              !app.validateSimulationInputs(),
+          );
+
+          app.reset();
+          change('mainFinalTime', '3');
+          change('tciStopTime', '2');
+          app.setDosingMode('tci');
+          change('mainTciMaxRate', '2000');
+          app.addTciTargetChange({ time: 0.35, target: 3 });
+          app.dfsolve();
+          app.addTciTargetChange({ time: 0.75, target: 0 });
+          app.dfsolve();
+          undo();
+          check(
+            'Undo removes only the latest target change',
+            app.getTciTargetChanges().length === 1,
+          );
+          redo();
+          check('Redo restores a zero-target change', app.getTciTargetChanges()[1].target === 0);
+          const targetInput = input('tciTargetChanges').querySelector('[data-field="target"]');
+          targetInput.value = '';
+          targetInput.dispatchEvent(new app.Event('change', { bubbles: true }));
+          undo();
+          redo();
+          check(
+            'target history preserves blank entries as invalid',
+            Number.isNaN(app.getTciTargetChanges()[0].target) && !app.validateSimulationInputs(),
+          );
+          undo();
+          input('mainImportTciScheduleBtn').click();
+          const exact = snapshot(),
+            source = app.simulateStrategy(app.getCurrentState());
+          const exactCount = app.getScheduleFromDOM().infusions.length;
+          check('history test imports a schedule that can actually be simplified', exactCount > 3);
+          undo();
+          check(
+            'Undo reverses a TCI import and restores timed targets',
+            input('tciEnabled').checked &&
+              app.getTciTargetChanges().length === 2 &&
+              app.buildRegimenDocument().tciOriginal === null,
+          );
+          redo();
+          check(
+            'Redo restores the imported schedule and its comparison source',
+            snapshot() === exact &&
+              app.buildRegimenDocument().tciOriginal.tci.changes.length === 2 &&
+              !input('tciReplayComparison').hidden,
+          );
+          check(
+            'history-restored TCI imports reproduce the same predictions',
+            approx(app.simulateStrategy(app.getCurrentState()).totalDoseMgKg, source.totalDoseMgKg),
+          );
+          input('tciSimplifyLimit').value = '3';
+          input('simplifyTciScheduleBtn').click();
+          check(
+            'schedule simplification creates fewer segments',
+            app.getScheduleFromDOM().infusions.length <= 3 &&
+              app.getScheduleFromDOM().infusions.length < exactCount,
+          );
+          undo();
+          check('Undo restores the exact pre-simplification schedule', snapshot() === exact);
+          redo();
+          check(
+            'Redo reapplies schedule simplification',
+            app.getScheduleFromDOM().infusions.length <= 3,
+          );
+          const beforeSwitch = snapshot();
+          app.applyDrugById('fentanyl');
+          undo();
+          check(
+            'Undo of a drug switch restores the model, schedule, and TCI reference',
+            app.getCurrentState().drug === 'propofol' &&
+              snapshot() === beforeSwitch &&
+              !input('tciReplayComparison').hidden,
+          );
+          app.reset();
+          undo();
+          check(
+            'Reset can be undone',
+            snapshot() === beforeSwitch && app.getCurrentState().schedule.enabled,
+          );
+          const saved = JSON.stringify(app.buildRegimenDocument());
+          app.applyDrugById('fentanyl');
+          app.loadRegimenDocument(saved);
+          undo();
+          check(
+            'file loading can be undone to recover the previous regimen',
+            app.getCurrentState().drug === 'fentanyl',
+          );
+          redo();
+          check(
+            'Redo of file loading restores imported TCI provenance',
+            app.getCurrentState().drug === 'propofol' && !input('tciReplayComparison').hidden,
+          );
+          for (let i = 0; i < 35; i++) {
+            change('mainWeight', String(50 + i));
+          }
+          check(
+            'history remains bounded by its entry and memory limits',
+            app.eval(
+              'regimenHistory.length <= REGIMEN_HISTORY_LIMIT && (regimenHistory.length === 1 || regimenHistory.reduce((n, item) => n + item.text.length, 0) <= REGIMEN_HISTORY_CHARACTER_LIMIT)',
+            ),
+          );
+          for (let i = 0; i < 35; i++) undo();
+          check('Undo stops safely at the oldest retained entry', input('undoRegimenBtn').disabled);
+          for (let i = 0; i < 35; i++) redo();
+          check(
+            'Redo stops safely at the newest entry',
+            input('redoRegimenBtn').disabled && input('mainWeight').value === '84',
+          );
+          app.writeDraftNow();
+          check(
+            'draft recovery saves the current history position',
+            JSON.parse(app.localStorage.getItem('physio.regimen.draft.v1')).current.patient
+              .weightKg === 84,
+          );
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push(`FAIL ${error.message}`);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      });
+    </script>
+  </body>
+</html>

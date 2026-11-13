@@ -1,13 +1,13 @@
 {
   "version": 1,
   "id": "physio-live-v1",
-  "description": "Authoritative live site presets. Parameters preserved from the maintained simulator; microconstants and downloadable tables are generated.",
+  "description": "Authoritative live site presets with structured provenance. Numerical parameters are preserved; citation links do not establish validation of the site approximations.",
   "drugs": [
     {
       "id": "propofol",
       "label": "Propofol",
       "group": "Hypnotics & sedatives",
-      "note": "Marsh model (validated preset parameters).",
+      "note": "Marsh-type site preset; exact parameter and effect-site provenance requires verification.",
       "units": {
         "conc": "µg/mL",
         "bolus": "mg/kg",
@@ -57,7 +57,26 @@
           "high": 4,
           "color": "#ff7f0e"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-propofol",
+        "modelName": "Marsh-type site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Marsh B et al. Pharmacokinetic model driven infusion of propofol in children. Br J Anaesth. 1991;67:41–48.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/1859758/",
+            "role": "Named-model background; exact mapping of this site preset, including ke0, has not been verified."
+          }
+        ],
+        "notes": "Marsh-type site preset; exact parameter and effect-site provenance requires verification."
+      }
     },
     {
       "id": "etomidate",
@@ -91,7 +110,21 @@
           "high": 0.4,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-etomidate",
+        "modelName": "Arden-derived site preset with adjusted deep compartment",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Arden-derived preset; V3 is refined for less deep accumulation."
+      }
     },
     {
       "id": "ketamine",
@@ -134,7 +167,21 @@
           "high": 2,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-ketamine",
+        "modelName": "Domino / Clements / Hijazi-type site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Domino / Clements / Hijazi-type preset."
+      }
     },
     {
       "id": "dexmedetomidine",
@@ -182,7 +229,21 @@
           "high": 2,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-dexmedetomidine",
+        "modelName": "Dyck / Hannivoort-type adjusted site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Dyck / Hannivoort-type preset; literature-consistent adjustment."
+      }
     },
     {
       "id": "midazolam",
@@ -225,7 +286,26 @@
           "high": 0.5,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-midazolam",
+        "modelName": "Greenblatt-derived site preset with adjusted V1 and Q2",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacokinetic and electroencephalographic study of intravenous diazepam, midazolam, and placebo. Greenblatt DJ, Ehrenberg BL, Gunderman J, Locniskar A, Scavone JM, Harmatz JS, Shader RI. Clin Pharmacol Ther. 1989 Apr;45(4):356-65.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/2702793/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Greenblatt-derived preset with adjusted V1 and Q2."
+      }
     },
     {
       "id": "diazepam",
@@ -259,7 +339,26 @@
           "high": 2,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-diazepam",
+        "modelName": "Diazepam site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacokinetic and electroencephalographic study of intravenous diazepam, midazolam, and placebo. Greenblatt DJ, Ehrenberg BL, Gunderman J, Locniskar A, Scavone JM, Harmatz JS, Shader RI. Clin Pharmacol Ther. 1989 Apr;45(4):356-65.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/2702793/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "fentanyl",
@@ -302,7 +401,26 @@
           "high": 4,
           "color": "#ff7f0e"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-fentanyl",
+        "modelName": "Shafer-type site approximation",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacokinetics of fentanyl administered by computer-controlled infusion pump. Shafer SL, Varvel JR, Aziz N, Scott JC. Anesthesiology. 1990 Dec;73(6):1091-102.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/2248388/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Shafer-type approximation preset."
+      }
     },
     {
       "id": "hydromorphone",
@@ -328,7 +446,26 @@
         "bolusMinutes": 2
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-hydromorphone",
+        "modelName": "Hydromorphone site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Comparing the subjective, psychomotor, and physiological effects of intravenous hydromorphone and morphine in healthy volunteers. Hill JL, Zacny JP. Psychopharmacology (Berl). 2000 Sep;152(1):31-9.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/11041313/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "remifentanil",
@@ -376,7 +513,26 @@
           "high": 8,
           "color": "#ff7f0e"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-remifentanil",
+        "modelName": "Weight-normalized Minto site approximation",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Influence of Age and Gender on the Pharmacokinetics and Pharmacodynamics of Remifentanil: I. Model Development. Minto CF, Schnider TW, Egan TD, Youngs E, Lemmens HJ, Gambus PL, Billard V, Hoke JF, Moore KH, Hermann DJ, Muir KT, Mandema JW, Shafer SL. Anesthesiology. 1997 Jan;86(1):10-23. Anesthesiology. 1997 Jan;86(1):10-23.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/9009935/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Weight-normalized Minto approximation preset."
+      }
     },
     {
       "id": "sufentanil",
@@ -419,7 +575,26 @@
           "high": 0.7,
           "color": "#ff7f0e"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-sufentanil",
+        "modelName": "Sufentanil site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Linearity of pharmacokinetics and model estimation of sufentanil. Gepts E, Shafer SL, Camu F, Stanski DR, Woestenborghs R, Van Peer A, Heykants JJ. Anesthesiology. 1995 Dec;83(6):1194-204.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/8533912/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "alfentanil",
@@ -462,7 +637,26 @@
           "high": 300,
           "color": "#ff7f0e"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-alfentanil",
+        "modelName": "Alfentanil site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Decreased fentanyl and alfentanil dose requirements with age. A simultaneous pharmacokinetic and pharmacodynamic evaluation. Scott JC, Stanski DR. J Pharmacol Exp Ther. 1987 Jan;240(1):159-66.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/3100765/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "methadone",
@@ -496,7 +690,26 @@
           "high": 100,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-methadone",
+        "modelName": "Methadone site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacokinetic-pharmacodynamic relationships of methadone infusions in patients with cancer pain. Inturrisi CE, Portenoy RK, Max MB, Colburn WA, Foley KM. Clin Pharmacol Ther. 1990 May;47(5):565-77.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/2188771/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "rocuronium",
@@ -522,7 +735,26 @@
         "bolusMinutes": 1
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-rocuronium",
+        "modelName": "Rocuronium site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacokinetics and pharmacodynamics of rocuronium at the vocal cords and the adductor pollicis in humans. Plaud B, Proost JH, Wierda JM, Barre J, Debaene B, Meistelman C. Clin Pharmacol Ther. 1995 Aug;58(2):185-91.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/7648768/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "vecuronium",
@@ -548,7 +780,26 @@
         "bolusMinutes": 1
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-vecuronium",
+        "modelName": "Vecuronium site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pancuronium and vecuronium pharmacokinetics and pharmacodynamics in younger and elderly adults. Rupp SM, Castagnoli KP, Fisher DM, Miller RD. Anesthesiology. 1987 Jul;67(1):45-9.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/2886080/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "cisatracurium",
@@ -576,7 +827,26 @@
         "infusionMinutes": 60
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-cisatracurium",
+        "modelName": "Cisatracurium site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacokinetics and pharmacodynamics of cisatracurium after a short infusion in patients under propofol anesthesia. Tran TV, Fiset P, Varin F. Anesth Analg. 1998 Nov;87(5):1158-63.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/9806701/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "pancuronium",
@@ -602,7 +872,26 @@
         "bolusMinutes": 1
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-pancuronium",
+        "modelName": "Pancuronium site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pancuronium and vecuronium pharmacokinetics and pharmacodynamics in younger and elderly adults. Rupp SM, Castagnoli KP, Fisher DM, Miller RD. Anesthesiology. 1987 Jul;67(1):45-9.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/2886080/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "succinylcholine",
@@ -628,7 +917,26 @@
         "bolusMinutes": 0.5
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-succinylcholine",
+        "modelName": "Succinylcholine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Concentration-effect relation of succinylcholine chloride during propofol anesthesia. Roy JJ, Donati F, Boismenu D, Varin F. Anesthesiology. 2002 Nov;97(5):1082-92.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/12411790/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "lidocaine",
@@ -664,7 +972,26 @@
           "high": 5,
           "color": "#1f77b4"
         }
-      ]
+      ],
+      "provenance": {
+        "modelId": "physio-lidocaine",
+        "modelName": "Lidocaine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Disposition kinetics of lidocaine in normal subjects. Rowland M, Thomson PD, Guichard A, Melmon KL. Ann N Y Acad Sci. 1971 Jul 6;179:383-98.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/5285383/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Standard PK preset; no validated effect-site model is assumed."
+      }
     },
     {
       "id": "bupivacaine",
@@ -687,7 +1014,26 @@
       },
       "example": {},
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-bupivacaine",
+        "modelName": "Bupivacaine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          },
+          {
+            "title": "Pharmacology of local anaesthetic agents. Pharmacokinetics of local anaesthetic agents. Tucker GT, Mather LE. Br J Anaesth. 1975 Feb;47 suppl:213-24.",
+            "href": "https://pubmed.ncbi.nlm.nih.gov/1148097/",
+            "role": "Background reference listed in druginfo.txt; exact parameter mapping is unverified."
+          }
+        ],
+        "notes": "Site preset parameters; no validated effect-site model is assumed."
+      }
     },
     {
       "id": "phenylephrine",
@@ -715,7 +1061,21 @@
         "infusionMinutes": 60
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-phenylephrine",
+        "modelName": "Phenylephrine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "ephedrine",
@@ -741,7 +1101,21 @@
         "bolusMinutes": 0
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-ephedrine",
+        "modelName": "Ephedrine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "epinephrine",
@@ -767,7 +1141,21 @@
         "infusionMinutes": 60
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-epinephrine",
+        "modelName": "Epinephrine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "dobutamine",
@@ -793,7 +1181,21 @@
         "infusionMinutes": 60
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-dobutamine",
+        "modelName": "Dobutamine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "dopamine",
@@ -819,7 +1221,21 @@
         "infusionMinutes": 60
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-dopamine",
+        "modelName": "Dopamine site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "milrinone",
@@ -847,7 +1263,21 @@
         "infusionMinutes": 60
       },
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-milrinone",
+        "modelName": "Milrinone site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     },
     {
       "id": "vasopressin",
@@ -870,7 +1300,21 @@
       },
       "example": {},
       "tci": null,
-      "ranges": []
+      "ranges": [],
+      "provenance": {
+        "modelId": "physio-vasopressin",
+        "modelName": "Vasopressin site preset",
+        "populationAssumptions": "Illustrative weight-normalized simulation. Age, sex, lean body mass, and organ-function covariates are not applied. The original study population and applicability of this site parameter set have not been verified.",
+        "reviewStatus": "Parameter-to-publication mapping unverified",
+        "references": [
+          {
+            "title": "Live site parameter registry",
+            "href": "drug_registry.json",
+            "role": "Exact numerical source for this site revision."
+          }
+        ],
+        "notes": "Site preset parameters; verify model applicability for the intended patient."
+      }
     }
   ]
 }

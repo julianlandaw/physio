@@ -2230,11 +2230,6 @@ body.dark-mode .validation-summary {
   font-size: 0.86rem;
 }
 
-.simulation-status__undo {
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-
 .simulation-status[data-state='error'] {
   color: #842029;
   border-color: #dc3545;
@@ -2963,6 +2958,115 @@ body.schedule-editor-open {
   flex-basis: 100%;
   margin: 0;
   color: var(--muted);
+}
+.model-provenance {
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+.model-provenance dt {
+  margin-top: 7px;
+}
+.model-provenance dd {
+  margin: 2px 0;
+}
+.model-provenance ul {
+  padding-left: 20px;
+}
+.model-provenance li {
+  margin-top: 8px;
+}
+.model-provenance small {
+  display: block;
+  color: var(--muted);
+}
+.simulation-inspector {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.simulation-inspector summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.simulation-inspector p {
+  margin: 8px 0;
+  color: var(--muted);
+}
+.inspector-time-controls {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.inspector-time-controls label:not(.sr-only) {
+  margin: 0;
+  flex: 0 0 120px;
+  font-size: 0.8rem;
+}
+.inspector-time-controls input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  accent-color: #1f77b4;
+}
+.inspector-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+.inspector-values dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+.inspector-values dd {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.simulation-inspector .inspection-status[data-state='capped'] {
+  color: var(--text);
+  font-weight: 650;
+}
+@media (max-width: 690px) {
+  .inspector-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media print {
+  .simulation-inspector {
+    display: none !important;
+  }
+}
+.regimen-history,
+.schedule-error-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0;
+}
+.regimen-history {
+  color: var(--muted);
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  margin: 0;
+}
+@media (max-width: 690px) {
+  .regimen-overview__heading {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+}
+.schedule-editor > .schedule-error-links {
+  margin: 0 18px;
+}
+@media print {
+  .regimen-history,
+  .schedule-error-links {
+    display: none !important;
+  }
 }
 .schedule-tools > summary {
   cursor: pointer;

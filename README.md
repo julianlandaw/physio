@@ -68,7 +68,17 @@ The main model is implemented by:
 
 - `docs/Pharmacology/threecompartmentmodel.html` — application markup and local library references.
 - `docs/assets/js/drug_registry.js` — generated shared drug data; edit `drug_registry.json` and regenerate rather than editing this output.
-- `docs/assets/js/threecompartmentmodel.js` — PK/PD solver, graph creation, comparison workflow, validation, export, and UI coordination.
+- `docs/assets/js/threecompartmentmodel.js` — form bindings, presets, comparison strategies, and application coordination.
+- `docs/assets/js/threecompartmentmodel_engine.js` — numerical PK/TCI simulation, PK normalization, dose integration, schedule simplification, replay calculations, and half-life metrics. It accepts data and has no page or chart dependencies.
+- `docs/assets/js/threecompartmentmodel_results.js` — bounded cache of physical simulation inputs, predictions, and half-life results; current validated result context.
+- `docs/assets/js/threecompartmentmodel_inspection.js` — time-point inspection, TCI delivery summaries, chart cursors, and full results CSV export.
+- `docs/assets/js/threecompartmentmodel_provenance.js` — recorded model identity, source references, revision handling, and safe display of source metadata.
+- `docs/assets/js/threecompartmentmodel_units.js` — unit metadata, numeric formatting, and pure conversions with explicit unit and weight arguments.
+- `docs/assets/js/threecompartmentmodel_validation.js` — shared numeric, dose-event, and target-change rules, plus the form-validation adapter. Blank required entries remain invalid; explicit zero is accepted where allowed.
+- `docs/assets/js/threecompartmentmodel_charts.js` — charts, reference ranges, comparisons, and result presentation.
+- `docs/assets/js/threecompartmentmodel_timeline.js` — timeline interactions and event editing.
+- `docs/assets/js/threecompartmentmodel_report.js` — report tables and print/PDF preparation.
+- `docs/assets/js/threecompartmentmodel_history.js` — bounded Undo/Redo snapshots, controls, and keyboard shortcuts.
 - `docs/assets/js/threecompartmentmodel_schedule.js` — complete schedule state and tables that render at most 50 events of each type, both in the drawer and larger editor.
 - `docs/assets/js/threecompartmentmodel_tci.js` — timed target editing and validation.
 - `docs/assets/js/threecompartmentmodel_files.js` — validated, versioned regimen JSON save/load, including comparison strategies and original TCI snapshots.
@@ -86,9 +96,15 @@ Key capabilities include:
 - Regimen JSON save/load to retain model inputs, units, schedules, comparison strategies, and TCI import references across visits. Use **Save regimen** and **Load regimen** under **Summary, settings & export**; loading a file replaces the current regimen and comparison list.
 - Automatic local recovery of the last valid regimen, including timed targets, comparison strategies, and imported TCI references. Incomplete edits retain the previous valid draft. Recovery uses this browser's local storage; **Forget saved draft** removes it and disables saving until recovery is enabled again. Regimen files remain useful for a separate, portable copy.
 - Editable dosing timeline: click to add a bolus, drag to add an infusion, and select an event to edit, duplicate, or delete it.
+- Undo/Redo for committed regimen edits, including incomplete numeric entries, schedule changes, target changes, TCI imports, simplification, drug switches, resets, and file loads. Controls appear beside the regimen heading and in the schedule dialog. Outside form controls, use Ctrl/Cmd+Z to undo and Ctrl/Cmd+Shift+Z to redo; Ctrl+Y also redoes. Form controls retain their native editing shortcuts. History lasts for this visit and retains up to 30 snapshots, with a combined text budget of roughly 12 MiB; an oversized current snapshot is retained alone.
+- Schedule validation links open the larger editor at the correct page and focus the invalid field, including errors in offscreen events.
 - Direct main-screen bolus and infusion-rate controls.
 - Cp/Ce concentration plots, distribution-compartment plots, half-life metrics, comparisons, therapeutic-range overlays where available, dark mode, log Y-axis, and PDF export.
 - Chart time-window controls and retained zoom during routine edits; reference ranges appear in a separate key below the graph.
+- Time-point inspection beneath the primary chart: enter a time, move the slider, or click a concentration/rate data point to see Cp, Ce, active TCI target, predicted-minus-target difference, delivery rate, and cumulative dose together. Both charts show the cursor. Values between samples use the model transition, so they do not interpolate across instantaneous bolus jumps. At an event boundary, concentrations and cumulative dose include the bolus and the displayed rate applies to the following interval; at simulation end the displayed rate is zero.
+- TCI feedback identifies maximum-rate delivery, zero-target pauses, pauses when no additional drug is required, and infusion stop. The rate-panel summary gives the duration of each state; it does not define a concentration tolerance or claim a target has been clinically attained. Imported TCI summaries retain every timed target change.
+- **Export results CSV** under **Summary, settings & export** downloads every sample, including fractional event times and the final sample. Columns include Cp/Ce and units, the right-continuous rate-based delivery rate and units, cumulative delivered dose in mg/kg and mg, active target and compartment, delivery status, weight, numerical PK parameters, and recorded model provenance. Initial concentration is not counted as delivered dose. Unavailable Ce and inactive targets are blank. **Export schedule CSV** in the schedule editor remains the dosing-event table.
+- Repeated calculations with identical physical inputs reuse predictions and half-life results, including saved strategies in comparison mode. The cache retains at most 12 results, 200,000 sample times in total, and roughly 8 MiB of key text; a single oversized result may be retained alone. Theme changes update styling, reference toggles update their overlay, and cursor movement updates the inspector and cursor overlays. Physical input edits trigger new calculations. Display-unit conversions and equivalent clearance/microconstant representations do not by themselves trigger a replay-assumptions warning.
 
 `drug_registry.json` is the sole live source for both simulators and the two CSV parameter tables. After changing it, run:
 
@@ -97,6 +113,10 @@ python3 scripts/generate_presets.py
 ```
 
 The generator derives microconstants from clearance and volume values and updates the browser data and both CSVs together. `python3 scripts/generate_presets.py --check` detects stale generated outputs. Historical `CoPilotHelp/` exports and `DrugModels/` remain reference resources. Preset/model assumptions must be reviewed before teaching or research use.
+
+Each preset has a stable model identifier, a model name, simulation population assumptions, a source-review status, and structured references. Generated parameter revisions hash the PK values and default units; the registry revision also covers documentation and metadata. A parameter revision identifies the base preset. Modified parameters are flagged separately, and saved numerical inputs describe the actual run. Regimen files, comparison strategies, TCI source snapshots, recovery, reports, and results CSVs retain recorded provenance. Older files without provenance still load and display the revision as **Not recorded**; loading a saved revision does not substitute the current registry revision.
+
+References distinguish the live registry from background literature. Repository citations are transcribed as background, and parameter-to-publication mappings remain explicitly **unverified**, including for named-model approximations. No study population is inferred from a model label. Source entries describe the implemented weight-normalized simulation and omitted covariates; this metadata does not establish validation or patient applicability. PDF references were not inspected or changed for this work.
 
 ### `docs/Respiratory/`
 
@@ -144,6 +164,8 @@ Do not edit minified or vendored files unless deliberately upgrading a dependenc
 - Browser checks are in `tests/threecompartmentmodel.browser.html` (add `?long=1` for full TCI import, paging, and file round-trips) and `tests/csht.browser.html` (responsive charts and calculation checks). Serve the repository root to open these test pages; each reports PASS/FAIL results.
 - `tests/site.browser.html` checks landing-page navigation, both ventilator simulators, and the inhalational simulator.
 - `tests/recovery.browser.html` checks timed targets, exact TCI replay, file compatibility, and local recovery across reloads, including invalid edits and unavailable storage.
+- `tests/editing.browser.html` checks shared validation, timeline editing, offscreen error navigation, Undo/Redo, history limits, and recovery at the current history position. It also runs `tests/engine.worker.js` to verify analytical solutions and TCI replay with no document or application UI loaded.
+- `tests/results.browser.html` checks cache reuse, chart-only updates, cursor values, results CSV data and metadata, TCI status, physical replay comparison, and provenance round-trips. Standalone engine checks also verify cumulative dose and sampling around bolus discontinuities.
 
 Install Node.js 22 or later, Python 3, and Chromium or Google Chrome. From the repository root, run:
 
@@ -152,7 +174,9 @@ npm ci
 npm run check
 ```
 
-This checks formatting, generated presets, local links and anchors, duplicate IDs, and all four browser suites, including the full-length TCI tests. It serves the repository temporarily on localhost and uses a separate browser profile for each suite. `npm run format` formats maintained source files. GitHub Actions runs the same checks for pushes and pull requests using `.github/workflows/checks.yml`.
+This checks formatting, generated presets, local links and anchors, duplicate IDs, and all six browser suites, including the full-length TCI tests. It serves the repository temporarily on localhost and uses a separate browser profile for each suite. `npm run format` formats maintained source files. GitHub Actions runs the same checks for pushes and pull requests using `.github/workflows/checks.yml`.
+
+The simulator uses classic script modules so it also works when opened directly from disk. Numerical tests can load Math.js, the unit module, and the engine independently; UI modules access their shared declarations after application initialization. Keep numerical functions independent of form fields and pass units and patient weight explicitly. Run the browser suites through HTTP because the test harnesses use fetch and workers.
 
 ## Clinical and scientific limitations
 

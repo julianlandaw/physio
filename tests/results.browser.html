@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Simulation results tools checks</title>
+  </head>
+  <body data-result="running">
+    <h1>Simulation results tools checks</h1>
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Results tools under test"
+      src="../docs/Pharmacology/threecompartmentmodel.html"
+      style="width: 390px; height: 844px; position: absolute; left: -2000px"
+    ></iframe>
+    <script>
+      const checks = [];
+      const check = (name, condition) => {
+        checks.push(`${condition ? 'PASS' : 'FAIL'} ${name}`);
+        if (!condition) throw Error(name);
+      };
+      const approx = (a, b) => Number.isFinite(a) && Math.abs(a - b) < 1e-7;
+      function parseCsv(text) {
+        const rows = [];
+        let row = [],
+          cell = '',
+          quoted = false;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+          if (c === '"') {
+            if (quoted && text[i + 1] === '"') {
+              cell += '"';
+              i++;
+            } else quoted = !quoted;
+          } else if (!quoted && c === ',') {
+            row.push(cell);
+            cell = '';
+          } else if (!quoted && c === '\n') {
+            row.push(cell.replace(/\r$/, ''));
+            rows.push(row);
+            row = [];
+            cell = '';
+          } else cell += c;
+        }
+        if (cell || row.length) {
+          row.push(cell);
+          rows.push(row);
+        }
+        return rows;
+      }
+      document.getElementById('app').addEventListener('load', async () => {
+        const app = document.getElementById('app').contentWindow,
+          d = app.document;
+        const input = (id) => d.getElementById(id);
+        const change = (id, value) => {
+          input(id).value = value;
+          input(id).dispatchEvent(new app.Event('change', { bubbles: true }));
+        };
+        const context = () => app.eval('latestSimulationContext');
+        try {
+          change('mainFinalTime', '3');
+          app.eval('simulationResultsCache.clear()');
+          const rawSolve = app.simulatePkModel,
+            rawReact = app.Plotly.react;
+          let solves = 0,
+            redraws = 0;
+          app.simulatePkModel = function (...args) {
+            solves++;
+            return rawSolve(...args);
+          };
+          app.Plotly.react = function (...args) {
+            redraws++;
+            return rawReact.apply(this, args);
+          };
+          app.dfsolve();
+          const first = context().result;
+          check('physical inputs are solved once', solves === 1);
+          app.dfsolve();
+          check(
+            'unchanged inputs reuse simulation and half-life results',
+            solves === 1 && context().result === first,
+          );
+          redraws = 0;
+          app.toggleDarkMode();
+          app.toggleDarkMode();
+          check(
+            'theme changes neither solve nor rebuild charts',
+            solves === 1 &&
+              redraws === 0 &&
+              input('myDiv1')._fullLayout.paper_bgcolor === '#ffffff',
+          );
+          const distributionShapes = JSON.stringify(input('myDiv2').layout.shapes);
+          input('toggleTherapeutic').click();
+          input('toggleTherapeutic').click();
+          check(
+            'reference toggles only update their overlay',
+            solves === 1 &&
+              redraws === 0 &&
+              JSON.stringify(input('myDiv2').layout.shapes) === distributionShapes &&
+              !input('therapeuticRangeKey').hidden,
+          );
+          app.setInspectionTime(0.123);
+          check(
+            'inspection never solves or rebuilds charts',
+            solves === 1 && redraws === 0 && input('inspectionTime').value === '0.123',
+          );
+          const renamed = structuredClone(app.getCurrentState());
+          renamed.name = 'Different name';
+          renamed.provenance.modelName = 'Different label';
+          check(
+            'cache ignores names and provenance',
+            app.getSimulationResult(renamed) === first && solves === 1,
+          );
+          change('mainBolusAmount', '2');
+          check('changed dose triggers a fresh solve', solves === 2 && context().result !== first);
+          app.captureCurrentStrategy();
+          const beforeCompare = solves;
+          input('compareMode').checked = true;
+          input('compareMode').dispatchEvent(new app.Event('change', { bubbles: true }));
+          app.dfsolve();
+          check('comparison reuses live and saved predictions', solves === beforeCompare);
+          input('compareMode').checked = false;
+          input('compareMode').dispatchEvent(new app.Event('change', { bubbles: true }));
+          const physical = app.getCurrentState();
+          for (let i = 0; i < 16; i++) {
+            const state = structuredClone(physical);
+            state.inputs.b = 10 + i;
+            app.getSimulationResult(state);
+          }
+          check(
+            'simulation cache stays bounded',
+            app.eval('simulationResultsCache.size <= SIMULATION_CACHE_LIMIT'),
+          );
+          const originalResult = app.getSimulationResult(physical);
+          const differentInitial = structuredClone(physical);
+          differentInitial.inputs.initialp = 1;
+          const differentHorizon = structuredClone(physical);
+          differentHorizon.inputs.tfinal = 4;
+          const differentPk = structuredClone(physical);
+          differentPk.pk.Cl *= 1.1;
+          check(
+            'cache invalidates for initial concentration, horizon, and PK edits',
+            [differentInitial, differentHorizon, differentPk].every(
+              (state) => app.getSimulationResult(state) !== originalResult,
+            ),
+          );
+          const absolute = structuredClone(physical);
+          absolute.units.bolus = 'mg';
+          absolute.inputs.b = 70;
+          absolute.inputs.tbolus = 0;
+          const lighter = structuredClone(absolute);
+          lighter.patient.weightKg = 35;
+          check(
+            'cached absolute doses remain weight-aware',
+            approx(
+              app.getSimulationResult(lighter).simulation.cp[0],
+              2 * app.getSimulationResult(absolute).simulation.cp[0],
+            ),
+          );
+          app.Plotly.react = rawReact;
+          app.simulatePkModel = rawSolve;
+          app.clearStrategies();
+
+          app.setScheduleToDOM({
+            enabled: true,
+            boluses: [
+              { time: 0, dose: 1, duration: 0 },
+              { time: 0.35, dose: 2, duration: 0 },
+              { time: 3, dose: 3, duration: 0 },
+            ],
+            infusions: [{ start: 0.35, end: 1.25, rate: 100 }],
+          });
+          app.dfsolve();
+          app.setInspectionTime(0.349);
+          check(
+            'cursor dose is exact before a bolus',
+            input('inspectionDose').textContent.startsWith('1 mg/kg'),
+          );
+          input('myDiv1').emit('plotly_click', { points: [{ x: 0.35 }] });
+          check(
+            'chart clicks update the inspector at a bolus boundary',
+            input('inspectionTime').value === '0.35' &&
+              input('inspectionSlider').value === '0.35' &&
+              input('inspectionDose').textContent.startsWith('3 mg/kg'),
+          );
+          input('tciRatePlot').emit('plotly_click', { points: [{ x: 0.75 }] });
+          check(
+            'rate-chart clicks synchronize both cursors',
+            input('inspectionTime').value === '0.75' &&
+              ['myDiv1', 'tciRatePlot'].every((id) =>
+                input(id).layout.shapes.some(
+                  (shape) => shape.name === 'inspection-cursor' && shape.x0 === 0.75,
+                ),
+              ),
+          );
+          check(
+            'inspection retains reference bands and dose markers',
+            input('myDiv1').layout.shapes.some((shape) => shape.name === 'therapeutic-band') &&
+              input('myDiv1').layout.annotations.some((annotation) =>
+                String(annotation.text).includes('B'),
+              ),
+          );
+          change('inspectionTime', '-1');
+          check(
+            'invalid cursor time is marked',
+            input('inspectionTime').getAttribute('aria-invalid') === 'true',
+          );
+          app.setInspectionTime(3);
+          const latest = context(),
+            simulation = latest.result.simulation;
+          let csvText = '',
+            csvName = '';
+          const download = app.downloadText;
+          app.downloadText = (name, text) => {
+            csvName = name;
+            csvText = text;
+          };
+          input('exportResultsCsvBtn').click();
+          app.downloadText = download;
+          const rows = parseCsv(csvText),
+            header = rows.shift(),
+            col = (name) => header.indexOf(name);
+          check(
+            'results CSV includes every sample and final time',
+            rows.length === simulation.ts.length &&
+              Number(rows.at(-1)[col('time_min')]) === 3 &&
+              csvName.endsWith('-results.csv'),
+          );
+          check(
+            'CSV concentrations and dose match simulation',
+            rows.every(
+              (row, i) =>
+                approx(Number(row[col('cp')]), simulation.cp[i] * 1000) &&
+                approx(Number(row[col('ce')]), simulation.ce[i] * 1000) &&
+                approx(
+                  Number(row[col('cumulative_dose_mg_per_kg')]),
+                  simulation.cumulativeDoseMgKg[i],
+                ),
+            ),
+          );
+          check(
+            'CSV includes the final bolus and absolute dose',
+            approx(
+              Number(rows.at(-1)[col('cumulative_dose_mg_per_kg')]),
+              simulation.totalDoseMgKg,
+            ) &&
+              approx(Number(rows.at(-1)[col('cumulative_dose_mg')]), simulation.totalDoseMgKg * 70),
+          );
+          check(
+            'CSV includes units, revisions, sources, and parameters',
+            [
+              'concentration_unit',
+              'delivery_rate_unit',
+              'model_id',
+              'model_revision',
+              'registry_revision',
+              'source_references',
+              'V1_mL_per_kg',
+              'ke0_per_min',
+            ].every((name) => col(name) >= 0) &&
+              rows[0][col('model_revision')] === latest.state.provenance.modelRevision &&
+              rows[0][col('concentration_unit')] === 'µg/mL',
+          );
+          check(
+            'CSV quoting preserves reference metadata',
+            JSON.parse(rows[0][col('source_references')]).some((reference) =>
+              reference.href.includes('1859758'),
+            ) && rows.every((row) => row.length === header.length),
+          );
+          const rate = input('infusionEventsTable').querySelector('[data-field="rate"]');
+          rate.value = '';
+          rate.dispatchEvent(new app.Event('change', { bubbles: true }));
+          check(
+            'incomplete regimens disable export and label stale inspection',
+            input('exportResultsCsvBtn').disabled &&
+              input('inspectorNotice').textContent.includes('last valid regimen'),
+          );
+          app.undoRegimenEdit();
+          check('valid restoration re-enables export', !input('exportResultsCsvBtn').disabled);
+
+          app.reset();
+          change('mainFinalTime', '3');
+          change('tciStopTime', '2');
+          app.setDosingMode('tci');
+          app.setTciTargetChanges([
+            { time: 0.35, target: 3 },
+            { time: 0.75, target: 0 },
+            { time: 1.25, target: 1 },
+          ]);
+          app.dfsolve();
+          app.setInspectionTime(0);
+          check(
+            'TCI inspection explains maximum rate and target error',
+            input('inspectionStatus').dataset.state === 'capped' &&
+              input('inspectionTarget').textContent.includes('Cp 2') &&
+              input('inspectionDifference').textContent.startsWith('-2'),
+          );
+          app.setInspectionTime(0.75);
+          check(
+            'zero-target change pauses delivery',
+            input('inspectionStatus').dataset.state === 'paused-zero-target' &&
+              input('inspectionRate').textContent.startsWith('0 ') &&
+              input('inspectionTarget').textContent.includes('Cp 0'),
+          );
+          app.setInspectionTime(2);
+          check(
+            'TCI stop boundary has no active target or delivery',
+            input('inspectionStatus').dataset.state === 'stopped' &&
+              input('inspectionTarget').textContent.includes('No active') &&
+              input('inspectionRate').textContent.startsWith('0 '),
+          );
+          check(
+            'TCI summary includes pause and stopped durations',
+            input('tciDeliverySummary').textContent.includes('zero target 0.5 min') &&
+              input('tciDeliverySummary').textContent.includes('stopped 1 min'),
+          );
+          const tciRows = parseCsv(app.simulationResultsCsv(context().state, context().result)),
+            tciHeader = tciRows.shift();
+          check(
+            'CSV preserves target and status at fractional changes',
+            tciRows.some(
+              (row) =>
+                Number(row[tciHeader.indexOf('time_min')]) === 0.75 &&
+                Number(row[tciHeader.indexOf('active_target')]) === 0 &&
+                row[tciHeader.indexOf('delivery_status')].includes('target is zero'),
+            ),
+          );
+          change('mainTciTargetType', 'ce');
+          change('initialp', '10');
+          app.setInspectionTime(0);
+          check(
+            'effect-site inspection shows Ce error and a pause above target',
+            input('inspectionTarget').textContent.includes('Ce 2') &&
+              input('inspectionDifference').textContent.startsWith('+8') &&
+              input('inspectionStatus').dataset.state === 'paused-above-target',
+          );
+          change('initialp', '0');
+          change('mainTciTargetType', 'cp');
+          input('mainImportTciScheduleBtn').click();
+          check(
+            'import summary lists every target change and stop time',
+            ['0.35 min', '0.75 min', '1.25 min', 'stop 2 min'].every((text) =>
+              input('tciSourceDescription').textContent.includes(text),
+            ),
+          );
+          app.setDisplayUnit('ng/mL');
+          app.setInfusionUnit('mg/kg/hr');
+          app.setBolusUnit('µg');
+          app.dfsolve();
+          check(
+            'unit conversion does not warn of changed assumptions',
+            input('tciReplayWarning').textContent === '',
+          );
+          change('pkInputMode', 'microconstants');
+          check(
+            'equivalent PK input mode does not warn',
+            input('tciReplayWarning').textContent === '',
+          );
+          change('mainWeight', '80');
+          check(
+            'genuine weight change still warns',
+            input('tciReplayWarning').textContent.includes('changed since import'),
+          );
+          app.undoRegimenEdit();
+          const old = app.getCurrentState(),
+            changed = structuredClone(old);
+          changed.pk.k10 *= 1.1;
+          check(
+            'physical comparison detects a genuine PK change',
+            app.replayAssumptionsChanged(changed, old),
+          );
+
+          const origin = app.getCurrentState().provenance;
+          check(
+            'all presets have structured sources and revisions',
+            app.eval(
+              'PHYSIO_DRUG_REGISTRY.drugs.every(drug => drug.provenance.modelId && drug.provenance.populationAssumptions && drug.provenance.references.length && drug.revision.length === 16)',
+            ),
+          );
+          check(
+            'source panel describes review status and revision',
+            input('modelProvenance').textContent.includes('unverified') &&
+              input('modelProvenance').textContent.includes(origin.modelRevision),
+          );
+          const saved = JSON.stringify(app.buildRegimenDocument());
+          app.applyDrugById('fentanyl');
+          app.loadRegimenDocument(saved);
+          check(
+            'files retain model and registry revisions',
+            app.getCurrentState().provenance.modelRevision === origin.modelRevision &&
+              app.getCurrentState().provenance.registryRevision === origin.registryRevision,
+          );
+          const historical = JSON.parse(saved);
+          historical.current.provenance.modelRevision = 'historical-model-123';
+          app.loadRegimenDocument(JSON.stringify(historical));
+          app.setDisplayUnit('µg/mL');
+          app.dfsolve();
+          check(
+            'historical provenance survives display changes',
+            app.getCurrentState().provenance.modelRevision === 'historical-model-123',
+          );
+          app.applyDrugById('fentanyl');
+          app.undoRegimenEdit();
+          check(
+            'Undo restores recorded historical provenance',
+            app.getCurrentState().provenance.modelRevision === 'historical-model-123',
+          );
+          app.writeDraftNow();
+          check(
+            'drafts preserve provenance',
+            JSON.parse(app.localStorage.getItem('physio.regimen.draft.v1')).current.provenance
+              .modelRevision === 'historical-model-123',
+          );
+          const unsafe = JSON.parse(saved);
+          unsafe.current.provenance.references[0].href = 'javascript:alert(1)';
+          let rejected = false;
+          try {
+            app.loadRegimenDocument(JSON.stringify(unsafe));
+          } catch (error) {
+            rejected = true;
+          }
+          check(
+            'unsafe source URLs cannot replace the regimen',
+            rejected && app.getCurrentState().provenance.modelRevision === 'historical-model-123',
+          );
+          const legacy = JSON.parse(saved);
+          delete legacy.current.provenance;
+          app.loadRegimenDocument(JSON.stringify(legacy));
+          check(
+            'older files do not acquire an invented recorded revision',
+            app.getCurrentState().provenance.origin === 'legacy' &&
+              app.getCurrentState().provenance.modelRevision === '' &&
+              input('modelProvenance').textContent.includes('Not recorded'),
+          );
+          app.applyDrugById('lidocaine');
+          change('mainFinalTime', '3');
+          check(
+            'unavailable effect-site model has no invented Ce',
+            input('inspectionCe').textContent === 'Not modeled',
+          );
+          const noCe = parseCsv(app.simulationResultsCsv(context().state, context().result)),
+            noCeHeader = noCe.shift();
+          check(
+            'CSV leaves unavailable Ce predictions blank',
+            noCe.every((row) => row[noCeHeader.indexOf('ce')] === ''),
+          );
+          check(
+            'inspector fits a mobile viewport',
+            d.documentElement.scrollWidth <= app.innerWidth &&
+              input('simulationInspector').getBoundingClientRect().width < app.innerWidth,
+          );
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push(`FAIL ${error.message}`);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      });
+    </script>
+  </body>
+</html>

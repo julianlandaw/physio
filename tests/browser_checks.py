@@ -99,7 +99,7 @@ def main():
     patterns = [
         "README.md", "package*.json", ".prettierrc.json", ".github/workflows/*.yml",
         "docs/**/*.html", "docs/assets/css/*.css", "docs/assets/js/*.js",
-        "docs/Pharmacology/drug_registry.json", "tests/*.html",
+        "docs/Pharmacology/drug_registry.json", "tests/*.html", "tests/*.js",
     ]
     subprocess.run([prettier, "--check", *patterns], check=True)
     check_links()
@@ -118,6 +118,8 @@ def main():
         suites = (
             "threecompartmentmodel.browser.html?long=1", "csht.browser.html",
             "site.browser.html", "recovery.browser.html",
+            "editing.browser.html",
+            "results.browser.html",
         )
         for suite in suites:
             with tempfile.TemporaryDirectory(prefix="physio-browser-") as profile:

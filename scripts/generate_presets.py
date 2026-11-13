@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -11,11 +12,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def generated_files():
     registry = json.loads((ROOT / "docs/Pharmacology/drug_registry.json").read_text())
+
+    def revision(value):
+        return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
+
+    registry["revision"] = revision(registry)
     seen = set()
     for drug in registry["drugs"]:
         if drug["id"] in seen:
             raise ValueError("Duplicate drug identifier")
         seen.add(drug["id"])
+        drug["revision"] = revision({"pk": drug["pk"], "units": drug["units"]})
+        provenance = drug["provenance"]
+        if not all(provenance.get(key) for key in ("modelId", "modelName", "populationAssumptions", "reviewStatus", "references")):
+            raise ValueError(f"Incomplete provenance for {drug['id']}")
         p = drug["pk"]
         drug["microconstants"] = {
             "k10": p["Cl"] / p["Vd1"],
@@ -36,13 +46,15 @@ def generated_files():
     writer.writerow([
         "drug", "display_unit", "bolus_unit", "infusion_unit", "V1_mL_per_kg",
         "V2_mL_per_kg", "V3_mL_per_kg", "Cl_mL_per_kg_min", "Q2_mL_per_kg_min",
-        "Q3_mL_per_kg_min", "ke0_min^-1", "notes",
+        "Q3_mL_per_kg_min", "ke0_min^-1", "notes", "model_id", "model_name",
+        "model_revision", "registry_revision", "source_references",
     ])
     micros = io.StringIO()
     mwriter = csv.writer(micros, lineterminator="\n")
     mwriter.writerow([
         "drug", "k10_min^-1", "k12_min^-1", "k21_min^-1", "k13_min^-1",
-        "k31_min^-1", "V1_mL_per_kg", "ke0_min^-1",
+        "k31_min^-1", "V1_mL_per_kg", "ke0_min^-1", "model_id",
+        "model_revision", "registry_revision",
     ])
     for d in registry["drugs"]:
         p, u = d["pk"], d["units"]
@@ -50,8 +62,14 @@ def generated_files():
             d["id"], u["conc"], u["bolus"], u["infusion"],
             *[p[k] for k in ["Vd1", "Vd2", "Vd3", "Cl", "Q2", "Q3", "ke0"]],
             d["note"],
+            d["provenance"]["modelId"], d["provenance"]["modelName"],
+            d["revision"], registry["revision"],
+            " | ".join(ref["href"] for ref in d["provenance"]["references"]),
         ])
-        mwriter.writerow([d["id"], *d["microconstants"].values(), p["Vd1"], p["ke0"]])
+        mwriter.writerow([
+            d["id"], *d["microconstants"].values(), p["Vd1"], p["ke0"],
+            d["provenance"]["modelId"], d["revision"], registry["revision"],
+        ])
     return {
         "docs/assets/js/drug_registry.js": browser,
         "docs/Pharmacology/anesthetic_drug_pk_parameters.csv": volumes.getvalue(),

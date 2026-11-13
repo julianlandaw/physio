@@ -3,6 +3,9 @@
 let scheduleState = { boluses: [], infusions: [] };
 let scheduleEventSequence = 0;
 let scheduleRenderSignature = '';
+let scheduleValidationErrors = [];
+let scheduleEditTimer = null;
+let openScheduleEditor;
 
 function scheduleFields(type) {
   return type === 'bolus' ? ['time', 'dose', 'duration'] : ['start', 'end', 'rate'];
@@ -14,7 +17,7 @@ function scheduleTable(type) {
   return document.getElementById(type === 'bolus' ? 'bolusEventsTable' : 'infusionEventsTable');
 }
 function scheduleNumber(raw) {
-  return String(raw).trim() === '' ? '' : Number(raw);
+  return String(raw).trim() === '' ? '' : readNumericInput(raw);
 }
 function scheduleEntry(type, values) {
   return {
@@ -154,15 +157,12 @@ function getScheduleFromDOM({ includeInactive = false } = {}) {
   }
   return result;
 }
-function setScheduleToDOM(schedule) {
+function setScheduleToDOM(schedule, { addPlaceholders = true } = {}) {
   document.getElementById('useSchedule').checked = Boolean(schedule?.enabled);
+  const entries = (events) => (events?.length ? events : addPlaceholders ? [{}] : []);
   scheduleState = {
-    boluses: (schedule?.boluses?.length ? schedule.boluses : [{}]).map((e) =>
-      scheduleEntry('bolus', e),
-    ),
-    infusions: (schedule?.infusions?.length ? schedule.infusions : [{}]).map((e) =>
-      scheduleEntry('infusion', e),
-    ),
+    boluses: entries(schedule?.boluses).map((e) => scheduleEntry('bolus', e)),
+    infusions: entries(schedule?.infusions).map((e) => scheduleEntry('infusion', e)),
   };
   schedulePage = 0;
   renderScheduleTables(true);
@@ -186,26 +186,53 @@ function validateScheduleState(addError) {
   flushVisibleScheduleInputs();
   for (const type of ['bolus', 'infusion'])
     scheduleList(type).forEach((event, index) => {
-      const fields = scheduleFields(type);
-      const invalid = fields.filter(
-        (field) =>
-          event[field] === '' || !Number.isFinite(Number(event[field])) || Number(event[field]) < 0,
-      );
-      if (type === 'infusion' && Number(event.end) < Number(event.start)) invalid.push('end');
+      const invalid = doseEventErrors(type, event);
       if (!invalid.length) return;
+      scheduleValidationErrors.push({ type, id: event.id, index, field: invalid[0].field });
       addError(
         null,
         `${type === 'bolus' ? 'Bolus' : 'Infusion'} ${index + 1}: enter non-negative numbers${type === 'infusion' ? ' with end at or after start' : ''}.`,
       );
       const row = scheduleTable(type).querySelector(`[data-event-id="${event.id}"]`);
       row?.querySelectorAll('input').forEach((input) => {
-        if (invalid.includes(input.dataset.field)) input.classList.add('is-invalid');
+        const error = invalid.find((item) => item.field === input.dataset.field);
+        if (error) markInvalidInput(input, error.message);
       });
       const amount = type === 'bolus' ? 'dose' : 'rate';
-      if (event === getQuickScheduleEntry(type) && invalid.includes(amount))
+      if (event === getQuickScheduleEntry(type) && invalid.some((item) => item.field === amount))
         addError(
           type === 'bolus' ? 'mainBolusAmount' : 'mainInfusionRate',
           `${type === 'bolus' ? 'Bolus amount' : 'Infusion rate'} must be a number at least 0.`,
         );
     });
+}
+
+function renderScheduleErrorLinks() {
+  for (const id of ['mainScheduleErrorLinks', 'scheduleEditorErrorLinks']) {
+    const container = document.getElementById(id);
+    container.replaceChildren();
+    scheduleValidationErrors.slice(0, 10).forEach((error) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-sm btn-outline-danger';
+      button.textContent = `Fix ${error.type} ${error.index + 1} (page ${Math.floor(error.index / SCHEDULE_PAGE_SIZE) + 1})`;
+      button.addEventListener('click', () => focusScheduleError(error));
+      container.append(button);
+    });
+  }
+}
+
+function focusScheduleError(error) {
+  openScheduleEditor();
+  flushVisibleScheduleInputs();
+  const index = scheduleList(error.type).findIndex((event) => event.id === error.id);
+  if (index < 0) return;
+  schedulePage = Math.floor(index / SCHEDULE_PAGE_SIZE);
+  renderScheduleTables();
+  validateSimulationInputs();
+  const field = scheduleTable(error.type).querySelector(
+    `[data-event-id="${error.id}"] [data-field="${error.field}"]`,
+  );
+  field?.focus();
+  field?.scrollIntoView({ block: 'center' });
 }

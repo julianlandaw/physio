@@ -792,6 +792,27 @@
             <p class="eyebrow">Current simulation</p>
             <h1 id="regimenHeading">Current regimen</h1>
           </div>
+          <div class="regimen-history" role="group" aria-label="Regimen edit history">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              id="undoRegimenBtn"
+              data-regimen-history="undo"
+              disabled
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              id="redoRegimenBtn"
+              data-regimen-history="redo"
+              disabled
+            >
+              Redo
+            </button>
+            <span id="regimenHistoryStatus" class="sr-only" role="status"></span>
+          </div>
         </div>
         <fieldset class="dosing-mode">
           <legend>Dosing mode</legend>
@@ -810,6 +831,7 @@
         </fieldset>
         <div id="mainValidationSummary" class="validation-summary" hidden>
           <p id="mainInputErrors" role="alert"></p>
+          <div id="mainScheduleErrorLinks" class="schedule-error-links"></div>
           <button type="button" class="btn btn-sm btn-outline-danger" id="reviewInvalidInputsBtn">
             Review errors in settings
           </button>
@@ -991,6 +1013,7 @@
             <summary>Model &amp; source details</summary>
             <p>PK input: <strong id="summaryModel">Clearance &amp; volumes</strong></p>
             <p id="summarySource">—</p>
+            <div id="modelProvenance" class="model-provenance"></div>
             <a class="preset-source-link" href="anesthetic_drug_pk_parameters.csv"
               >View preset parameter table</a
             >
@@ -1008,6 +1031,9 @@
             </button>
             <button class="btn btn-sm btn-outline-primary" type="button" id="saveRegimenBtn">
               Save regimen
+            </button>
+            <button class="btn btn-sm btn-outline-primary" type="button" id="exportResultsCsvBtn">
+              Export results CSV
             </button>
             <button class="btn btn-sm btn-outline-primary" type="button" id="loadRegimenBtn">
               Load regimen
@@ -1033,14 +1059,6 @@
 
       <div class="simulation-status" id="simulationStatus" role="status" aria-live="polite">
         <span id="simulationStatusText">Simulation is up to date.</span>
-        <button
-          class="btn btn-sm btn-outline-secondary simulation-status__undo"
-          type="button"
-          id="undoTimelineBtn"
-          hidden
-        >
-          Undo
-        </button>
       </div>
 
       <section class="content-section content-section--plot">
@@ -1092,12 +1110,57 @@
               aria-label="Therapeutic range references"
               hidden
             ></div>
+            <details id="simulationInspector" class="simulation-inspector" open>
+              <summary>Inspect a time point</summary>
+              <p id="inspectorNotice" class="small"></p>
+              <div class="inspector-time-controls">
+                <label for="inspectionTime"
+                  >Time (min)<input
+                    id="inspectionTime"
+                    class="form-control form-control-sm"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value="0"
+                /></label>
+                <label for="inspectionSlider" class="sr-only">Inspection time in minutes</label>
+                <input id="inspectionSlider" type="range" min="0" step="any" value="0" />
+              </div>
+              <dl class="inspector-values" aria-label="Predicted values at selected time">
+                <div>
+                  <dt>Plasma (Cp)</dt>
+                  <dd id="inspectionCp">—</dd>
+                </div>
+                <div>
+                  <dt>Effect site (Ce)</dt>
+                  <dd id="inspectionCe">—</dd>
+                </div>
+                <div>
+                  <dt>Active target</dt>
+                  <dd id="inspectionTarget">—</dd>
+                </div>
+                <div>
+                  <dt>Difference from target</dt>
+                  <dd id="inspectionDifference">—</dd>
+                </div>
+                <div>
+                  <dt>Delivery rate</dt>
+                  <dd id="inspectionRate">—</dd>
+                </div>
+                <div>
+                  <dt>Cumulative dose</dt>
+                  <dd id="inspectionDose">—</dd>
+                </div>
+              </dl>
+              <p id="inspectionStatus" class="inspection-status" role="status"></p>
+            </details>
             <div class="tci-rate-panel" id="tciRatePanel" hidden>
               <div class="tci-rate-panel__heading">
                 <span id="deliveryRateHeading">Educational TCI calculated infusion rate</span>
                 <span id="tciRateUnit">mg/kg/min</span>
               </div>
               <div id="tciRatePlot" class="plot plot--tci-rate"></div>
+              <p id="tciDeliverySummary" class="small" hidden></p>
             </div>
             <section
               class="tci-replay-comparison"
@@ -1228,6 +1291,7 @@
                     />
                   </label>
                 </div>
+                <p id="timelineEventErrors" class="validation-summary" role="alert" hidden></p>
                 <div class="timeline-event-editor__actions">
                   <button class="btn btn-sm btn-primary" type="button" id="timelineEventSaveBtn">
                     Update dose
@@ -1430,6 +1494,22 @@
         </button>
       </div>
       <div class="schedule-navigation">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          data-regimen-history="undo"
+          disabled
+        >
+          Undo
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          data-regimen-history="redo"
+          disabled
+        >
+          Redo
+        </button>
         <label for="scheduleJumpTime"
           >Jump to time (min)<input
             id="scheduleJumpTime"
@@ -1453,14 +1533,25 @@
         </button>
       </div>
       <p id="scheduleEditorErrors" class="validation-summary" role="status" hidden></p>
+      <div id="scheduleEditorErrorLinks" class="schedule-error-links"></div>
       <div id="scheduleEditorBody"></div>
     </dialog>
     <!-- App script -->
     <script src="../assets/js/drug_registry.js"></script>
+    <script src="../assets/js/threecompartmentmodel_units.js"></script>
+    <script src="../assets/js/threecompartmentmodel_engine.js"></script>
+    <script src="../assets/js/threecompartmentmodel_results.js"></script>
+    <script src="../assets/js/threecompartmentmodel_provenance.js"></script>
+    <script src="../assets/js/threecompartmentmodel_inspection.js"></script>
+    <script src="../assets/js/threecompartmentmodel_validation.js"></script>
     <script src="../assets/js/threecompartmentmodel_schedule.js"></script>
     <script src="../assets/js/threecompartmentmodel_tci.js"></script>
+    <script src="../assets/js/threecompartmentmodel_timeline.js"></script>
+    <script src="../assets/js/threecompartmentmodel_charts.js"></script>
+    <script src="../assets/js/threecompartmentmodel_report.js"></script>
     <script src="../assets/js/threecompartmentmodel_files.js"></script>
     <script src="../assets/js/threecompartmentmodel_draft.js"></script>
+    <script src="../assets/js/threecompartmentmodel_history.js"></script>
     <script src="../assets/js/threecompartmentmodel.js"></script>
   </body>
 </html>

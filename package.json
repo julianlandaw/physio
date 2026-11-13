@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "check": "python3 tests/browser_checks.py",
-    "format": "prettier --write README.md \"docs/**/*.html\" \"docs/assets/css/*.css\" \"docs/assets/js/*.js\" docs/Pharmacology/drug_registry.json \"tests/*.html\" \"package*.json\" .prettierrc.json \".github/workflows/*.yml\""
+    "format": "prettier --write README.md \"docs/**/*.html\" \"docs/assets/css/*.css\" \"docs/assets/js/*.js\" docs/Pharmacology/drug_registry.json \"tests/*.html\" \"tests/*.js\" \"package*.json\" .prettierrc.json \".github/workflows/*.yml\""
   },
   "devDependencies": {
     "prettier": "3.6.2"

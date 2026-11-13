@@ -5,7 +5,7 @@ function getTciTargetChanges() {
     Object.fromEntries(
       ['time', 'target'].map((field) => {
         const raw = row.querySelector(`[data-field="${field}"]`).value.trim();
-        return [field, raw === '' ? NaN : Number(raw)];
+        return [field, readNumericInput(raw)];
       }),
     ),
   );
@@ -47,34 +47,15 @@ function setTciTargetChanges(changes = []) {
   changes.forEach(addTciTargetChange);
 }
 function validateTciTargetChanges(addError) {
-  let previous = 0;
-  const stop = Number(document.getElementById('tciStopTime').value);
-  if (getTciTargetChanges().length > 100) addError(null, 'Use at most 100 TCI target changes.');
-  getTciTargetChanges().forEach((change, index) => {
-    const row = document.querySelector('#tciTargetChanges tbody').rows[index];
-    if (!Number.isFinite(change.time) || change.time <= previous || change.time >= stop) {
-      addError(
-        null,
-        `Target change ${index + 1}: times must increase, be greater than 0, and be before TCI stop.`,
-      );
-      row.querySelector('[data-field="time"]').classList.add('is-invalid');
-      document.getElementById('tciTargetScheduleEditor').open = true;
-    }
-    if (!Number.isFinite(change.target) || change.target < 0) {
-      addError(null, `Target change ${index + 1}: enter a non-negative concentration.`);
-      row.querySelector('[data-field="target"]').classList.add('is-invalid');
-      document.getElementById('tciTargetScheduleEditor').open = true;
-    }
-    previous = change.time;
+  tciTargetChangeErrors(
+    getTciTargetChanges(),
+    document.getElementById('tciStopTime').value,
+  ).forEach((error) => {
+    addError(null, error.message);
+    const row = document.querySelector('#tciTargetChanges tbody').rows[error.index];
+    markInvalidInput(row?.querySelector(`[data-field="${error.field}"]`), error.message);
+    document.getElementById('tciTargetScheduleEditor').open = true;
   });
-}
-function tciTargetAt(tci, time) {
-  let target = tci.targetBase;
-  for (const change of tci.targetChanges || []) {
-    if (change.time > time + TIME_EPSILON) break;
-    target = change.targetBase;
-  }
-  return target;
 }
 function initTciTargetSchedule() {
   document.getElementById('addTciTargetChangeBtn').addEventListener('click', () => {

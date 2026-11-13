@@ -37,7 +37,7 @@ function validateRegimenState(value, path) {
     return item;
   };
   const number = (item, name, positive = false) => {
-    if (typeof item !== 'number' || !Number.isFinite(item) || (positive ? item <= 0 : item < 0)) {
+    if (typeof item !== 'number' || numericInputError(item, name, { strictlyPositive: positive })) {
       throw new Error(`${name} must be a finite ${positive ? 'positive' : 'non-negative'} number.`);
     }
     return item;
@@ -103,7 +103,7 @@ function validateRegimenState(value, path) {
     ['start', 'end', 'rate'],
     `${path}.schedule.infusions`,
   );
-  if (infusions.some((item) => item.end < item.start))
+  if (infusions.some((item) => doseEventErrors('infusion', item).length))
     throw new Error(`${path}: an infusion ends before it starts.`);
   const tci = numbers(v.tci, ['target', 'maxRate', 'stopTime'], `${path}.tci`);
   tci.enabled = boolean(v.tci.enabled, `${path}.tci.enabled`);
@@ -113,12 +113,7 @@ function validateRegimenState(value, path) {
   tci.changes = changes.map((change, index) =>
     numbers(change, ['time', 'target'], `${path}.tci.changes[${index}]`),
   );
-  if (
-    tci.changes.some(
-      (change, index) =>
-        change.time <= (index ? tci.changes[index - 1].time : 0) || change.time >= tci.stopTime,
-    )
-  )
+  if (tciTargetChangeErrors(tci.changes, tci.stopTime).length)
     throw new Error(`${path}: TCI changes must increase in time and precede TCI stop.`);
   tci.targetType = v.tci.targetType;
   if (!['cp', 'ce'].includes(tci.targetType))
@@ -137,6 +132,10 @@ function validateRegimenState(value, path) {
     name: typeof v.name === 'string' ? v.name.slice(0, 120) : 'Loaded regimen',
     drug: v.drug,
     presetModified: boolean(v.presetModified, `${path}.presetModified`),
+    provenance:
+      v.provenance === undefined
+        ? unknownModelProvenance(v.drug, 'legacy')
+        : validateModelProvenance(v.provenance),
     patient: { weightKg },
     units: { conc: units.conc, bolus: units.bolus, infusion: units.infusion },
     inputs,
@@ -189,7 +188,6 @@ function loadRegimenDocument(text) {
   strategies = file.strategies;
   activeStrategyId = null;
   selectedTimelineEvent = null;
-  timelineUndoSchedule = null;
   tciImportSession = session;
   compareMode = false;
   document.getElementById('compareMode').checked = false;
