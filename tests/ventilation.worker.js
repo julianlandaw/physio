@@ -1,5 +1,9 @@
 /* Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT */
-importScripts('../docs/assets/js/ventilation_co2.js', '../docs/assets/js/ventilation_engine.js');
+importScripts(
+  '../docs/assets/js/ventilation_co2.js',
+  '../docs/assets/js/ventilation_regions.js',
+  '../docs/assets/js/ventilation_engine.js',
+);
 const checks = [];
 const check = (name, value) => {
   checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
@@ -370,6 +374,178 @@ try {
     'each complete breath captures its own CO2 continuation state',
     near(checkpoint.co2State.measured, checkpoint.metrics.EtCO2) &&
       Math.abs(checkpoint.co2State.measured - checkpointRun.co2Balance.measured) > 0.01,
+  );
+  const tank = VentilationCO2.create(
+    { ...Ventilation.defaults, VCO2: 0, VD: 150, airwayMix: 1 },
+    1,
+    { lungFraction: 0.05, tissueFraction: 0.05 },
+  );
+  tank.advance(2, (t) => ({ v: (1 - 0.1 * t) * 1000, phase: 'expiration' }));
+  const tankEnd = tank.read(),
+    expectedMix = 0.05 * (1 - Math.exp(-0.2 / 0.15));
+  check(
+    'airway mixing matches the analytical stirred-tank solution',
+    near(tankEnd.state.mixFraction, expectedMix, 1e-9),
+  );
+  check(
+    'mixed airway accounts for both stored and exhaled CO2',
+    near(tankEnd.exhaled, 0.2 * 0.05 - 0.15 * expectedMix, 1e-9) &&
+      Math.abs(tankEnd.residual) < 1e-9,
+  );
+  const riseTime = (run) => {
+    const b = run.completeBreaths[0],
+      e = b.metrics.EtCO2;
+    const points = run.t
+      .map((t, i) => ({ t, p: run.co2[i] }))
+      .filter((x) => x.t >= b.start + run.timing.Ti && x.t <= b.end);
+    return points.find((x) => x.p >= 0.9 * e).t - points.find((x) => x.p >= 0.1 * e).t;
+  };
+  const unmixed = Ventilation.simulate({ ...Ventilation.defaults, T: 5, airwayMix: 0 });
+  const airwayMixed = Ventilation.simulate({ ...Ventilation.defaults, T: 5, airwayMix: 0.4 });
+  check(
+    'airway mixing broadens the upstroke without changing total dead space',
+    riseTime(airwayMixed) > riseTime(unmixed) + 0.1 &&
+      near(
+        airwayMixed.co2Balance.state.plugVolume + airwayMixed.co2Balance.state.mixingVolume,
+        0.15,
+      ),
+  );
+  for (const mode of ['vcv', 'pcv']) {
+    const settings = { ...Ventilation.defaults, mode, regionRatio: 6, T: 20 },
+      r = Ventilation.simulate(settings),
+      q = r.timing,
+      g = q.regions;
+    check(
+      `${mode}: regional R and C preserve the aggregate inputs`,
+      near(1 / g.R[0] + 1 / g.R[1], 1 / settings.R) &&
+        near(2 * g.Ci, settings.C / 1000) &&
+        near(g.tauE[1] / g.tauE[0], 6),
+    );
+    for (const fraction of [0.1, 0.3, 0.8]) {
+      const point = Ventilation.sample(r, q.cycle * fraction),
+        resistance = point.phase === 'expiration' ? g.Re : g.R;
+      check(
+        `${mode}: regional flow and volume sum at ${fraction} of a breath`,
+        near(point.regionVolumes[0] + point.regionVolumes[1], point.v) &&
+          near(point.regionFlows[0] + point.regionFlows[1], point.f),
+      );
+      check(
+        `${mode}: each region shares the airway pressure at ${fraction}`,
+        point.regionFlows.every((f, i) =>
+          near(
+            settings.PEEP + point.regionVolumes[i] / 1000 / g.Ci + resistance[i] * f,
+            point.p,
+            1e-8,
+          ),
+        ),
+      );
+    }
+    const periodic = Ventilation.simulate({ ...settings, initial: 'steady' });
+    check(
+      `${mode}: periodic initialization conserves volume separately in both regions`,
+      periodic.breaths.every((b) => b.regionV0.every((v, i) => near(v, b.regionVend[i]))),
+    );
+    check(
+      `${mode}: regional and mixed airway gas transfers conserve total CO2`,
+      Math.abs(r.co2Balance.residual) < 1e-9 && Math.abs(periodic.co2Balance.residual) < 1e-9,
+    );
+    if (mode === 'vcv') {
+      const hold = Ventilation.sample(r, q.Tflow + q.Th / 2);
+      check(
+        'VCV permits internal redistribution during a zero-total-flow hold',
+        hold.f === 0 &&
+          near(hold.regionFlows[0] + hold.regionFlows[1], 0) &&
+          Math.abs(hold.regionFlows[0]) > 1e-4,
+      );
+      check(
+        'VCV delivers the selected tidal volume despite uneven filling',
+        r.breaths.every((b) => near(b.metrics.VT, settings.VT)),
+      );
+      const mean =
+        r.t.slice(1).reduce((a, t, i) => a + ((t - r.t[i]) * (r.p[i] + r.p[i + 1])) / 2, 0) /
+        settings.T;
+      const exact =
+        r.completeBreaths.reduce((a, b) => a + b.metrics.Mean, 0) / r.completeBreaths.length;
+      check(
+        'two-region VCV mean pressure agrees with direct integration',
+        near(mean, exact, 0.002),
+      );
+      const before = Ventilation.sample(r, q.Tflow, 'left'),
+        after = Ventilation.sample(r, q.Tflow, 'right');
+      check(
+        'instantaneous resistive drop remains distinct from later redistribution',
+        near(before.p - after.p, r.breaths[0].metrics.ResistiveDrop),
+      );
+    } else {
+      check(
+        'PCV regional filling agrees with independent RC solutions',
+        r.breaths[0].regionVe.every((v, i) =>
+          near(v, settings.PC * g.Ci * (1 - Math.exp(-q.Ti / g.tauI[i]))),
+        ),
+      );
+    }
+  }
+  const heterogeneous = Ventilation.simulate({ ...Ventilation.defaults, regionRatio: 6, T: 120 });
+  const homogeneous = Ventilation.simulate({ ...Ventilation.defaults, regionRatio: 1, T: 120 });
+  const lateRise = (r) => {
+    const b = r.completeBreaths.at(-1),
+      q = r.timing;
+    return (
+      Ventilation.sample(r, b.start + q.Ti + q.Te * 0.9).co2 -
+      Ventilation.sample(r, b.start + q.Ti + q.Te * 0.5).co2
+    );
+  };
+  check(
+    'unequal emptying develops higher CO2 in the slow region',
+    heterogeneous.co2Balance.alveolarRegions[1] > heterogeneous.co2Balance.alveolarRegions[0] + 1,
+  );
+  check(
+    'regional CO2 differences create a rising plateau without shape overlays',
+    lateRise(heterogeneous) > lateRise(homogeneous) + 0.1 &&
+      heterogeneous.settings.capnogramShape === 'transport',
+  );
+  check(
+    'the uniform reference has equal regional volumes and CO2 concentrations',
+    homogeneous.breaths.every((b) => near(b.regionVend[0], b.regionVend[1])) &&
+      near(homogeneous.co2Balance.alveolarRegions[0], homogeneous.co2Balance.alveolarRegions[1]),
+  );
+  const continuation = Ventilation.simulate(
+    { ...Ventilation.defaults, regionRatio: 6, T: 5 },
+    { co2State: heterogeneous.co2Balance.state },
+  );
+  const saved = heterogeneous.co2Balance.state;
+  const expectedInitial =
+    Ventilation.defaults.CO2Store * saved.tissueFraction +
+    (Ventilation.defaults.FRC / 2) * (saved.lungFractions[0] + saved.lungFractions[1]) +
+    saved.plugVolume * saved.plugFraction +
+    saved.mixingVolume * saved.mixFraction;
+  check(
+    'continuation preserves distinct regional gas states and the mixed airway',
+    continuation.co2[0] === heterogeneous.co2Balance.measured &&
+      near(continuation.co2Balance.initialMass, expectedInitial, 1e-9) &&
+      Math.abs(continuation.co2Balance.residual) < 1e-9,
+  );
+  const extremeRegions = Ventilation.simulate({
+    ...Ventilation.defaults,
+    regionRatio: 8,
+    R: 1,
+    Rexp: 1,
+    C: 5,
+    RR: 40,
+    IF: 0.05,
+    HF: 0.8,
+    VT: 1000,
+    VD: 0.1,
+    T: 5,
+  });
+  check(
+    'extreme regional time constants remain stable and conserve gas',
+    extremeRegions.v.every((v) => Number.isFinite(v) && v >= 0) &&
+      Math.abs(extremeRegions.co2Balance.residual) < 1e-9,
+  );
+  check(
+    'invalid mixing and regional ratio values are rejected',
+    Ventilation.validate({ ...Ventilation.defaults, airwayMix: 2, regionRatio: 0 }).length === 2,
   );
   self.postMessage({ passed: true, checks });
 } catch (error) {

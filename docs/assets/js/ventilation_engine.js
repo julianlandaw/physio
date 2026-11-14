@@ -1,5 +1,5 @@
 /* Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT */
-// Passive, linear single compartment. Volume is measured above the equilibrium
+// Two passive parallel RC regions. Volume is measured above the equilibrium
 // volume at set PEEP. Units: L, s, cm H2O internally; UI VT/C are mL-based.
 const Ventilation = (() => {
   const EPS = 1e-9;
@@ -23,6 +23,8 @@ const Ventilation = (() => {
     FRC: 2.5,
     CO2Store: 20,
     CO2Initial: 40,
+    airwayMix: 0.2,
+    regionRatio: 1,
   };
   const limits = {
     VT: [50, 1000],
@@ -41,6 +43,8 @@ const Ventilation = (() => {
     FRC: [1, 6],
     CO2Store: [5, 60],
     CO2Initial: [5, 100],
+    airwayMix: [0, 1],
+    regionRatio: [1, 8],
   };
   function validate(p) {
     const errors = [];
@@ -83,56 +87,11 @@ const Ventilation = (() => {
       tauI: p.R * C,
       tauE: p.Rexp * C,
       flow: p.mode === 'vcv' ? p.VT / 1000 / Tflow : null,
+      regions: VentilationRegions.configure(p),
     };
   }
-  function initialVolume(p, q) {
-    if (p.initial === 'startup') return 0;
-    const B = Math.exp(-q.Te / q.tauE);
-    if (p.mode === 'vcv') return (B * p.VT) / 1000 / -Math.expm1(-q.Te / q.tauE);
-    return (
-      (B * -Math.expm1(-q.Ti / q.tauI) * p.PC * q.C) / -Math.expm1(-q.Ti / q.tauI - q.Te / q.tauE)
-    );
-  }
-  function breath(p, q, index, V0) {
-    const start = index * q.cycle,
-      end = (index + 1) * q.cycle;
-    const Ve =
-      p.mode === 'vcv' ? V0 + p.VT / 1000 : V0 + (p.PC * q.C - V0) * -Math.expm1(-q.Ti / q.tauI);
-    const Vend = Ve * Math.exp(-q.Te / q.tauE);
-    const plateau = p.mode === 'vcv' && q.Th > 0 ? p.PEEP + Ve / q.C : null;
-    const peak = p.mode === 'pcv' ? p.PEEP + p.PC : p.PEEP + Ve / q.C + p.R * q.flow;
-    const mean =
-      p.mode === 'pcv'
-        ? p.PEEP + (p.PC * q.Ti) / q.cycle
-        : p.PEEP +
-          ((V0 / q.C) * q.Tflow +
-            (q.flow * q.Tflow ** 2) / (2 * q.C) +
-            p.R * q.flow * q.Tflow +
-            (Ve / q.C) * q.Th) /
-            q.cycle;
-    return {
-      index,
-      start,
-      end,
-      V0,
-      Ve,
-      Vend,
-      complete: end <= p.T + EPS,
-      metrics: {
-        VT: (Ve - V0) * 1000,
-        Expired: (Ve - Vend) * 1000,
-        Peak: peak,
-        Plateau: plateau,
-        Mean: mean,
-        Intrinsic: Vend / q.C,
-        StartIntrinsic: V0 / q.C,
-        EndExpVolume: Vend * 1000,
-        Retained: (Vend - V0) * 1000,
-        MinuteVentilation: (Ve - Vend) * p.RR,
-        Driving: plateau == null ? null : plateau - (p.PEEP + V0 / q.C),
-        EndInspiratory: p.PEEP + Ve / q.C,
-      },
-    };
+  function breath(p, q, index, volumes) {
+    return VentilationRegions.breath(p, q, index, volumes);
   }
   // Illustrative time capnogram, not a heterogeneous gas-exchange model.
   // Shape fractions are teaching choices, not fitted disease parameters.
@@ -168,44 +127,8 @@ const Ventilation = (() => {
       co2Phase: 'phase III',
     };
   }
-  function sampleBreath(p, q, b, time, side, gas, shape) {
-    const local = Math.max(0, Math.min(q.cycle, time - b.start));
-    const before = (boundary) =>
-      local < boundary - EPS || (side === 'left' && local <= boundary + EPS);
-    let volume, flow, pressure, phase;
-    if (before(q.Ti)) {
-      if (p.mode === 'pcv') {
-        volume = b.V0 + (p.PC * q.C - b.V0) * -Math.expm1(-local / q.tauI);
-        flow = (p.PC * q.C - volume) / q.tauI;
-        pressure = p.PEEP + p.PC;
-        phase = 'inspiration';
-      } else if (before(q.Tflow)) {
-        volume = b.V0 + q.flow * local;
-        flow = q.flow;
-        pressure = p.PEEP + volume / q.C + p.R * flow;
-        phase = 'inspiration';
-      } else {
-        volume = b.Ve;
-        flow = 0;
-        pressure = p.PEEP + volume / q.C;
-        phase = 'hold';
-      }
-    } else {
-      volume = b.Ve * Math.exp(-(local - q.Ti) / q.tauE);
-      flow = -volume / q.tauE;
-      pressure = p.PEEP;
-      phase = 'expiration';
-    }
-    return {
-      t: time,
-      v: volume * 1000,
-      f: flow,
-      p: pressure,
-      palv: p.PEEP + volume / q.C,
-      phase,
-      breath: b.index + 1,
-      ...capnogram(q, shape, gas, local, phase),
-    };
+  function sampleBreath(p, q, b, time, side) {
+    return VentilationRegions.sample(p, q, b, time, side);
   }
   function mechanicalSample(run, rawTime, side) {
     const time = Math.max(0, Math.min(run.settings.T, rawTime));
@@ -213,15 +136,7 @@ const Ventilation = (() => {
     let index = Math.floor((time + EPS) / run.timing.cycle);
     if (side === 'left' && time > 0 && Math.abs(time - index * run.timing.cycle) < EPS) index--;
     index = Math.max(0, Math.min(run.breaths.length - 1, index));
-    return sampleBreath(
-      run.settings,
-      run.timing,
-      run.breaths[index],
-      time,
-      side,
-      run.gasExchange,
-      run.capnogramTiming,
-    );
+    return sampleBreath(run.settings, run.timing, run.breaths[index], time, side);
   }
   function sample(run, time, side) {
     const point = mechanicalSample(run, time, side);
@@ -243,6 +158,7 @@ const Ventilation = (() => {
         : values[lo] + (values[next] - values[lo]) * (span > 0 ? (point.t - run.t[lo]) / span : 0);
     point.co2 = interpolate(run.co2);
     point.alveolarCO2 = interpolate(run.alveolarCO2);
+    point.alveolarCO2Regions = [interpolate(run.co2Fast), interpolate(run.co2Slow)];
     point.co2Phase =
       point.phase !== 'expiration'
         ? 'inspiratory washout / baseline'
@@ -259,9 +175,8 @@ const Ventilation = (() => {
   // VCO2 is mL/min STPD; alveolar ventilation is L/min BTPS. No CO2 stores,
   // perfusion are simulated. The Pa–Et gradient is an assumption.
   function gasExchange(p, q) {
-    const V0 = initialVolume({ ...p, initial: 'steady' }, q);
-    const steadyVT =
-      p.mode === 'vcv' ? p.VT : (p.PC * q.C - V0) * -Math.expm1(-q.Ti / q.tauI) * 1000;
+    const steady = VentilationRegions.initial({ ...p, initial: 'steady' }, q);
+    const steadyVT = breath(p, q, 0, steady).metrics.VT;
     const alveolarVentilation = (Math.max(0, steadyVT - p.VD) * p.RR) / 1000;
     const result = {
       steadyVT,
@@ -285,11 +200,11 @@ const Ventilation = (() => {
     if (errors.length) throw Error(errors.map((error) => error.message).join(' '));
     const q = timing(p),
       breaths = [];
-    let V0 = initialVolume(p, q);
+    let V0 = VentilationRegions.initial(p, q);
     for (let i = 0; i * q.cycle < p.T - EPS; i++) {
       const b = breath(p, q, i, V0);
       breaths.push(b);
-      V0 = b.Vend;
+      V0 = b.regionVend;
     }
     const run = {
       settings: p,
@@ -303,6 +218,8 @@ const Ventilation = (() => {
       phase: [],
       co2: [],
       alveolarCO2: [],
+      co2Fast: [],
+      co2Slow: [],
       gasExchange: gasExchange(p, q),
       capnogramTiming: capnogramTiming(p, q),
     };
@@ -328,7 +245,12 @@ const Ventilation = (() => {
     times.sort((a, b) => a - b);
     const unique = times.filter((t, i) => !i || t - times[i - 1] > EPS);
     let nextBoundary = 0;
-    const co2Model = VentilationCO2.create(p, breaths[0].V0, options.co2State, options.co2Step);
+    const co2Model = VentilationCO2.create(
+      p,
+      breaths[0].regionV0,
+      options.co2State,
+      options.co2Step,
+    );
     for (const time of unique) {
       while (nextBoundary < boundaries.length && boundaries[nextBoundary] < time - EPS)
         nextBoundary++;
@@ -346,7 +268,20 @@ const Ventilation = (() => {
           currentBreath.co2State = co2Model.read().state;
         point.co2 = gas.measured;
         point.alveolarCO2 = gas.alveolar;
-        for (const key of ['t', 'p', 'v', 'f', 'palv', 'phase', 'co2', 'alveolarCO2'])
+        point.co2Fast = gas.alveolarRegions[0];
+        point.co2Slow = gas.alveolarRegions[1];
+        for (const key of [
+          't',
+          'p',
+          'v',
+          'f',
+          'palv',
+          'phase',
+          'co2',
+          'alveolarCO2',
+          'co2Fast',
+          'co2Slow',
+        ])
           run[key].push(point[key]);
       }
     }

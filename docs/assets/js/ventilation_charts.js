@@ -371,12 +371,12 @@ function drawVentAnnotations(svg, group, key, b, x, y, top, panelHeight, width, 
     group.append(ventSvg('circle', { cx: x(t), cy: y(value), r: 3, fill: '#b42355' }));
   if (key === 'p') {
     label(
-      `Peak ${ventFormat(m.Peak)}${m.Plateau == null ? '' : ` · plateau ${ventFormat(m.Plateau)}`} cm H₂O`,
+      `Peak ${ventFormat(m.Peak)}${m.Plateau == null ? '' : ` · ${ventSettings.regionRatio > 1 ? 'end hold' : 'plateau'} ${ventFormat(m.Plateau)}`} cm H₂O`,
     );
     label(
       m.Plateau == null
         ? 'Plateau requires a VCV hold'
-        : `Resistive drop ${ventFormat(m.Peak - m.Plateau)} cm H₂O`,
+        : `Instant resistive drop ${ventFormat(m.ResistiveDrop)} cm H₂O`,
       1,
     );
     const t = b.start + (ventMode === 'vcv' ? q.Tflow : q.Ti / 2);
@@ -386,7 +386,7 @@ function drawVentAnnotations(svg, group, key, b, x, y, top, panelHeight, width, 
   }
   if (key === 'f') {
     const scale = ventElement('flowUnit').value === 'L/min' ? 60 : 1,
-      f = (-b.Vend / q.tauE) * scale;
+      f = Ventilation.sample(ventRun, b.end, 'left').f * scale;
     mark(b.end, f);
     label(`End-expiratory flow ${ventFormat(f, 2)} ${ventElement('flowUnit').value}`);
     if (Math.abs(f) > 0.1) label('Flow persists at the next inspiration', 1);

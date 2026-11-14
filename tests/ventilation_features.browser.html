@@ -47,6 +47,49 @@
               run().settings.capnogramShape === 'transport' && run().co2Balance.valid,
             );
             change('timingMode', 'ti');
+            check(
+              `${mode}: default airway split is exposed`,
+              near(run().co2Balance.state.mixingVolume, 0.03) &&
+                near(run().co2Balance.state.plugVolume, 0.12) &&
+                el('capnogramNote').textContent.includes('30 mL'),
+            );
+            const originalCO2 = el('plot').querySelector('[data-signal="co2"]').getAttribute('d');
+            change(`${mode}airwayMix`, '0.5');
+            check(
+              `${mode}: airway mixing updates the tracing while preserving total VD`,
+              el('plot').querySelector('[data-signal="co2"]').getAttribute('d') !== originalCO2 &&
+                near(run().co2Balance.state.mixingVolume, 0.075) &&
+                run().settings.VD === 150,
+            );
+            change(`${mode}regionRatio`, '6');
+            check(
+              `${mode}: unequal regions expose separate CO2 and time constants`,
+              run().co2Balance.alveolarRegions[1] > run().co2Balance.alveolarRegions[0] &&
+                near(run().timing.regions.tauE[1] / run().timing.regions.tauE[0], 6) &&
+                el('regionReadout').textContent.includes('fast / slow'),
+            );
+            check(
+              `${mode}: region labels distinguish end-hold and mean pressures`,
+              el('metrics').textContent.includes('Mean intrinsic') &&
+                (mode === 'pcv' || el('additionalMetrics').textContent.includes('End-hold')),
+            );
+            const validRegions = run();
+            change(`${mode}regionRatio`, '0');
+            check(
+              `${mode}: invalid regional ratios preserve the last valid run`,
+              run() === validRegions &&
+                el(`${mode}regionRatio`).getAttribute('aria-invalid') === 'true',
+            );
+            change(`${mode}regionRatio`, '1');
+            change(`${mode}VD`, '0');
+            check(
+              `${mode}: zero dead space safely bypasses mixing and transit`,
+              run().co2Balance.valid &&
+                run().co2Balance.state.mixingVolume === 0 &&
+                run().co2Balance.state.plugVolume === 0,
+            );
+            el('resetBtn').click();
+            change('timingMode', 'ti');
             change('timingValue', '1');
             check(`${mode}: direct Ti sets the solved timing`, near(run().timing.Ti, 1));
             change(`${mode}RR`, '20');

@@ -83,7 +83,7 @@
               `${mode}: dynamic selected-breath CO2 is visible`,
               el('co2Heading').textContent.includes('Selected-breath') &&
                 el('co2Readings').querySelector('.num').textContent === gas.EtCO2.toFixed(1) &&
-                el('co2Note').textContent.includes('lung/tissue storage'),
+                el('co2Note').textContent.includes('Two lung regions'),
             );
             change(`${prefix}VCO2`, '400');
             check(
@@ -283,6 +283,8 @@
             change(`${prefix}VCO2`, '250');
             change(`${prefix}VD`, '175');
             change(`${prefix}CO2Gradient`, '7');
+            change(`${prefix}airwayMix`, '0.4');
+            change(`${prefix}regionRatio`, '5');
             change('capnogramShape', 'obstructive');
             const link = d.querySelector(`[data-mode-link="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`);
             const shared = new URL(link.href);
@@ -298,7 +300,9 @@
               other.eval('ventRun.settings.VCO2') === 250 &&
                 other.eval('ventRun.settings.VD') === 175 &&
                 other.eval('ventRun.settings.CO2Gradient') === 7 &&
-                other.eval('ventRun.settings.capnogramShape') === 'obstructive',
+                other.eval('ventRun.settings.capnogramShape') === 'obstructive' &&
+                other.eval('ventRun.settings.airwayMix') === 0.4 &&
+                other.eval('ventRun.settings.regionRatio') === 5,
             );
             engine.simulate = solve;
           }

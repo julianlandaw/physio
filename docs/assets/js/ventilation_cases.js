@@ -2,6 +2,7 @@
 const VENTILATION_CASES = [
   {
     id: 'reference',
+    regionRatio: 1,
     label: 'Reference mechanics',
     R: 10,
     C: 50,
@@ -9,24 +10,27 @@ const VENTILATION_CASES = [
   },
   {
     id: 'copd',
+    regionRatio: 4,
     label: 'COPD-like obstruction',
     R: 20,
     C: 60,
-    note: 'R 20, C 60: a published COPD bench-model combination. Look for slower expiratory flow decay and more retained volume as expiration is shortened. This passive compartment does not reproduce dynamic airway collapse or flow limitation.',
+    note: 'R 20, C 60: a published COPD bench-model combination. The added 4:1 regional time-constant ratio is an illustrative choice, not a fitted COPD parameter. Look for unequal emptying and evolving CO₂ differences. No dynamic airway collapse or flow limitation is modeled.',
     source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/',
     sourceLabel: '2024 PCV mechanics bench study',
   },
   {
     id: 'bronchospasm',
+    regionRatio: 6,
     label: 'Bronchospasm-like resistance increase',
     R: 30,
     C: 50,
-    note: 'Illustrative choice: increase R to 30 while retaining C 50. Look for a larger resistive pressure contribution in VCV and lower delivered volume in PCV. This is an isolated resistance demonstration, not a validated bronchospasm parameter set.',
+    note: 'Illustrative R 30, C 50 with a 6:1 regional time-constant ratio. Look for a larger resistive pressure contribution in VCV, lower delivered volume in PCV and unequal regional emptying. These added regional values are not a validated bronchospasm parameter set.',
     source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/',
     sourceLabel: 'Background: obstructive bench-model mechanics (R 20, C 50)',
   },
   {
     id: 'low-compliance',
+    regionRatio: 1,
     label: 'Low compliance / restrictive-like',
     R: 10,
     C: 25,
@@ -36,9 +40,10 @@ const VENTILATION_CASES = [
   },
   {
     id: 'high-compliance',
+    regionRatio: 4,
     label: 'High compliance with obstruction',
     R: 20,
     C: 100,
-    note: 'Illustrative R 20, C 100: the expiratory time constant is 2 s. Use it to explore how slower emptying changes retained volume. This is not a validated emphysema model.',
+    note: 'Illustrative R 20, C 100, with a 4:1 regional time-constant ratio. The reference R×C is 2 s; the fast/slow regional expiratory constants are 1.25/5 s. This is not a validated emphysema model.',
   },
 ];

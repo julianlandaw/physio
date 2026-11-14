@@ -18,6 +18,8 @@ const ventFields = {
   FRC: ['Resting alveolar volume', 'L at set PEEP', 0.1],
   CO2Store: ['Tissue-equivalent CO₂ storage', 'L equivalent gas volume', 1],
   CO2Initial: ['Initial alveolar CO₂', 'mmHg', 1],
+  airwayMix: ['Airway mixing fraction', 'of total airway dead space', 0.05],
+  regionRatio: ['Slow / fast time-constant ratio', '1 = uniform lung', 0.1],
 };
 let ventSettings = { ...Ventilation.defaults, mode: ventMode },
   ventRun = null,
@@ -43,6 +45,7 @@ function buildVentilator() {
         <label for="timingValue" id="timingValueLabel" hidden>Inspiratory time (s)</label><input id="timingValue" type="number" step="any" hidden><p id="timingError" class="field-error"></p>
         <label class="check"><input id="keepTi" type="checkbox"> Keep Ti fixed when changing rate</label></div>
         <p class="control-group-label">Lung mechanics</p><div class="controls" id="lungControls"></div>
+        <p class="small" id="regionMechanicsNote"></p>
         <details class="advanced"><summary>Hold, expiration &amp; run options</summary>
           <div class="controls" id="advancedControls"></div>
           <label class="check"><input id="linkResistance" type="checkbox" checked> Use the same resistance for inspiration and expiration</label>
@@ -82,30 +85,29 @@ function buildVentilator() {
         <section class="card co2-card" aria-labelledby="co2Heading">
           <h2 id="co2Heading">Selected-breath CO₂</h2>
           <div class="co2-readings" id="co2Readings"></div>
+          <p class="small" id="regionReadout"></p>
           <p class="small" id="co2Note"></p>
         </section>
         <div class="button-row" style="margin-top:10px"><div><button type="button" id="freezeBaseline">Freeze baseline</button> <button type="button" id="clearBaseline" disabled>Clear baseline</button></div><label for="comparisonMode">Compare by <select id="comparisonMode"><option value="absolute">Absolute time</option><option value="aligned">Start of inspiration</option></select></label></div><p id="baselineNote" class="baseline-note"></p><p id="settingsChanges" class="small"></p>
       </section>
     </div>
     <details class="card model"><summary>Model assumptions, scenario values &amp; sources</summary>
-      <p>Passive linear single compartment, ideal pressure/flow control, no leaks or patient effort. Compliance represents the respiratory system. Volume is above its equilibrium volume at set PEEP. Expiratory airway pressure is set PEEP; alveolar pressure can remain higher when emptying is incomplete.</p>
-      <p><code>τ = R × C; PCV: V(t) = C × ΔP + [V₀ − C × ΔP] × exp(−t/τᵢ); VCV flow: V(t) = V₀ + flow × t; expiration: V(t) = Vₑᵢ × exp(−t/τₑ).</code> Holds have zero flow. Each phase is solved exactly, including its boundaries.</p>
-      <p>Metrics describe the selected complete breath, including actual volume change during inspiration and expiration. Plateau pressure requires a VCV hold. In PCV, pressure at the airway opening is not assumed to be a plateau if flow continues. Driving pressure, when available, uses plateau minus total PEEP at breath start. Timing can be entered as inspiratory fraction, Ti or I:E. The keep-Ti option preserves inspiratory time when rate changes; invalid combinations retain the last valid run.</p>
-      <p>These examples illustrate mechanics, not recommended ventilator settings. Real COPD and bronchospasm involve heterogeneity, nonlinear resistance, and sometimes dynamic expiratory flow limitation that this model does not reproduce.</p>
-      <p>Dynamic CO₂ uses a well-mixed lung gas store (resting volume plus tidal volume), a tissue-equivalent CO₂ store, metabolic production, and bidirectional airway transport. Inspired gas has zero CO₂; expired gas leaves through the same airway parcels that return residual CO₂ on inspiration. A 40 ms sensor response smooths the sampled signal without altering the gas mass balance. EtCO₂ is the sensor value at the end of each complete expiration, not a repeating steady-state amplitude.</p>
-      <p>Illustrative defaults: resting alveolar volume 2.5 L, tissue-equivalent CO₂ storage 20 L, initial alveolar CO₂ 40 mmHg, airway dead space 150 mL, metabolic production 200 mL/min STPD, and equivalent exchange conductance 0.5 L/s (not blood flow). Gas amounts use BTPS; conversion is 863/713 at sea level. These are teaching assumptions, not patient-specific fitted values. Tissue stores model buffering in equivalent gas-volume units, not anatomical tissue volume. The airway dead-space input now represents transported conducting-airway volume, rather than the previous estimator's physiologic dead space. No separate alveolar dead space, V/Q heterogeneity, shunt, circulation delays or acid–base chemistry are modeled.</p>
-      <p>The assumed Pa–Et gradient only adds to sampled EtCO₂ to show an arterial estimate; it does not shift the gas-transport signal or predict V/Q mismatch. Approximate steady alveolar ventilation remains <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min. Unlike the old steady-state estimate, low ventilation can retain CO₂ in finite stores while producing a small capnogram. Each settings edit restarts the run; “Start CO₂ from baseline end” instead uses the frozen selected breath's end lung/tissue concentrations, sensor value and airway contents. Mechanics restart separately. This continued CO₂ start is local to the page and resets with Reset; mode links transfer parameter values, not stored gas history.</p>
-      <p>Dynamic airway transport is the default tracing. Optional legacy reference/obstructive shapes remain illustrative overlays with evolving breath amplitudes; their time fractions are not a validated resistance-to-capnogram relationship. Teaching annotations label phases approximately from airway CO₂ relative to alveolar CO₂. The simplified dynamic model is mass-conserving but is not a validated clinical gas-exchange simulator.</p>
-      <p>Modeling background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4737892/">lung/tissue CO₂ mass-balance study</a>; <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8354828/">body gas-store modeling</a>. These support the concepts, not these specific parameters or implementation. <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10115549/">Bronchospasm capnogram case study</a> provides background on obstructive shape.</p>
-      <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
+      <p>Two passive parallel lung regions share the airway pressure. Each receives half the total compliance, resting alveolar volume and lung/tissue gas-exchange conductance. There are no leaks, patient effort or nonlinear flow limitation. With slow/fast time-constant ratio k, regional resistances are <code>Rfast = R × (1 + 1/k); Rslow = R × (1 + k)</code>, preserving the entered parallel R and total C. The same split applies to expiratory resistance. Ratio 1 is the uniform reference.</p>
+      <p>PCV fills each region according to its own RC solution; expiration empties each independently toward set PEEP. VCV supplies the selected total flow, which divides according to regional elastic pressures and resistances. VCV holds have zero total flow but may allow internal gas redistribution. Mechanical phases and their boundaries are solved analytically; periodic initialization conserves each region's volume. Volume is above equilibrium at set PEEP.</p>
+      <p>With unequal regions, the optional alveolar-pressure curve and intrinsic PEEP report compliance-weighted mean elastic pressure, not either individual region's pressure. Regional end-expiratory values are shown below the CO₂ readings. End-hold airway pressure may continue changing while the regions equilibrate; it is labeled separately from a uniform-lung plateau. Equilibrated elastic driving pressure uses the delivered volume divided by total C. Instantaneous resistive drop refers to removal of VCV flow at the start of the hold and is distinct from subsequent redistribution.</p>
+      <p>Airway dead space is split into unmixed transit volume and a well-mixed compartment near the mouth. The mixing fraction is 0.2 by default: at VD 150 mL this is 30 mL mixed and 120 mL unmixed. Total dead space stays fixed when its split changes. Gas travels in both directions, including airway CO₂ returning on inspiration. The mixed compartment's exponential dilution is solved exactly for each incoming parcel; a separate 40 ms sensor response smooths the signal without changing stored or exhaled CO₂. Setting mixing to 0 restores unmixed transport. Background: <a href="https://pubmed.ncbi.nlm.nih.gov/37030832/">mechanistic airway-mixing model</a>.</p>
+      <p>Each lung region has its own CO₂ content and exchanges with shared tissue stores. Unequal ventilation can therefore create unequal CO₂ concentrations; gas contributions are combined by their flow at the common junction. Internal redistribution also transports CO₂. Both regions initially have the same CO₂, so a rising plateau develops as regional differences form rather than being imposed from the first breath. Background: <a href="https://publications.ersnet.org/content/erjor/8/1/00440-2021">sequential ventilation-inhomogeneity study</a>. These references support the concepts, not the chosen parameters or validation of this implementation.</p>
+      <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. Total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
+      <p>The COPD-like and bronchospasm-like examples add illustrative 4:1 and 6:1 regional ratios to their R/C examples. These ratios and the mixing default are not fitted disease parameters; the model does not reproduce all clinical capnograms or dynamic airway collapse. Every settings edit restarts the run. “Start CO₂ from baseline end” preserves the frozen selected breath's separate regional concentrations, airway contents and sensor value while mechanics restart from their chosen initial state. This continued gas state is local to the page; mode links transfer settings, not gas history. Optional legacy shapes are schematic overlays, not the transport model. Timing may be entered as fraction, Ti or I:E, with an option to preserve Ti across rate changes.</p>
+      <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ fast / slow<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
       <ul><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/">2024 PCV bench study</a>: COPD bench compliance 60 with obstructive resistances including 20. This supports the COPD-like mechanics example, not all of its clinical behavior.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/">2021 respiratory-mechanics bench study</a>: obstructive R 20/C 50 and restrictive R 10/C 25 examples. Our bronchospasm-like R 30/C 50 is an illustrative extension, not a validated disease parameter set.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3376482/">Respiratory compartment model equations</a>.</li></ul>
     </details>`;
   for (const field of [ventMode === 'vcv' ? 'VT' : 'PC', 'PEEP', 'RR', 'IF'])
     addVentControl(field, 'ventilatorControls');
-  for (const field of ['R', 'C']) addVentControl(field, 'lungControls');
+  for (const field of ['R', 'C', 'regionRatio']) addVentControl(field, 'lungControls');
   for (const field of [...(ventMode === 'vcv' ? ['HF'] : []), 'Rexp', 'T'])
     addVentControl(field, 'advancedControls');
-  for (const field of ['VCO2', 'VD', 'CO2Gradient', 'FRC', 'CO2Store', 'CO2Initial'])
+  for (const field of ['VCO2', 'VD', 'airwayMix', 'CO2Gradient', 'FRC', 'CO2Store', 'CO2Initial'])
     addVentControl(field, 'co2Controls');
   for (const item of VENTILATION_CASES) {
     const option = document.createElement('option');
@@ -113,13 +115,23 @@ function buildVentilator() {
     option.textContent = item.label;
     ventElement('lungCase').append(option);
     const row = document.createElement('tr');
-    [item.label, `${item.R} / ${item.R}`, item.C, ventFormat((item.R * item.C) / 1000, 2)].forEach(
-      (value) => {
-        const cell = document.createElement('td');
-        cell.textContent = value;
-        row.append(cell);
-      },
-    );
+    const tau = VentilationRegions.configure({
+      ...Ventilation.defaults,
+      R: item.R,
+      Rexp: item.R,
+      C: item.C,
+      regionRatio: item.regionRatio,
+    }).tauE;
+    [
+      item.label,
+      `${item.R} / ${item.R}`,
+      item.C,
+      tau.map((t) => ventFormat(t, 2)).join(' / '),
+    ].forEach((value) => {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.append(cell);
+    });
     ventElement('caseTable').append(row);
   }
   const custom = document.createElement('option');
@@ -172,7 +184,7 @@ function addVentControl(field, containerId) {
     }
     const value = readVentNumber(number.value);
     if (Number.isFinite(value)) range.value = value;
-    if (['R', 'Rexp', 'C'].includes(field)) {
+    if (['R', 'Rexp', 'C', 'regionRatio'].includes(field)) {
       ventCaseId = 'custom';
       ventElement('lungCase').value = 'custom';
     }
@@ -361,13 +373,31 @@ function renderVentMetrics() {
     ['VT', 'Delivered VT (mL)', 0],
     ['Expired', 'Expired VT (mL)', 0],
     ['Peak', 'Peak airway pressure (cm H₂O)', 1],
-    ['Intrinsic', 'End-expiratory intrinsic PEEP (cm H₂O)', 2],
+    [
+      'Intrinsic',
+      ventSettings.regionRatio > 1
+        ? 'Mean intrinsic PEEP (cm H₂O)'
+        : 'End-expiratory intrinsic PEEP (cm H₂O)',
+      2,
+    ],
   ])
     ventMetric(primary, m?.[key], label, old?.[key], digits);
   for (const [key, label, digits] of [
-    ['Plateau', 'Plateau pressure (cm H₂O); requires VCV hold', 1],
+    [
+      'Plateau',
+      ventSettings.regionRatio > 1
+        ? 'End-hold airway pressure (cm H₂O)'
+        : 'Plateau pressure (cm H₂O); requires VCV hold',
+      1,
+    ],
     ['Mean', 'Mean airway pressure (cm H₂O)', 1],
-    ['Driving', 'Plateau minus start total PEEP (cm H₂O)', 1],
+    [
+      'Driving',
+      ventSettings.regionRatio > 1
+        ? 'Equilibrated elastic driving pressure (cm H₂O)'
+        : 'Plateau minus start total PEEP (cm H₂O)',
+      1,
+    ],
     ['EndExpVolume', 'Retained end-expiratory volume (mL)', 1],
     ['Retained', 'Net retained this breath (mL)', 1],
     ['MinuteVentilation', 'Expired minute ventilation (L/min)', 2],
@@ -376,7 +406,7 @@ function renderVentMetrics() {
   const q = ventRun.timing;
   renderVentCO2();
   ventElement('emptyingNote').textContent = b
-    ? `Expiration: ${ventFormat(q.Te / q.tauE, 2)} time constants; ${ventFormat(100 * Math.exp(-q.Te / q.tauE), 1)}% of end-inspiratory compartment volume remains. Expiratory flow at the breath end: ${ventFormat((-b.Vend / q.tauE) * 60, 1)} L/min.`
+    ? `Expiration: ${q.regions.tauE.map((t) => ventFormat(q.Te / t, 2)).join(' / ')} fast/slow time constants; ${ventFormat((100 * b.Vend) / b.Ve, 1)}% of end-inspiratory volume remains. Expiratory flow at breath end: ${ventFormat(Ventilation.sample(ventRun, b.end, 'left').f * 60, 1)} L/min.`
     : 'The display distinguishes a partial breath from completed-breath measurements.';
   ventElement('baselineLegend').hidden = !ventBaseline;
   ventElement('clearBaseline').disabled = !ventBaseline;
@@ -395,10 +425,17 @@ function renderVentCO2() {
   ])
     ventMetric(readings, m?.[key], label, old?.[key], digits);
   ventElement('co2Note').textContent =
-    `EtCO₂ is sampled at the end of the selected complete breath. CO₂ evolves through lung/tissue storage and airway transit; the assumed Pa–Et gradient affects only the arterial estimate. Approximate steady alveolar ventilation: ${ventFormat(gas.alveolarVentilation, 2)} L/min. This simplified model has no V/Q heterogeneity or validated disease-specific CO₂ kinetics.`;
+    `EtCO₂ is sampled at the end of the selected complete breath. Two lung regions exchange CO₂ with shared tissue stores and receive equal gas-exchange conductance; unequal ventilation can create regional CO₂ differences. Approximate steady alveolar ventilation: ${ventFormat(gas.alveolarVentilation, 2)} L/min. These are illustrative mechanics, not validated disease-specific kinetics. The Pa–Et gradient affects only the arterial estimate.`;
+  const b = ventRun.completeBreaths[ventBreathIndex],
+    fractions = b?.co2State?.lungFractions;
+  ventElement('regionReadout').textContent = fractions
+    ? `Selected breath, fast / slow regions: alveolar CO₂ ${fractions.map((f) => ventFormat(f * 713)).join(' / ')} mmHg; end-expiratory elastic pressure ${ventFormat(b.metrics.IntrinsicFast)} / ${ventFormat(b.metrics.IntrinsicSlow)} cm H₂O above set PEEP.`
+    : 'Regional measurements require a complete breath.';
+  ventElement('regionMechanicsNote').textContent =
+    `Two equal-size regions share the airway. Total C and parallel R stay as entered. Expiratory time constants: ${ventRun.timing.regions.tauE.map((t) => ventFormat(t, 2)).join(' / ')} s. Ratio 1 restores uniform mechanics.`;
   ventElement('capnogramNote').textContent =
     ventSettings.capnogramShape === 'transport'
-      ? 'Dynamic CO₂: lung/tissue stores, bidirectional airway transit and a 40 ms sensor response. Dots mark each breath’s end-expiratory CO₂.'
+      ? `Dynamic CO₂: two lung regions, ${ventFormat(ventSettings.VD * ventSettings.airwayMix, 0)} mL of airway mixing and ${ventFormat(ventSettings.VD * (1 - ventSettings.airwayMix), 0)} mL of unmixed transit, with a 40 ms sensor response. Dots mark each breath’s end-expiratory CO₂.`
       : 'Illustrative shape overlay with evolving breath amplitudes. Select Dynamic airway transport for the mass-balance model’s tracing.';
 }
 function renderTiming() {
@@ -409,7 +446,10 @@ function renderTiming() {
     ['Ti', `${ventFormat(q.Ti, 2)} s`],
     ['Te', `${ventFormat(q.Te, 2)} s`],
     ['I:E', `1:${ventFormat(q.Te / q.Ti, 2)}`],
-    ['τᵢ / τₑ', `${ventFormat(q.tauI, 2)} / ${ventFormat(q.tauE, 2)} s`],
+    [
+      'τₑ fast / slow',
+      `${ventFormat(q.regions.tauE[0], 2)} / ${ventFormat(q.regions.tauE[1], 2)} s`,
+    ],
     ...(ventMode === 'vcv'
       ? [
           ['Flow time', `${ventFormat(q.Tflow, 2)} s`],
@@ -484,7 +524,16 @@ function refreshVentView() {
   ventElement('lungCase').addEventListener('change', (event) => {
     const item = VENTILATION_CASES.find((c) => c.id === event.target.value);
     if (item)
-      setVentSettings({ ...readVentSettings(), R: item.R, Rexp: item.R, C: item.C }, item.id);
+      setVentSettings(
+        {
+          ...readVentSettings(),
+          R: item.R,
+          Rexp: item.R,
+          C: item.C,
+          regionRatio: item.regionRatio,
+        },
+        item.id,
+      );
   });
   ventElement('resetBtn').addEventListener('click', () => {
     stopVentPlayback();
@@ -569,7 +618,10 @@ function refreshVentView() {
       const example = VENTILATION_CASES.find((c) => c.id === caseId);
       if (
         example &&
-        (initial.R !== example.R || initial.Rexp !== example.R || initial.C !== example.C)
+        (initial.R !== example.R ||
+          initial.Rexp !== example.R ||
+          initial.C !== example.C ||
+          initial.regionRatio !== example.regionRatio)
       )
         caseId = 'custom';
     }
