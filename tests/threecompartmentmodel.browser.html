@@ -270,7 +270,7 @@
           app.reset();
           check('reset renders once after loading the preset', plotCalls === 3);
           plotCalls = 0;
-          app.propofol();
+          app.applyRegistryPreset('propofol');
           check('direct preset calls still render', plotCalls === 3);
           plotCalls = 0;
 

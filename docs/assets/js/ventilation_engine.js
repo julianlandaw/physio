@@ -78,7 +78,7 @@ const Ventilation = (() => {
       errors.push({ field: 'initial', message: 'Choose an initial lung state.' });
     if (!['transport', 'auto', 'reference', 'obstructive'].includes(p.capnogramShape))
       errors.push({ field: 'capnogramShape', message: 'Choose a supported capnogram shape.' });
-    if (!Object.hasOwn(VentilationScenarios.names, p.eventType))
+    if (!Object.hasOwn(VentilationScenarios.catalog, p.eventType))
       errors.push({ field: 'eventType', message: 'Choose a supported event.' });
     if (!['regional', 'common'].includes(p.eventLocation))
       errors.push({ field: 'eventLocation', message: 'Choose an obstruction location.' });
@@ -143,9 +143,6 @@ const Ventilation = (() => {
       regions: VentilationRegions.configure(p),
     };
   }
-  function breath(p, q, index, volumes) {
-    return VentilationRegions.breath(p, q, index, volumes);
-  }
   // Illustrative time capnogram, not a heterogeneous gas-exchange model.
   // Shape fractions are teaching choices, not fitted disease parameters.
   function capnogramTiming(p, q) {
@@ -180,9 +177,6 @@ const Ventilation = (() => {
       co2Phase: 'phase III',
     };
   }
-  function sampleBreath(p, q, b, time, side) {
-    return VentilationRegions.sample(p, q, b, time, side);
-  }
   function mechanicalSample(run, rawTime, side) {
     if (run.scenario) return VentilationScenarios.sample(run, rawTime, side);
     const time = Math.max(0, Math.min(run.settings.T, rawTime));
@@ -190,7 +184,7 @@ const Ventilation = (() => {
     let index = Math.floor((time + EPS) / run.timing.cycle);
     if (side === 'left' && time > 0 && Math.abs(time - index * run.timing.cycle) < EPS) index--;
     index = Math.max(0, Math.min(run.breaths.length - 1, index));
-    return sampleBreath(run.settings, run.timing, run.breaths[index], time, side);
+    return VentilationRegions.sample(run.settings, run.timing, run.breaths[index], time, side);
   }
   function sample(run, time, side) {
     const point = mechanicalSample(run, time, side);
@@ -230,7 +224,7 @@ const Ventilation = (() => {
   // perfusion are simulated. The Pa–Et gradient is an assumption.
   function gasExchange(p, q) {
     const steady = VentilationRegions.initial({ ...p, initial: 'steady' }, q);
-    const steadyVT = breath(p, q, 0, steady).metrics.VT;
+    const steadyVT = VentilationRegions.breath(p, q, 0, steady).metrics.VT;
     const alveolarVentilation = (Math.max(0, steadyVT - p.VD) * p.RR) / 1000;
     const result = {
       steadyVT,
@@ -258,7 +252,7 @@ const Ventilation = (() => {
       breaths = [];
     let V0 = VentilationRegions.initial(p, q);
     for (let i = 0; i * q.cycle < p.T - EPS; i++) {
-      const b = breath(p, q, i, V0);
+      const b = VentilationRegions.breath(p, q, i, V0);
       breaths.push(b);
       V0 = b.regionVend;
     }

@@ -318,7 +318,7 @@ function drawVentilation() {
       trace(current, 'palv', ventColors.palv);
     }
     if (ventElement('showTeaching').checked && selected && selected.end <= limit + 1e-9)
-      drawVentAnnotations(svg, group, key, selected, x, y, top, panelHeight, width, pad);
+      drawVentAnnotations(svg, group, key, selected, x, y, top, panelHeight, pad);
     for (let g = 0; g <= 4; g++) {
       const time = start + ((end - start) * g) / 4;
       svg.append(
@@ -405,7 +405,7 @@ function drawVentilation() {
     });
   }
 }
-function drawVentAnnotations(svg, group, key, b, x, y, top, panelHeight, width, pad) {
+function drawVentAnnotations(svg, group, key, b, x, y, top, panelHeight, pad) {
   const q = ventRun.timing,
     m = b.metrics;
   const label = (text, row = 0) =>

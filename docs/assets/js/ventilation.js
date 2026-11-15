@@ -92,10 +92,11 @@ function buildVentilator() {
         </section>
         <details class="card event-panel" id="eventPanel"><summary>Practice an acute event <span id="eventSummary" class="summary-value"></span></summary>
           <label class="scenario-label" for="eventType">Event</label><select id="eventType"></select>
+          <p class="small" id="eventPattern" hidden></p>
           <div class="controls event-controls" id="eventControls"></div>
           <div id="eventLocationControl" hidden><label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select></div>
           <div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><button type="button" id="triggerEvent">Trigger now</button><button type="button" id="resolveEvent">Resolve event</button></div>
-          <p class="small" id="eventStatus" role="status"></p><details class="event-help"><summary>How this event works</summary><p class="small" id="eventDescription"></p>
+          <p class="small" id="eventStatus" role="status"></p><details class="event-help"><summary>How this event works</summary><p class="small" id="eventDescription"></p><p class="small" id="eventSources" hidden></p>
           <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
           </details>
         </details>
@@ -107,20 +108,22 @@ function buildVentilator() {
           <h2 id="co2Heading">Selected-breath CO₂</h2><div class="co2-readings" id="co2Readings"></div>
           <p class="small" id="regionReadout"></p><p class="small" id="co2Note"></p>
         </section></details>
-        <details class="card loops-card" id="loopsPanel"><summary>Pressure–volume &amp; flow–volume loops</summary><p id="loopCaption" class="small"></p><div class="loop-grid"><svg id="pvLoop" class="loop-plot" role="img" tabindex="0" aria-label="Pressure-volume loop; click to inspect time"></svg><svg id="fvLoop" class="loop-plot" role="img" tabindex="0" aria-label="Flow-volume loop; click to inspect time"></svg></div><p class="small">Blue: inspiration/hold · amber: expiration · dashed: frozen baseline. Click a loop to inspect the corresponding time. Volume is above set-PEEP equilibrium; transient breaths may form open loops.</p></details>
+        <details class="card" id="loopsPanel"><summary>Pressure–volume &amp; flow–volume loops</summary><p id="loopCaption" class="small"></p><div class="loop-grid"><svg id="pvLoop" class="loop-plot" role="img" tabindex="0" aria-label="Pressure-volume loop; click to inspect time"></svg><svg id="fvLoop" class="loop-plot" role="img" tabindex="0" aria-label="Flow-volume loop; click to inspect time"></svg></div><p class="small">Blue: inspiration/hold · amber: expiration · dashed: frozen baseline. Click a loop to inspect the corresponding time. Volume is above set-PEEP equilibrium; transient breaths may form open loops.</p></details>
         <details class="card comparison-panel" id="comparisonPanel"><summary>Compare with a baseline</summary><div class="button-row"><div><button type="button" id="freezeBaseline">Freeze baseline</button> <button type="button" id="clearBaseline" disabled>Clear baseline</button></div><label for="comparisonMode">Compare by <select id="comparisonMode"><option value="absolute">Absolute time</option><option value="aligned">Start of inspiration</option></select></label></div><p id="baselineNote" class="baseline-note"></p><p id="settingsChanges" class="small"></p></details>
       </section>
     </div>
     <details class="card model"><summary>Model assumptions, scenario values &amp; sources</summary>
-      <p>Two passive parallel lung regions share the airway pressure. Each receives half the total compliance, resting alveolar volume and lung/tissue gas-exchange conductance. There are no leaks, patient effort or nonlinear flow limitation. With slow/fast time-constant ratio k, regional resistances are <code>Rfast = R × (1 + 1/k); Rslow = R × (1 + k)</code>, preserving the entered parallel R and total C. The same split applies to expiratory resistance. Ratio 1 is the uniform reference.</p>
+      <p>Two passive parallel lung regions share the airway pressure. At baseline, each receives half the total compliance, resting alveolar volume and lung/tissue gas-exchange conductance. There are no leaks, patient effort or nonlinear flow limitation. With slow/fast time-constant ratio k, regional resistances are <code>Rfast = R × (1 + 1/k); Rslow = R × (1 + k)</code>, preserving the entered parallel R and total C. The same split applies to expiratory resistance. Ratio 1 is the uniform reference.</p>
       <p>PCV fills each region according to its own RC solution; expiration empties each independently toward set PEEP. VCV supplies the selected total flow, which divides according to regional elastic pressures and resistances. VCV holds have zero total flow but may allow internal gas redistribution. Mechanical phases and their boundaries are solved analytically; periodic initialization conserves each region's volume. Volume is above equilibrium at set PEEP.</p>
       <p>With unequal regions, the optional alveolar-pressure curve and intrinsic PEEP report compliance-weighted mean elastic pressure, not either individual region's pressure. Regional end-expiratory values are shown below the CO₂ readings. End-hold airway pressure may continue changing while the regions equilibrate; it is labeled separately from a uniform-lung plateau. Equilibrated elastic driving pressure uses the delivered volume divided by total C. Instantaneous resistive drop refers to removal of VCV flow at the start of the hold and is distinct from subsequent redistribution.</p>
       <p>Airway dead space is split into unmixed transit volume and a well-mixed compartment near the mouth. The mixing fraction is 0.2 by default: at VD 150 mL this is 30 mL mixed and 120 mL unmixed. Total dead space stays fixed when its split changes. Gas travels in both directions, including airway CO₂ returning on inspiration. The mixed compartment's exponential dilution is solved exactly for each incoming parcel; a separate 40 ms sensor response smooths the signal without changing stored or exhaled CO₂. Setting mixing to 0 restores unmixed transport. Background: <a href="https://pubmed.ncbi.nlm.nih.gov/37030832/">mechanistic airway-mixing model</a>.</p>
       <p>Each lung region has its own CO₂ content and exchanges with shared tissue stores. Unequal ventilation can therefore create unequal CO₂ concentrations; gas contributions are combined by their flow at the common junction. Internal redistribution also transports CO₂. Both regions initially have the same CO₂, so a rising plateau develops as regional differences form rather than being imposed from the first breath. Background: <a href="https://publications.ersnet.org/content/erjor/8/1/00440-2021">sequential ventilation-inhomogeneity study</a>. These references support the concepts, not the chosen parameters or validation of this implementation.</p>
-      <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. Total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
+      <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. Baseline total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
       <p>The COPD-like and bronchospasm-like examples add illustrative 4:1 and 6:1 regional ratios to their R/C examples. These ratios and the mixing default are not fitted disease parameters; the model does not reproduce all clinical capnograms or dynamic airway collapse. Every settings edit restarts the run. “Start CO₂ from baseline end” preserves the frozen selected breath's separate regional concentrations, airway contents and sensor value while mechanics restart from their chosen initial state. This continued gas state is local to the page; shared URLs transfer settings, not gas history. Optional legacy shapes are schematic overlays, not the transport model. Timing may be entered as fraction, Ti or I:E, with an option to preserve Ti across rate changes.</p>
       <p>Acute events warm the baseline off-screen, then preserve regional volumes, gas stores and sensor state through onset and recovery. Status reports if warmup did not fully settle. A nonzero VC ceiling limits absolute airway pressure during inspiration and can reduce delivered volume; 0 retains ideal delivery. Event severity is an illustrative mechanism scale, not a measured percentage of obstruction. Bronchospasm increases unequal inspiratory/expiratory resistance; a kink or common mucus plug adds series resistance; a regional plug affects one branch. Complete common closure traps distal gas while fresh circuit gas washes the proximal sampling compartment at an assumed 0.1 L/s, with this loss included in the CO₂ audit.</p>
       <p>The venous-air-embolism scenario reduces equivalent lung/tissue exchange by (1 − severity)² without reducing metabolic production or changing airway mechanics. It represents reduced pulmonary CO₂ delivery, not bubbles or circulation. Event scenarios replace the fixed Pa–Et estimate with tissue-equivalent store pressure, which is not PaCO₂. A low expired tracing can coexist with rising stored CO₂; recovery may cause a rebound. Bronchospasm and plugging do not always lower EtCO₂, and waveform patterns overlap. Background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12340691/">bronchospasm case observations</a> and <a href="https://pubmed.ncbi.nlm.nih.gov/22383084/">venous-air-embolism observations</a>. These sources support qualitative patterns, not calibration of the event severity or timing. This simulator is educational and cannot diagnose a clinical event.</p>
+      <p>Other events act on the same transported gas, not a prescribed waveform. MH increases metabolic CO₂ production. Abdominal insufflation stiffens both regions and adds gradually absorbed CO₂. Hypotension represents reduced cardiac output; PE reduces regional pulmonary delivery unequally. Mainstem intubation excludes one region at maximal severity while ventilation of the other continues. Acute compliance loss models stiffness without fluid, recruitment or oxygenation. CO₂ rebreathing introduces inspired gas through the airway. Metabolic production, absorbed CO₂ and inspired CO₂ are audited separately. Compliance changes preserve volumes and gas content while elastic pressure can change immediately; the reference resting gas volume stays fixed.</p>
+      <p>Each event's “How this event works” section links its background sources and states its limitations. No blood pressure, cardiac output, oxygen saturation, temperature, clot, pleural-pressure or disease-specific treatment model is included. Severity and the 120 s reference time scale are teaching choices, not measured disease severity or validated onset/recovery times. Clinical patterns overlap, and an abnormal tracing alone does not establish the cause.</p>
       <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ fast / slow<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
       <ul><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/">2024 PCV bench study</a>: COPD bench compliance 60 with obstructive resistances including 20. This supports the COPD-like mechanics example, not all of its clinical behavior.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/">2021 respiratory-mechanics bench study</a>: obstructive R 20/C 50 and restrictive R 10/C 25 examples. Our bronchospasm-like R 30/C 50 is an illustrative extension, not a validated disease parameter set.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3376482/">Respiratory compartment model equations</a>.</li></ul>
     </details>`;
@@ -330,12 +333,9 @@ function simulateAndDraw() {
     `${ventMode === 'vcv' ? `${ventFormat(p.VT, 0)} mL` : `ΔP ${ventFormat(p.PC)} cm H₂O`} · ${ventFormat(p.RR)} /min · R ${ventFormat(p.R)} · C ${ventFormat(p.C, 0)}`;
   updateVentURL();
   renderBreathSelect();
-  renderVentMetrics();
   renderTiming();
-  drawVentilation();
-  drawVentLoops();
-  updateVentCursor();
-  renderVentEventStatus();
+  renderVentEventDescription();
+  refreshVentView();
 }
 function updateVentCaseNote() {
   const item = VENTILATION_CASES.find((c) => c.id === ventCaseId);
@@ -500,9 +500,7 @@ function renderVentMetrics() {
         : 'The display distinguishes a partial breath from completed-breath measurements.';
   ventElement('baselineLegend').hidden = !ventBaseline;
   ventElement('clearBaseline').disabled = !ventBaseline;
-  ventElement('continueCO2').disabled = !ventBaseline;
   renderVentComparison();
-  renderVentEventStatus();
 }
 function renderVentCO2() {
   const m = ventRun.completeBreaths[ventBreathIndex]?.metrics,
@@ -519,7 +517,7 @@ function renderVentCO2() {
     ventMetric(readings, m?.[key], label, old?.[key], digits);
   ventElement('co2Note').textContent =
     ventSettings.eventType !== 'none'
-      ? 'Event mode preserves CO₂ production and stored gas. Low measured EtCO₂ can coexist with rising tissue CO₂. The tissue pressure is a model surrogate, not an arterial measurement; the fixed Pa–Et estimate is suppressed in event scenarios. Interpret CO₂ with delivered/expired volume, pressure and flow.'
+      ? 'Event mode carries stored gas forward while the selected mechanism changes mechanics, CO₂ production, absorption, inspired CO₂ or pulmonary delivery. Low measured EtCO₂ can coexist with rising tissue CO₂. Tissue pressure is a model surrogate, not PaCO₂; the fixed Pa–Et estimate is suppressed. Interpret CO₂ with delivered/expired volume, pressure and flow.'
       : `EtCO₂ is sampled at the end of the selected complete breath. Two lung regions exchange CO₂ with shared tissue stores and receive equal gas-exchange conductance; unequal ventilation can create regional CO₂ differences. Approximate ${ventRun.scenario ? 'first-breath fresh-gas' : 'steady alveolar'} ventilation: ${ventFormat(gas.alveolarVentilation, 2)} L/min. These are illustrative mechanics, not validated disease-specific kinetics. The Pa–Et gradient affects only the arterial estimate.`;
   const b = ventRun.completeBreaths[ventBreathIndex],
     fractions = b?.co2State?.lungFractions;
@@ -730,7 +728,7 @@ function refreshVentView() {
       )
         caseId = 'custom';
     }
-  } catch (error) {
+  } catch {
     initial = { ...Ventilation.defaults, mode: ventMode };
     caseId = 'reference';
   }

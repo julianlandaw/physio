@@ -7,8 +7,6 @@
   --muted: #52627a;
   --border: #d6dfeb;
   --blue: #2563eb;
-  --green: #0f766e;
-  --amber: #9a5105;
 }
 * {
   box-sizing: border-box;
@@ -197,6 +195,7 @@ p {
 }
 .plot-card {
   margin-top: 12px;
+  padding: 12px;
 }
 .results-column > details.card {
   margin-top: 12px;
@@ -384,14 +383,8 @@ details summary {
   color: var(--muted);
   margin: 8px 0 12px;
 }
-.plot-card {
-  padding: 12px;
-}
 .co2-card {
   margin: 12px 0;
-}
-.event-panel {
-  margin-top: 12px;
 }
 .event-controls {
   margin: 10px 0;
@@ -399,9 +392,6 @@ details summary {
 .event-panel .button-row {
   margin-top: 10px;
   justify-content: flex-start;
-}
-.event-panel select {
-  max-width: 100%;
 }
 .co2-readings {
   display: grid;
@@ -424,9 +414,6 @@ details summary {
   display: block;
   margin: 6px 0 3px;
 }
-.loops-card {
-  margin-top: 12px;
-}
 .loop-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -440,11 +427,6 @@ details summary {
 }
 .teaching-label {
   pointer-events: none;
-}
-@media (max-width: 950px) {
-  .loop-grid {
-    grid-template-columns: 1fr;
-  }
 }
 .chart-toolbar {
   justify-content: flex-start;
@@ -514,9 +496,6 @@ details summary {
   font-size: 0.75rem;
 }
 .inspection-values {
-  display: flex;
-  gap: 8px 18px;
-  flex-wrap: wrap;
   margin-top: 8px;
   font-size: 0.8rem;
 }
@@ -575,6 +554,9 @@ footer {
   font-size: 0.75rem;
 }
 @media (max-width: 950px) {
+  .loop-grid {
+    grid-template-columns: 1fr;
+  }
   .workspace {
     grid-template-columns: 270px minmax(0, 1fr);
   }
@@ -656,9 +638,6 @@ footer {
   }
   .metric .num {
     font-size: 1.15rem;
-  }
-  .plot {
-    height: 740px;
   }
   .chart-toolbar {
     gap: 7px;

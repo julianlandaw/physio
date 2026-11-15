@@ -2,12 +2,144 @@
 // Acute teaching events. Mechanics preserve regional volumes through every
 // phase/event boundary; CO2 stores and metabolism persist through perfusion loss.
 const VentilationScenarios = (() => {
-  const names = {
-    none: 'No event',
-    bronchospasm: 'Bronchospasm',
-    'tube-kink': 'Kinked endotracheal tube',
-    'mucus-plug': 'Mucus plug',
-    'air-embolism': 'Venous air embolism',
+  // One catalog supplies the menu, validation, teaching notes and source links.
+  // Numerical severity mappings below are illustrative, not fitted disease data.
+  const catalog = {
+    none: { name: 'No event' },
+    bronchospasm: {
+      name: 'Bronchospasm',
+      group: 'Airway',
+      pattern: 'Unequal emptying; severe obstruction can reduce volume and the expired CO₂ signal.',
+      description:
+        'Diffuse, unequal inspiratory/expiratory narrowing. Severe attacks may yield a low or absent expired CO₂ signal while stores rise; mild cases need not lower EtCO₂.',
+      sources: [
+        ['Bronchospasm case observations', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC12340691/'],
+      ],
+    },
+    'tube-kink': {
+      name: 'Kinked endotracheal tube',
+      group: 'Airway',
+      pattern: 'Common-airway obstruction: pressure rises in VC; delivered volume falls in PC.',
+      description:
+        'Resistance in the common endotracheal airway. At severity 1 the airway is completely blocked; proximal sampling gas is washed by fresh circuit gas.',
+    },
+    'mucus-plug': {
+      name: 'Mucus plug',
+      group: 'Airway',
+      pattern:
+        'Regional and common plugs can look different. A regional plug need not lower EtCO₂.',
+      description:
+        'Choose one region or the common airway. At severity 1 that path is closed. A regional plug can preserve VC volume at the cost of higher pressure, so EtCO₂ need not fall.',
+    },
+    mainstem: {
+      name: 'Mainstem ETT / one-lung ventilation',
+      marker: 'Mainstem ETT',
+      group: 'Airway',
+      severity: 1,
+      pattern:
+        'Less lung is ventilated: VC pressure may rise or PC volume fall; CO₂ can remain present.',
+      description:
+        'Increasing severity restricts access to the second region; at 1 it is isolated while the other remains ventilated. Gas exchange with the unventilated region continues. This shares mechanics with a regional plug: capnography alone cannot distinguish the causes. The equal-size regions are not anatomical right/left lungs; oxygenation, absorption collapse, cuff geometry and hypoxic vasoconstriction are not modeled.',
+      sources: [
+        ['Endobronchial intubation randomized trial', 'https://www.bmj.com/content/341/bmj.c5943'],
+      ],
+    },
+    'air-embolism': {
+      name: 'Venous air embolism',
+      marker: 'Air embolism',
+      group: 'Pulmonary delivery',
+      pattern:
+        'EtCO₂ falls as pulmonary CO₂ delivery falls; airway mechanics initially stay the same.',
+      description:
+        'Reduced pulmonary CO₂ delivery is represented by reduced lung/tissue exchange conductance. Metabolic production continues. Airway mechanics initially stay the same. This is a perfusion surrogate, not a bubble/circulation model.',
+      sources: [['Venous-air-embolism observations', 'https://pubmed.ncbi.nlm.nih.gov/22383084/']],
+    },
+    hypotension: {
+      name: 'Hypotension with low cardiac output',
+      marker: 'Low output',
+      group: 'Pulmonary delivery',
+      severity: 0.7,
+      pattern:
+        'Reduced pulmonary delivery lowers EtCO₂ without initially changing pressure or volume.',
+      description:
+        'Represents hypotension accompanied by reduced cardiac output, not isolated vasodilation with preserved output. Equivalent lung/tissue exchange decreases while metabolic production continues. Blood pressure and cardiac output are not calculated; severity is not a MAP or a percentage fall in cardiac output.',
+      sources: [
+        [
+          'Clinical cardiac-output / exhaled-CO₂ study',
+          'https://pubmed.ncbi.nlm.nih.gov/31281675/',
+        ],
+      ],
+    },
+    'pulmonary-embolism': {
+      name: 'Pulmonary embolism',
+      marker: 'PE',
+      group: 'Pulmonary delivery',
+      pattern:
+        'EtCO₂ falls with unequal pulmonary delivery; pressure and delivered volume may remain stable.',
+      description:
+        'An illustrative hemodynamically significant PE reduces exchange more in the second region and also reduces delivery to the first. Ventilation continues in underperfused regions. There is no clot, pulmonary vascular pressure, right-heart, oxygenation or anatomical dead-space model. Severity is not clot burden. This tracing can overlap low output and venous air embolism.',
+      sources: [
+        [
+          'Intraoperative PE case observations',
+          'https://pmc.ncbi.nlm.nih.gov/articles/PMC10333629/',
+        ],
+      ],
+    },
+    'malignant-hyperthermia': {
+      name: 'Malignant hyperthermia',
+      marker: 'MH',
+      group: 'CO₂ load',
+      severity: 0.75,
+      pattern: 'CO₂ production ramps up and EtCO₂ rises despite unchanged ventilator settings.',
+      description:
+        'The CO₂-production component of MH is represented by rising metabolic production over an illustrative 15 s ramp. Airway mechanics stay unchanged. Temperature, rigidity, oxygen consumption, acidosis, triggering agents and treatment are not simulated; this is not a full MH crisis model or diagnostic threshold.',
+      sources: [
+        [
+          'European Malignant Hyperthermia Group: recognition',
+          'https://www.emhg.org/recommendations-1/2024/11/4/recognising-and-managing-a-malignant-hyperthermia-crisis-v2024',
+        ],
+      ],
+    },
+    insufflation: {
+      name: 'Abdominal CO₂ insufflation',
+      marker: 'Insufflation',
+      group: 'CO₂ load',
+      severity: 0.8,
+      pattern:
+        'A stiffer respiratory system changes pressure/volume; absorbed CO₂ adds a slower rise in EtCO₂.',
+      description:
+        'Pneumoperitoneum reduces both regional compliances and adds absorbed CO₂ to the tissue store over an illustrative 30 s uptake time. Uptake decays over 30 s after release; stored gas also washes out gradually. Insufflation pressure, abdominal geometry, position, venous return and changing resting lung volume are not simulated. This is separate from a gas embolism.',
+      sources: [
+        ['Pneumoperitoneum mechanics study', 'https://pubmed.ncbi.nlm.nih.gov/27324326/'],
+        ['Peritoneal CO₂ absorption study', 'https://pubmed.ncbi.nlm.nih.gov/1394755/'],
+      ],
+    },
+    rebreathing: {
+      name: 'CO₂ rebreathing / circuit fault',
+      marker: 'Rebreathing',
+      group: 'Circuit',
+      severity: 0.7,
+      pattern: 'The inspired CO₂ baseline rises above zero, followed by a rise in expired CO₂.',
+      description:
+        'Prescribed inspired CO₂ represents a circuit/absorber/valve problem. CO₂ enters through the airway and is included in the gas-mass audit rather than added to the displayed tracing. The breathing circuit, fresh-gas flow, absorber chemistry and faulty valve are not modeled individually; patterns cannot identify which component failed.',
+      sources: [['Circle-system rebreathing case', 'https://pubmed.ncbi.nlm.nih.gov/16491902/']],
+    },
+    'compliance-loss': {
+      name: 'Acute compliance loss / edema-like',
+      marker: 'Stiffness',
+      group: 'Lung mechanics',
+      severity: 0.75,
+      pattern:
+        'Both lungs stiffen: VC pressure rises; PC volume falls. EtCO₂ depends on remaining ventilation.',
+      description:
+        'Bilateral compliance falls as a mechanical surrogate for an acutely stiff respiratory system, such as edema or atelectasis. It does not simulate fluid, recruitment, shunt, oxygenation or the time course of these conditions. No prescribed direction of EtCO₂ is imposed.',
+      sources: [
+        [
+          'Experimental edema and compliance study',
+          'https://pmc.ncbi.nlm.nih.gov/articles/PMC3028256/',
+        ],
+      ],
+    },
   };
   const warmCache = new Map(),
     EPS = 1e-9;
@@ -26,11 +158,14 @@ const VentilationScenarios = (() => {
     const result = {
       R: r.R.slice(),
       Re: r.Re.slice(),
+      Ci: [r.Ci, r.Ci],
       common: 0,
       closed: [false, false],
       commonClosed: false,
-      perfusion: 1,
-      active: on,
+      perfusion: [1, 1],
+      production: 1,
+      absorbed: 0,
+      inspired: 0,
     };
     if (p.eventType === 'bronchospasm') {
       result.R = result.R.map((v, i) => v * (1 + [18, 80][i] * s * s));
@@ -45,7 +180,28 @@ const VentilationScenarios = (() => {
       result.R[1] *= 1 + 999 * s ** 4;
       result.Re[1] *= 1 + 999 * s ** 4;
       result.closed[1] = on && s === 1;
-    } else if (p.eventType === 'air-embolism') result.perfusion = (1 - s) ** 2;
+    } else if (p.eventType === 'air-embolism') result.perfusion.fill((1 - s) ** 2);
+    else if (p.eventType === 'hypotension') result.perfusion.fill((1 - 0.9 * s) ** 2);
+    else if (p.eventType === 'pulmonary-embolism')
+      result.perfusion = [(1 - 0.65 * s) ** 2, (1 - s) ** 2];
+    else if (p.eventType === 'mainstem') {
+      result.R[1] /= Math.max(1 - s, 1e-6);
+      result.Re[1] /= Math.max(1 - s, 1e-6);
+      result.closed[1] = on && s === 1;
+    } else if (p.eventType === 'malignant-hyperthermia')
+      result.production = 1 + 4 * s * -Math.expm1(-Math.max(0, t - p.eventOnset) / 15);
+    else if (p.eventType === 'insufflation') {
+      result.Ci = result.Ci.map((c) => c * (1 - 0.4 * s));
+      // A continuous uptake tail outlasts release of the mechanical load.
+      const age = Math.max(0, t - p.eventOnset),
+        duration = p.eventRecovery ? p.eventRecovery - p.eventOnset : Infinity;
+      result.absorbed =
+        100 *
+        p.eventSeverity *
+        -Math.expm1(-Math.min(age, duration) / 30) *
+        Math.exp(-Math.max(0, age - duration) / 30);
+    } else if (p.eventType === 'rebreathing') result.inspired = 12 * s;
+    else if (p.eventType === 'compliance-loss') result.Ci = result.Ci.map((c) => c * (1 - 0.7 * s));
     return result;
   }
   function phaseAt(q, time, side = 'right') {
@@ -63,7 +219,7 @@ const VentilationScenarios = (() => {
     const resistance = phase === 'expiration' ? e.Re : e.R;
     const g = resistance.map((r, i) => (e.closed[i] ? 0 : 1 / r)),
       G = g[0] + g[1],
-      Ci = q.C / 2;
+      Ci = e.Ci;
     const Q = phase === 'hold' || e.commonClosed ? 0 : q.flow;
     let A = [
         [0, 0],
@@ -76,8 +232,8 @@ const VentilationScenarios = (() => {
       for (let i = 0; i < 2; i++)
         for (let j = 0; j < 2; j++)
           A[i][j] =
-            (g[i] * (flow ? g[j] / G : (e.common * g[j]) / (1 + e.common * G))) / Ci -
-            (i === j ? g[i] / Ci : 0);
+            (g[i] * (flow ? g[j] / G : (e.common * g[j]) / (1 + e.common * G))) / Ci[j] -
+            (i === j ? g[i] / Ci[i] : 0);
       b = g.map((x) => (flow ? (x * Q) / G : (x * P) / (1 + e.common * G)));
     }
     return { A, b, g, G, Ci, Q, P, flow, e, phase, kind };
@@ -115,8 +271,8 @@ const VentilationScenarios = (() => {
         H * ((c.A[i][0] - (i === 0 ? l2 : 0)) * c.b[0] + (c.A[i][1] - (i === 1 ? l2 : 0)) * c.b[1]),
     );
   }
-  function observe(p, q, c, v, t, index) {
-    const elastic = v.map((x) => x / c.Ci);
+  function observe(p, c, v, t, index) {
+    const elastic = v.map((x, i) => x / c.Ci[i]);
     const weighted = c.g[0] * elastic[0] + c.g[1] * elastic[1];
     const junction = c.G
       ? c.flow
@@ -139,16 +295,17 @@ const VentilationScenarios = (() => {
       v: (v[0] + v[1]) * 1000,
       f: flow,
       p: p.PEEP + airway,
-      palv: p.PEEP + (v[0] + v[1]) / q.C,
+      palv: p.PEEP + (v[0] + v[1]) / (c.Ci[0] + c.Ci[1]),
       phase: c.phase,
       breath: index + 1,
       regionVolumes: v.map((x) => x * 1000),
       regionFlows: flows,
       regionPressures: elastic.map((x) => p.PEEP + x),
-      perfusionScale: c.e.perfusion,
+      perfusionScales: c.e.perfusion,
+      productionScale: c.e.production,
+      absorbedCO2: c.e.absorbed,
+      inspiredCO2: c.e.inspired,
       circuitFlush: c.e.commonClosed,
-      pressureLimited: c.kind === 'cap',
-      eventActive: c.e.active,
     };
   }
   function sample(run, rawTime, side) {
@@ -166,7 +323,6 @@ const VentilationScenarios = (() => {
     const s = segments[lo];
     return observe(
       run.settings,
-      run.timing,
       s.control,
       propagate(s.v0, s.control, Math.max(0, t - s.start)),
       t,
@@ -212,7 +368,7 @@ const VentilationScenarios = (() => {
         volumes = append(start, end, volumes, requested, ph.index);
         continue;
       }
-      const needed = (v) => observe(p, q, requested, v, start, ph.index).p;
+      const needed = (v) => observe(p, requested, v, start, ph.index).p;
       const limited = needed(volumes) > p.pressureLimit + 1e-10;
       const control = limited ? matrix(p, q, e, ph.phase, 'cap') : requested;
       const last = propagate(volumes, control, end - start);
@@ -246,7 +402,6 @@ const VentilationScenarios = (() => {
       timing: q,
       scenario: true,
       segments,
-      initialVolumes,
       breaths: [],
       t: [],
       p: [],
@@ -261,7 +416,11 @@ const VentilationScenarios = (() => {
       events: [],
     };
     if (p.eventType !== 'none') {
-      run.events.push({ time: p.eventOnset, label: names[p.eventType], kind: 'onset' });
+      run.events.push({
+        time: p.eventOnset,
+        label: catalog[p.eventType].marker ?? catalog[p.eventType].name,
+        kind: 'onset',
+      });
       if (p.eventRecovery)
         run.events.push({ time: p.eventRecovery, label: 'Event resolved', kind: 'recovery' });
     }
@@ -309,11 +468,10 @@ const VentilationScenarios = (() => {
       let integral = 0,
         peak = p.PEEP;
       for (const s of parts) {
-        const x = observe(p, q, s.control, s.v0, s.start, index),
-          y = observe(p, q, s.control, s.v1, s.end, index),
+        const x = observe(p, s.control, s.v0, s.start, index),
+          y = observe(p, s.control, s.v1, s.end, index),
           m = observe(
             p,
-            q,
             s.control,
             propagate(s.v0, s.control, (s.end - s.start) / 2),
             (s.start + s.end) / 2,
@@ -334,17 +492,15 @@ const VentilationScenarios = (() => {
         Peak: peak,
         Plateau: p.mode === 'vcv' && q.Th > 0 ? ei.p : null,
         Mean: complete ? integral / q.cycle : null,
-        Intrinsic: Vend / q.C,
-        StartIntrinsic: V0 / q.C,
+        Intrinsic: z.palv - p.PEEP,
         EndExpVolume: z.v,
         Retained: z.v - a.v,
         MinuteVentilation: (Ve - Vend) * p.RR,
-        Driving: p.mode === 'vcv' && q.Th > 0 ? (Ve - V0) / q.C : null,
+        Driving: p.mode === 'vcv' && q.Th > 0 ? ei.palv - a.palv : null,
         EndInspiratory: ei.palv,
-        EquilibratedPlateau: p.mode === 'vcv' && q.Th > 0 ? ei.palv : null,
         ResistiveDrop: p.mode === 'vcv' ? before.p - after.p : null,
-        IntrinsicFast: z.regionVolumes[0] / 1000 / q.regions.Ci,
-        IntrinsicSlow: z.regionVolumes[1] / 1000 / q.regions.Ci,
+        IntrinsicFast: z.regionPressures[0] - p.PEEP,
+        IntrinsicSlow: z.regionPressures[1] - p.PEEP,
         PressureLimited: limited,
         EtCO2: null,
         EstimatedPaCO2: null,
@@ -449,5 +605,5 @@ const VentilationScenarios = (() => {
     if (initial?.reason) run.warmup.reason = initial.reason;
     return run;
   }
-  return { names, active, effect, simulate, sample };
+  return { catalog, active, effect, simulate, sample };
 })();

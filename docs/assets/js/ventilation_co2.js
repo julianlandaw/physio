@@ -1,7 +1,7 @@
 /* Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT */
 // Conservative tidal gas transport. CO2 amounts are L BTPS, volumes L, time s.
 // Two lung gas stores exchange with a shared tissue-equivalent store through
-// equal illustrative conductances (not blood flow). A plug-flow airway plus
+// equal baseline illustrative conductances (not blood flow). A plug-flow airway plus
 // a stirred mixing region carry gas bidirectionally. Sensor filtering is separate.
 const VentilationCO2 = (() => {
   const pressure = 713,
@@ -34,6 +34,8 @@ const VentilationCO2 = (() => {
     let measured = seed?.measured ?? 0,
       gasTarget = seed?.measured ?? 0,
       produced = 0,
+      absorbed = 0,
+      inspired = 0,
       exhaled = 0,
       circuitLoss = 0,
       time = 0;
@@ -50,9 +52,12 @@ const VentilationCO2 = (() => {
       return { mass, fraction: mixingMass / mixingVolume };
     }
     function transport(amount, fraction, inspiration) {
-      if (!(amount > 0)) return { mass: 0, fraction: inspiration ? 0 : fraction, chunks: [] };
+      if (!(amount > 0)) return { mass: 0, chunks: [] };
       if (!plugVolume)
-        return { mass: amount * fraction, fraction, chunks: [{ volume: amount, fraction }] };
+        return {
+          mass: amount * fraction,
+          chunks: inspiration ? [] : [{ volume: amount, fraction }],
+        };
       const parcel = { volume: amount, fraction };
       const index = inspiration ? 0 : parcels.length - 1;
       if (parcels.length && Math.abs(parcels[index].fraction - fraction) < 1e-10)
@@ -60,16 +65,14 @@ const VentilationCO2 = (() => {
       else if (inspiration) parcels.unshift(parcel);
       else parcels.push(parcel);
       let remaining = amount,
-        mass = 0,
-        outgoing = 0;
+        mass = 0;
       const chunks = [];
       while (remaining > 1e-14 && parcels.length) {
         const i = inspiration ? parcels.length - 1 : 0,
           part = parcels[i];
         const take = Math.min(remaining, part.volume);
         mass += take * part.fraction;
-        chunks.push({ volume: take, fraction: part.fraction });
-        outgoing = part.fraction;
+        if (!inspiration) chunks.push({ volume: take, fraction: part.fraction });
         remaining -= take;
         part.volume -= take;
         if (part.volume < 1e-14) {
@@ -78,7 +81,7 @@ const VentilationCO2 = (() => {
         }
       }
       airwayMass += amount * fraction - mass;
-      return { mass, fraction: outgoing, chunks };
+      return { mass, chunks };
     }
     function advance(nextTime, mechanics) {
       const total = nextTime - time;
@@ -104,12 +107,15 @@ const VentilationCO2 = (() => {
         const dv = next.map((v, i) => v - volumes[i]);
         const ft = tissueMass / p.CO2Store;
         const transfers = lungMasses.map(
-          (m, i) => (exchange / 2) * (point.perfusionScale ?? 1) * (ft - m / lungVolumes[i]) * dt,
+          (m, i) =>
+            (exchange / 2) * (point.perfusionScales?.[i] ?? 1) * (ft - m / lungVolumes[i]) * dt,
         );
-        const made = source * dt;
-        tissueMass += made - sum(transfers);
+        const made = source * (point.productionScale ?? 1) * dt;
+        const uptake = ((((point.absorbedCO2 ?? 0) / 60000) * 863) / pressure) * dt;
+        tissueMass += made + uptake - sum(transfers);
         lungMasses = lungMasses.map((m, i) => m + transfers[i]);
         produced += made;
+        absorbed += uptake;
         const incoming = dv.map((v) => Math.max(0, v)),
           outgoing = dv.map((v) => Math.max(0, -v));
         const I = sum(incoming),
@@ -119,11 +125,13 @@ const VentilationCO2 = (() => {
         let target = mixingVolume ? (mixingMass / mixingVolume) * pressure : gasTarget;
         if (I >= E) {
           const amount = I - E;
-          const fresh = mix(amount, 0),
+          const inlet = (point.inspiredCO2 ?? 0) / pressure;
+          inspired += amount * inlet;
+          const fresh = mix(amount, inlet),
             returned = transport(amount, amount > 0 ? fresh.mass / amount : 0, true);
           const fraction = I > 0 ? (sum(outgoingMass) + returned.mass) / I : 0;
           lungMasses = lungMasses.map((m, i) => m + incoming[i] * fraction);
-          if (amount > 0) target = mixingVolume ? fresh.fraction * pressure : 0;
+          if (amount > 0) target = mixingVolume ? fresh.fraction * pressure : inlet * pressure;
         } else {
           const fraction = sum(outgoingMass) / E;
           lungMasses = lungMasses.map((m, i) => m + incoming[i] * fraction);
@@ -160,10 +168,12 @@ const VentilationCO2 = (() => {
         alveolarRegions: fractions.map((f) => (valid ? pressure * f : null)),
         stored,
         produced,
+        absorbed,
+        inspired,
         exhaled,
         circuitLoss,
         initialMass,
-        residual: stored + exhaled + circuitLoss - initialMass - produced,
+        residual: stored + exhaled + circuitLoss - initialMass - produced - absorbed - inspired,
         state: includeState
           ? {
               lungFraction,

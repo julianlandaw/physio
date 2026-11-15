@@ -20,7 +20,7 @@ function writeDraftNow() {
     localStorage.setItem(DRAFT_KEY, lastValidDraftText);
     document.getElementById('draftStatus').textContent =
       'Last valid regimen saved on this browser.';
-  } catch (error) {
+  } catch {
     document.getElementById('draftStatus').textContent =
       'Browser recovery could not be saved. Use Save regimen for a file copy.';
   }
@@ -31,7 +31,7 @@ function queueDraftSave() {
   try {
     lastValidDraftText = JSON.stringify(buildRegimenDocument({ validate: false }));
     draftTimer = setTimeout(writeDraftNow, 500);
-  } catch (error) {
+  } catch {
     document.getElementById('draftStatus').textContent =
       'Recovery keeps the previous valid regimen until the current inputs can be saved.';
   }
@@ -48,7 +48,7 @@ function initDraftRecovery() {
       lastValidDraftText = stored;
       status.textContent = 'Recovered your last valid regimen from this browser.';
     }
-  } catch (error) {
+  } catch {
     status.textContent =
       'The saved draft could not be recovered. Your current inputs are available.';
   }
@@ -63,7 +63,7 @@ function initDraftRecovery() {
     cancelDraftSave();
     try {
       localStorage.setItem(DRAFT_PREFERENCE_KEY, String(enabled.checked));
-    } catch (error) {
+    } catch {
       /* Storage may be unavailable. */
     }
     status.textContent = enabled.checked ? 'Draft recovery enabled.' : 'Draft recovery paused.';
@@ -76,7 +76,7 @@ function initDraftRecovery() {
     try {
       localStorage.removeItem(DRAFT_KEY);
       localStorage.setItem(DRAFT_PREFERENCE_KEY, 'false');
-    } catch (error) {
+    } catch {
       /* Keep the simulation usable. */
     }
     status.textContent = 'Saved draft cleared. Enable recovery to start saving new edits.';

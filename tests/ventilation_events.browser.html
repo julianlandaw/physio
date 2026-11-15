@@ -190,6 +190,65 @@
             );
             engine.simulate = solve;
           }
+          for (const mode of ['vcv', 'pcv']) {
+            const app = await load('ventilator_simulator.html?mode=' + mode),
+              d = app.document,
+              el = (id) => d.getElementById(id);
+            check(
+              `${mode}: scenario menu groups clinical mechanisms without adding main-view controls`,
+              el('eventType').querySelectorAll('optgroup').length === 5 && !el('eventPanel').open,
+            );
+            for (const type of [
+              'malignant-hyperthermia',
+              'hypotension',
+              'pulmonary-embolism',
+              'insufflation',
+              'mainstem',
+              'rebreathing',
+              'compliance-loss',
+            ]) {
+              el('eventType').value = type;
+              el('eventType').dispatchEvent(new app.Event('change', { bubbles: true }));
+              el('loadEventReference').click();
+              const run = app.eval('ventRun');
+              check(
+                `${mode} ${type}: loads a usable reference with context and sources`,
+                run.settings.eventType === type &&
+                  run.warmup.settled &&
+                  run.settings.eventRecovery === 90 &&
+                  el('eventPattern').textContent.length > 15 &&
+                  el('eventDescription').textContent.length > 30 &&
+                  [...el('eventSources').querySelectorAll('a')].every((a) =>
+                    a.href.startsWith('https://'),
+                  ) &&
+                  el('eventSources').querySelectorAll('a').length > 0 &&
+                  el('plot').querySelectorAll('.event-marker').length === 8 &&
+                  run.co2Balance.valid &&
+                  el('ventilationErrors').hidden,
+              );
+              check(
+                `${mode} ${type}: reference retains clinical limits and both mode targets`,
+                run.metrics.EstimatedPaCO2 === null &&
+                  el('co2Readings').textContent.includes('not PaCO₂') &&
+                  run.settings.VT === 500 &&
+                  run.settings.PC === 10.4 &&
+                  (type !== 'mainstem' || run.settings.eventSeverity === 1) &&
+                  (type === 'mucus-plug' || el('eventLocationControl').hidden),
+              );
+            }
+            el('eventPanel').open = true;
+            check(
+              `${mode}: expanded new scenario controls fit a phone`,
+              d.documentElement.scrollWidth <= app.innerWidth,
+            );
+            const shared = new URL(app.location.href),
+              reopened = await load(shared.pathname.split('/').at(-1) + shared.search);
+            check(
+              `${mode}: a shared URL restores a new clinical event`,
+              reopened.eval('ventRun.settings.eventType') === 'compliance-loss' &&
+                reopened.eval('ventRun.co2Balance.valid'),
+            );
+          }
           document.body.dataset.result = 'passed';
         } catch (error) {
           checks.push('FAIL ' + error.message);

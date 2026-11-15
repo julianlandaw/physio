@@ -50,9 +50,7 @@ function paintVentPlayback() {
     ventRun.completeBreaths.length - 1,
     Math.floor((ventPlayback.time + 1e-9) / ventRun.timing.cycle) - 1,
   );
-  drawVentilation();
-  renderVentMetrics();
-  drawVentLoops();
+  refreshVentView();
   renderBreathSelect();
   ventElement('playbackStatus').textContent =
     `${ventPlayback.active ? 'Playing' : 'Paused'} · ${ventFormat(ventPlayback.time)} / ${ventFormat(ventSettings.T, 0)} s`;

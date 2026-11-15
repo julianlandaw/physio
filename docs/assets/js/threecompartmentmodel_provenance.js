@@ -45,7 +45,7 @@ function provenanceReferenceHref(href) {
   try {
     const url = new URL(href);
     return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }

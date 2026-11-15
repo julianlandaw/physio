@@ -124,7 +124,155 @@ try {
       `${mode}: a regional plug permits continued ventilation through the other region`,
       b.metrics.VT > 100 && Math.abs(plug.co2Balance.residual) < 1e-9,
     );
+    for (const type of [
+      'malignant-hyperthermia',
+      'hypotension',
+      'pulmonary-embolism',
+      'insufflation',
+      'mainstem',
+      'rebreathing',
+      'compliance-loss',
+    ]) {
+      const run = Ventilation.simulate({
+          ...base,
+          mode,
+          eventType: type,
+          eventSeverity: VentilationScenarios.catalog[type].severity ?? base.eventSeverity,
+        }),
+        before = run.breaths[5].metrics,
+        late = run.breaths[17].metrics,
+        recovered = run.breaths[23].metrics,
+        gas = run.co2Balance;
+      check(
+        `${mode} ${type}: new event preserves a valid CO2 mass balance`,
+        gas.valid && Math.abs(gas.residual) < 1e-9,
+      );
+      check(
+        `${mode} ${type}: onset and recovery preserve volumes and sensor continuity`,
+        [30, 90].every((t) => {
+          const a = Ventilation.sample(run, t, 'left'),
+            b = Ventilation.sample(run, t, 'right');
+          return a.regionVolumes.every((v, i) => near(v, b.regionVolumes[i])) && near(a.co2, b.co2);
+        }),
+      );
+      check(
+        `${mode} ${type}: recovery restores baseline mechanical delivery`,
+        near(recovered.VT, before.VT, 0.01) && near(recovered.Peak, before.Peak, 0.01),
+      );
+      if (type === 'malignant-hyperthermia') {
+        check(
+          `${mode}: MH raises production and EtCO2 without changing airway mechanics`,
+          late.EtCO2 > before.EtCO2 + 8 &&
+            gas.produced > bronch.co2Balance.produced * 1.8 &&
+            near(late.VT, before.VT) &&
+            near(late.Peak, before.Peak),
+        );
+      } else if (type === 'hypotension' || type === 'pulmonary-embolism') {
+        check(
+          `${mode} ${type}: low pulmonary delivery lowers EtCO2 with unchanged production and mechanics`,
+          late.EtCO2 < before.EtCO2 * 0.75 &&
+            late.TissueCO2 > before.TissueCO2 &&
+            near(gas.produced, bronch.co2Balance.produced) &&
+            near(late.VT, before.VT) &&
+            near(late.Peak, before.Peak),
+        );
+        if (type === 'pulmonary-embolism') {
+          const point = Ventilation.sample(run, 87.5);
+          check(
+            `${mode}: PE underperfuses ventilated regions unequally`,
+            point.alveolarCO2Regions[1] < point.alveolarCO2Regions[0] &&
+              point.regionVolumes.every((v) => v > 0),
+          );
+        }
+      } else if (type === 'insufflation') {
+        check(
+          `${mode}: insufflation adds an audited CO2 load without changing metabolism`,
+          gas.absorbed > 0 &&
+            gas.inspired === 0 &&
+            near(gas.produced, bronch.co2Balance.produced) &&
+            late.EtCO2 > before.EtCO2,
+        );
+        check(
+          `${mode}: insufflation changes compliance and has a continuous absorption tail`,
+          (mode === 'vcv' ? late.Peak > before.Peak + 3 : late.VT < before.VT * 0.8) &&
+            Ventilation.sample(run, 90).absorbedCO2 > 0 &&
+            Ventilation.sample(run, 110).absorbedCO2 < Ventilation.sample(run, 90).absorbedCO2,
+        );
+        const left = Ventilation.sample(run, 31, 'left');
+        check(
+          `${mode}: elastic regional pressure uses event compliance`,
+          left.regionVolumes.every((v, i) =>
+            near(
+              left.regionPressures[i] - base.PEEP,
+              v / 1000 / VentilationScenarios.effect(run.settings, 31).Ci[i],
+            ),
+          ),
+        );
+      } else if (type === 'mainstem') {
+        const b = run.breaths[17];
+        check(
+          `${mode}: mainstem isolates one region without forcing an absent capnogram`,
+          near(b.regionV0[1], b.regionVe[1]) &&
+            near(b.regionVe[1], b.regionVend[1]) &&
+            late.EtCO2 > 10 &&
+            (mode === 'vcv' ? late.Peak > before.Peak + 10 : late.VT < before.VT * 0.6),
+        );
+      } else if (type === 'rebreathing') {
+        check(
+          `${mode}: rebreathing raises the inspired baseline using an audited inlet gas`,
+          gas.inspired > 0 &&
+            gas.absorbed === 0 &&
+            near(gas.produced, bronch.co2Balance.produced) &&
+            Ventilation.sample(run, 85 + run.timing.Ti * 0.8).co2 > 6 &&
+            late.EtCO2 > before.EtCO2 &&
+            Ventilation.sample(run, 115 + run.timing.Ti * 0.8).co2 < 2,
+        );
+      } else if (type === 'compliance-loss') {
+        check(
+          `${mode}: isolated stiffness changes pressure or volume without adding a CO2 source`,
+          (mode === 'vcv' ? late.Peak > before.Peak + 8 : late.VT < before.VT * 0.6) &&
+            gas.absorbed === 0 &&
+            gas.inspired === 0 &&
+            near(gas.produced, bronch.co2Balance.produced),
+        );
+        const b = run.breaths[17],
+          point = Ventilation.sample(run, b.start + run.timing.Ti, 'left');
+        check(
+          `${mode}: end-inspiratory measurements use changed compliance`,
+          near(point.palv, b.metrics.EndInspiratory) &&
+            near(
+              point.palv - base.PEEP,
+              point.regionVolumes.reduce((s, v) => s + v, 0) /
+                1000 /
+                VentilationScenarios.effect(run.settings, point.t, 'left').Ci.reduce(
+                  (s, c) => s + c,
+                  0,
+                ),
+            ),
+        );
+      }
+    }
   }
+  check(
+    'all new events are mechanically and chemically neutral at zero severity',
+    Object.keys(VentilationScenarios.catalog).every((type) =>
+      [10, 45, 105].every((t) => {
+        const e = VentilationScenarios.effect({ ...base, eventType: type, eventSeverity: 0 }, t),
+          r = VentilationRegions.configure(base);
+        return (
+          e.R.every((x, i) => near(x, r.R[i])) &&
+          e.Re.every((x, i) => near(x, r.Re[i])) &&
+          e.Ci.every((x) => near(x, r.Ci)) &&
+          e.perfusion.every((x) => near(x, 1)) &&
+          near(e.production, 1) &&
+          e.absorbed === 0 &&
+          e.inspired === 0 &&
+          !e.commonClosed &&
+          !e.closed.some(Boolean)
+        );
+      }),
+    ),
+  );
   const abrupt = Ventilation.simulate({
     ...base,
     eventType: 'tube-kink',
@@ -161,6 +309,39 @@ try {
     'mechanical and CO2 results converge when scenario sampling is refined',
     near(refined.breaths[8].metrics.VT, abrupt.breaths[8].metrics.VT, 0.02) &&
       near(refined.breaths[8].metrics.EtCO2, abrupt.breaths[8].metrics.EtCO2, 0.2),
+  );
+  const insufflationSettings = {
+      ...base,
+      eventType: 'insufflation',
+      pressureLimit: 20,
+      eventOnset: 31.13,
+      eventRecovery: 73.21,
+    },
+    insufflation = Ventilation.simulate(insufflationSettings),
+    fineInsufflation = VentilationScenarios.simulate(insufflationSettings, { step: 0.005 });
+  check(
+    'mid-breath compliance changes preserve each region and sensor state',
+    [31.13, 73.21].every((t) => {
+      const a = Ventilation.sample(insufflation, t, 'left'),
+        b = Ventilation.sample(insufflation, t, 'right');
+      return a.regionVolumes.every((v, i) => near(v, b.regionVolumes[i])) && near(a.co2, b.co2);
+    }),
+  );
+  check(
+    'stiffening switches VC to pressure-limited delivery without exceeding its inspiratory ceiling',
+    insufflation.breaths[8].metrics.VT < base.VT &&
+      insufflation.breaths[8].metrics.PressureLimited &&
+      insufflation.p.every((p, i) => insufflation.phase[i] !== 'inspiration' || p <= 20 + 1e-7),
+  );
+  check(
+    'coupled compliance and absorbed-CO2 results converge on a finer grid',
+    near(insufflation.breaths[8].metrics.VT, fineInsufflation.breaths[8].metrics.VT, 0.02) &&
+      near(
+        insufflation.breaths[17].metrics.EtCO2,
+        fineInsufflation.breaths[17].metrics.EtCO2,
+        0.2,
+      ) &&
+      near(insufflation.co2Balance.absorbed, fineInsufflation.co2Balance.absorbed, 1e-5),
   );
   const invalid = [
     { eventOnset: 120 },

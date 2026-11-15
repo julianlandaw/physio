@@ -1136,7 +1136,7 @@ function uuidLike() {
     return crypto && crypto.randomUUID
       ? crypto.randomUUID()
       : 'id-' + Math.random().toString(16).slice(2) + Date.now().toString(16);
-  } catch (e) {
+  } catch {
     return 'id-' + Math.random().toString(16).slice(2) + Date.now().toString(16);
   }
 }
@@ -1609,110 +1609,6 @@ function applyRegistryPreset(id) {
   dfsolve();
 }
 
-function propofol() {
-  applyRegistryPreset('propofol');
-}
-
-function etomidate() {
-  applyRegistryPreset('etomidate');
-}
-
-function ketamine() {
-  applyRegistryPreset('ketamine');
-}
-
-function dexmedetomidine() {
-  applyRegistryPreset('dexmedetomidine');
-}
-
-function midazolam() {
-  applyRegistryPreset('midazolam');
-}
-
-function diazepam() {
-  applyRegistryPreset('diazepam');
-}
-
-function fentanyl() {
-  applyRegistryPreset('fentanyl');
-}
-
-function hydromorphone() {
-  applyRegistryPreset('hydromorphone');
-}
-
-function remifentanil() {
-  applyRegistryPreset('remifentanil');
-}
-
-function sufentanil() {
-  applyRegistryPreset('sufentanil');
-}
-
-function alfentanil() {
-  applyRegistryPreset('alfentanil');
-}
-
-function methadone() {
-  applyRegistryPreset('methadone');
-}
-
-function rocuronium() {
-  applyRegistryPreset('rocuronium');
-}
-
-function vecuronium() {
-  applyRegistryPreset('vecuronium');
-}
-
-function cisatracurium() {
-  applyRegistryPreset('cisatracurium');
-}
-
-function pancuronium() {
-  applyRegistryPreset('pancuronium');
-}
-
-function succinylcholine() {
-  applyRegistryPreset('succinylcholine');
-}
-
-function lidocaine() {
-  applyRegistryPreset('lidocaine');
-}
-
-function bupivacaine() {
-  applyRegistryPreset('bupivacaine');
-}
-
-function phenylephrine() {
-  applyRegistryPreset('phenylephrine');
-}
-
-function ephedrine() {
-  applyRegistryPreset('ephedrine');
-}
-
-function epinephrine() {
-  applyRegistryPreset('epinephrine');
-}
-
-function dobutamine() {
-  applyRegistryPreset('dobutamine');
-}
-
-function dopamine() {
-  applyRegistryPreset('dopamine');
-}
-
-function milrinone() {
-  applyRegistryPreset('milrinone');
-}
-
-function vasopressin() {
-  applyRegistryPreset('vasopressin');
-}
-
 // ============================
 // Drug preset library
 // ============================
@@ -1840,7 +1736,7 @@ function reset() {
   if (pkInputModeSelect) pkInputModeSelect.value = 'clearance';
   updatePkInputVisibility();
   presetIsModified = false;
-  withoutIntermediateSolve(propofol);
+  withoutIntermediateSolve(() => applyRegistryPreset('propofol'));
   applyDrugDoseExample('propofol');
   applyTciPreset('propofol');
   const testTarget = document.getElementById('testRegimenTarget');
@@ -1866,7 +1762,7 @@ function reset() {
         },
       ],
     });
-  } catch (e) {}
+  } catch {}
 
   const useCb = document.getElementById('useSchedule');
   if (useCb) useCb.checked = false;

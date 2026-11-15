@@ -5,6 +5,7 @@ function ventEventTime() {
 function renderVentEventStatus() {
   if (!ventRun) return;
   const p = ventRun.settings,
+    item = VentilationScenarios.catalog[p.eventType],
     time = ventEventTime(),
     on = VentilationScenarios.active(p, time);
   ventElement('eventStatus').setAttribute('aria-live', ventPlayback.active ? 'off' : 'polite');
@@ -16,11 +17,11 @@ function renderVentEventStatus() {
   ventElement('eventLocation').disabled = p.eventType !== 'mucus-plug';
   ventElement('eventLocationControl').hidden = p.eventType !== 'mucus-plug';
   ventElement('eventSummary').textContent = enabled
-    ? `${VentilationScenarios.names[p.eventType]} · ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'}`
+    ? `${item.name} · ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'}`
     : '';
   ventElement('initialState').disabled = enabled;
   const at = enabled
-    ? `${VentilationScenarios.names[p.eventType]}: ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'} at ${ventFormat(time, 1)} s. `
+    ? `${item.name}: ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'} at ${ventFormat(time, 1)} s. `
     : '';
   const warm = ventRun.warmup
     ? `Baseline ${ventRun.warmup.settled ? 'settled' : 'warmed; not fully settled'} over ${ventFormat(ventRun.warmup.seconds, 0)} simulated seconds off-screen. ${ventRun.warmup.reason || ''} `
@@ -28,19 +29,24 @@ function renderVentEventStatus() {
   ventElement('eventStatus').textContent = enabled
     ? `${at}${warm}Onset ${ventFormat(p.eventOnset, 2)} s${p.eventRecovery ? `; recovery ${ventFormat(p.eventRecovery, 2)} s` : ''}. Lung volumes and gas stores persist through both changes.`
     : 'Standard simulator. Select an event, or load the settled reference scenario.';
-  const descriptions = {
-    bronchospasm:
-      'Diffuse, unequal inspiratory/expiratory narrowing. Severe attacks may yield a low or absent expired CO₂ signal while stores rise; mild cases need not lower EtCO₂.',
-    'tube-kink':
-      'Resistance in the common endotracheal airway. At severity 1 the airway is completely blocked; proximal sampling gas is washed by fresh circuit gas.',
-    'mucus-plug':
-      'Choose one region or the common airway. At severity 1 that path is closed. A regional plug can preserve VC volume at the cost of higher pressure, so EtCO₂ need not fall.',
-    'air-embolism':
-      'Reduced pulmonary CO₂ delivery is represented by reduced lung/tissue exchange conductance. Metabolic production continues. Airway mechanics initially stay the same. This is a perfusion surrogate, not a bubble/circulation model.',
-    none: '',
-  };
-  ventElement('eventDescription').textContent = descriptions[p.eventType];
   ventElement('continueCO2').disabled = enabled || !ventBaseline || !ventValid;
+}
+function renderVentEventDescription() {
+  const p = ventRun.settings,
+    item = VentilationScenarios.catalog[p.eventType];
+  ventElement('eventPattern').textContent = item.pattern || '';
+  ventElement('eventPattern').hidden = p.eventType === 'none';
+  ventElement('eventDescription').textContent = item.description || '';
+  const sources = ventElement('eventSources');
+  sources.replaceChildren();
+  for (const [label, url] of item.sources || []) {
+    if (sources.childNodes.length) sources.append(' · ');
+    const link = document.createElement('a');
+    link.href = url;
+    link.textContent = label;
+    sources.append(link);
+  }
+  sources.hidden = !sources.childNodes.length;
 }
 function applyVentEventAction(onset) {
   if (!ventValid || ventSettings.eventType === 'none') return;
@@ -65,11 +71,22 @@ function applyVentEventAction(onset) {
   if (playing) ventElement('playVent').click();
 }
 function initVentEventUI() {
-  for (const [value, label] of Object.entries(VentilationScenarios.names)) {
+  const groups = new Map();
+  for (const [value, item] of Object.entries(VentilationScenarios.catalog)) {
     const option = document.createElement('option');
     option.value = value;
-    option.textContent = label;
-    ventElement('eventType').append(option);
+    option.textContent = item.name;
+    if (!item.group) {
+      ventElement('eventType').append(option);
+      continue;
+    }
+    if (!groups.has(item.group)) {
+      const group = document.createElement('optgroup');
+      group.label = item.group;
+      groups.set(item.group, group);
+      ventElement('eventType').append(group);
+    }
+    groups.get(item.group).append(option);
   }
   ventElement('eventType').addEventListener('change', () => {
     if (ventElement('eventType').value !== 'none') {
@@ -99,6 +116,8 @@ function initVentEventUI() {
         initial: 'steady',
         pressureLimit: 40,
         eventType: type,
+        eventSeverity:
+          VentilationScenarios.catalog[type].severity ?? Ventilation.defaults.eventSeverity,
         eventOnset: 30,
         eventRecovery: 90,
       },
