@@ -294,11 +294,15 @@ function initVentExtras() {
           nearest = p;
         }
       }
-      if (nearest) updateVentCursor(nearest.t);
+      if (nearest) {
+        updateVentCursor(nearest.t);
+        ventElement('inspectionPanel').open = true;
+      }
     });
     ventElement(id).addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
+      ventElement('inspectionPanel').open = true;
       const q = ventLoopCoordinates.get(id);
       if (!q) return;
       stopVentPlayback();

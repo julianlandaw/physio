@@ -29,8 +29,8 @@
       (async () => {
         try {
           for (const [mode, page] of [
-            ['vcv', 'volume_control_simulator.html'],
-            ['pcv', 'pressure_control_simulator.html'],
+            ['vcv', 'ventilator_simulator.html?mode=vcv'],
+            ['pcv', 'ventilator_simulator.html?mode=pcv'],
           ]) {
             const app = await load(page),
               d = app.document,
@@ -54,14 +54,14 @@
                 el('capnogramNote').textContent.includes('30 mL'),
             );
             const originalCO2 = el('plot').querySelector('[data-signal="co2"]').getAttribute('d');
-            change(`${mode}airwayMix`, '0.5');
+            change(`ventairwayMix`, '0.5');
             check(
               `${mode}: airway mixing updates the tracing while preserving total VD`,
               el('plot').querySelector('[data-signal="co2"]').getAttribute('d') !== originalCO2 &&
                 near(run().co2Balance.state.mixingVolume, 0.075) &&
                 run().settings.VD === 150,
             );
-            change(`${mode}regionRatio`, '6');
+            change(`ventregionRatio`, '6');
             check(
               `${mode}: unequal regions expose separate CO2 and time constants`,
               run().co2Balance.alveolarRegions[1] > run().co2Balance.alveolarRegions[0] &&
@@ -74,14 +74,14 @@
                 (mode === 'pcv' || el('additionalMetrics').textContent.includes('End-hold')),
             );
             const validRegions = run();
-            change(`${mode}regionRatio`, '0');
+            change(`ventregionRatio`, '0');
             check(
               `${mode}: invalid regional ratios preserve the last valid run`,
               run() === validRegions &&
-                el(`${mode}regionRatio`).getAttribute('aria-invalid') === 'true',
+                el(`ventregionRatio`).getAttribute('aria-invalid') === 'true',
             );
-            change(`${mode}regionRatio`, '1');
-            change(`${mode}VD`, '0');
+            change(`ventregionRatio`, '1');
+            change(`ventVD`, '0');
             check(
               `${mode}: zero dead space safely bypasses mixing and transit`,
               run().co2Balance.valid &&
@@ -92,7 +92,7 @@
             change('timingMode', 'ti');
             change('timingValue', '1');
             check(`${mode}: direct Ti sets the solved timing`, near(run().timing.Ti, 1));
-            change(`${mode}RR`, '20');
+            change(`ventRR`, '20');
             check(
               `${mode}: direct Ti remains fixed across rate changes`,
               near(run().timing.Ti, 1) && near(run().settings.IF, 1 / 3),
@@ -105,7 +105,7 @@
             );
             el('keepTi').click();
             const fixedTi = run().timing.Ti;
-            change(`${mode}RR`, '24');
+            change(`ventRR`, '24');
             check(`${mode}: keep-Ti works in I:E entry mode`, near(run().timing.Ti, fixedTi));
             const valid = run();
             change('timingValue', '0.01');
@@ -188,7 +188,7 @@
             change('breathSelect', String(run().completeBreaths.length - 1));
             el('freezeBaseline').click();
             const baseline = app.eval('ventBaseline');
-            change(`${mode}RR`, '18');
+            change(`ventRR`, '18');
             change('comparisonMode', 'aligned');
             check(
               `${mode}: alignment shares inspiration start without stretching time`,
@@ -219,12 +219,12 @@
               Math.abs(run().co2Balance.residual) < 1e-9,
             );
             const continuedRun = run();
-            change(`${mode}CO2Initial`, '');
+            change(`ventCO2Initial`, '');
             check(
               `${mode}: invalid initial CO2 edits preserve the continued run`,
               run() === continuedRun && !el('ventilationErrors').hidden,
             );
-            change(`${mode}CO2Initial`, '40');
+            change(`ventCO2Initial`, '40');
             check(
               `${mode}: an explicit initial pressure replaces the baseline CO2 start`,
               run().co2[0] === 0 && !app.eval('ventCO2Seed'),
@@ -254,7 +254,7 @@
               run().co2[0] === 0,
             );
             el('playVent').click();
-            change(`${mode}RR`, '18');
+            change(`ventRR`, '18');
             check(
               `${mode}: editing settings pauses and restarts the run consistently`,
               !app.eval('ventPlayback.active') && el('viewWindow').value === 'three',

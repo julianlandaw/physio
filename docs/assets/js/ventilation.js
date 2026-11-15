@@ -1,6 +1,7 @@
 /* Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT */
-const ventMode = document.body.dataset.ventilationMode;
-const ventPrefix = ventMode === 'vcv' ? 'vcv' : 'pcv';
+const ventQuery = new URLSearchParams(location.search);
+let ventMode = ventQuery.get('mode') === 'pcv' ? 'pcv' : 'vcv';
+const ventPrefix = 'vent';
 const ventFields = {
   VT: ['Tidal volume', 'mL', 1],
   PC: ['Pressure above PEEP', 'cm H₂O', 0.1],
@@ -43,17 +44,21 @@ function buildVentilator() {
       <details class="card settings" id="settingsPanel" open aria-labelledby="settingsHeading">
         <summary class="settings-toggle">Adjust settings <span id="settingsSummary"></span></summary>
         <div class="card-heading"><h2 id="settingsHeading">Settings</h2><button id="resetBtn" type="button">Reset</button></div>
-        <label class="scenario-label" for="lungCase">Lung-mechanics example</label><select id="lungCase"></select><p class="scenario-note" id="scenarioNote"></p>
         <p class="control-group-label">Ventilator</p><div class="controls" id="ventilatorControls"></div>
-        <div class="timing-controls"><label for="timingMode">Enter timing as</label><select id="timingMode"><option value="fraction">Inspiratory fraction</option><option value="ti">Inspiratory time (Ti)</option><option value="ie">I:E ratio (1:E)</option></select>
-        <label for="timingValue" id="timingValueLabel" hidden>Inspiratory time (s)</label><input id="timingValue" type="number" step="any" hidden><p id="timingError" class="field-error"></p>
-        <label class="check"><input id="keepTi" type="checkbox"> Keep Ti fixed when changing rate</label></div>
-        <p class="control-group-label">Lung mechanics</p><div class="controls" id="lungControls"></div>
-        <p class="small" id="regionMechanicsNote"></p>
-        <details class="advanced"><summary>Hold, expiration &amp; run options</summary>
+        <p class="control-group-label">Lung</p>
+        <label class="sr-only" for="lungCase">Lung-mechanics example</label><select id="lungCase"></select>
+        <div class="controls lung-controls" id="lungControls"></div>
+        <details class="advanced" id="timingPanel"><summary>Breath timing</summary>
+          <div class="controls" id="timingControls"></div>
+          <div class="timing-controls"><label for="timingMode">Enter timing as</label><select id="timingMode"><option value="fraction">Inspiratory fraction</option><option value="ti">Inspiratory time (Ti)</option><option value="ie">I:E ratio (1:E)</option></select>
+          <label for="timingValue" id="timingValueLabel" hidden>Inspiratory time (s)</label><input id="timingValue" type="number" step="any" hidden><p id="timingError" class="field-error"></p>
+          <label class="check"><input id="keepTi" type="checkbox"> Keep Ti fixed when changing rate</label></div>
+        </details>
+        <details class="advanced" id="mechanicsPanel"><summary>Advanced mechanics &amp; run</summary>
           <div class="controls" id="advancedControls"></div>
-          <label class="check"><input id="linkResistance" type="checkbox" checked> Use the same resistance for inspiration and expiration</label>
+          <label class="check"><input id="linkResistance" type="checkbox" checked> Link inspiratory / expiratory resistance</label>
           <label class="scenario-label" for="initialState">Initial lung state</label><select id="initialState"><option value="startup">Start from rest at set PEEP</option><option value="steady">Periodic steady state</option></select>
+          <p class="small" id="regionMechanicsNote"></p>
         </details>
         <details class="advanced"><summary>CO₂ &amp; capnogram options</summary>
           <div class="controls" id="co2Controls"></div>
@@ -61,46 +66,49 @@ function buildVentilator() {
           <select id="capnogramShape"><option value="transport">Dynamic airway transport</option><option value="auto">Illustrative shape: follows resistance</option><option value="reference">Illustrative reference shape</option><option value="obstructive">Illustrative obstructive shape</option></select>
           <button type="button" id="continueCO2" disabled>Start CO₂ from baseline end</button><p class="small" id="co2StartNote">CO₂ starts from the initial pressure above. Mechanics start from the selected lung state.</p>
         </details>
-        <div class="timing" id="timingReadout" aria-label="Calculated breath timing"></div>
       </details>
       <section class="results-column" aria-label="Predicted ventilation">
         <div id="ventilationErrors" class="validation" role="alert" hidden></div>
-        <details class="card event-panel" id="eventPanel"><summary>Acute event scenarios</summary>
-          <label class="scenario-label" for="eventType">Event</label><select id="eventType"></select>
-          <div class="controls event-controls" id="eventControls"></div>
-          <label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select>
-          <div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><button type="button" id="triggerEvent">Trigger now</button><button type="button" id="resolveEvent">Resolve event</button></div>
-          <p class="small" id="eventStatus" role="status"></p><p class="small" id="eventDescription"></p>
-          <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
-        </details>
         <p id="breathCaption" class="breath-caption"></p><section class="metrics" id="metrics" aria-label="Selected breath measurements"></section>
-        <details class="additional"><summary>Plateau, mean pressure &amp; additional measurements</summary><div id="additionalMetrics" class="metrics"></div></details>
-        <p id="emptyingNote" class="emptying-note"></p>
         <section class="card plot-card" aria-label="Ventilator waveforms">
           <div class="chart-toolbar">
-            <button id="playVent" type="button">Play</button><button id="rewindVent" type="button">Rewind</button><label for="playbackSpeed">Speed<select id="playbackSpeed"><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label><span id="playbackStatus" class="small" role="status">Paused</span>
+            <button id="playVent" class="primary-button" type="button">Play</button><button id="rewindVent" type="button">Rewind</button><span id="playbackStatus" class="small" role="status">Paused</span>
             <label for="viewWindow">View<select id="viewWindow"><option value="three">Three breaths</option><option value="breath">Selected breath</option><option value="full">Full run</option><option value="monitor">Monitor window</option></select></label>
+          </div>
+          <details class="chart-options" id="chartOptions"><summary>Display options</summary><div class="chart-toolbar">
+            <label for="playbackSpeed">Speed<select id="playbackSpeed"><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
             <label for="breathSelect">Breath<select id="breathSelect"></select></label>
             <label for="flowUnit">Flow<select id="flowUnit"><option value="L/min">L/min</option><option value="L/s">L/s</option></select></label>
             <label class="check"><input id="showAlveolar" type="checkbox"> Alveolar pressure</label>
             <label class="check"><input id="lockAxes" type="checkbox"> Lock scales</label>
             <label class="check"><input id="showTeaching" type="checkbox"> Teaching annotations</label>
-          </div>
+          </div></details>
           <svg class="plot" id="plot" role="img" aria-label="Pressure, volume, flow, and CO₂ capnogram waveforms"></svg>
           <div class="legend"><span style="--line:#2563eb">Airway pressure</span><span style="--line:#0f766e">Volume</span><span style="--line:#9a5105">Flow</span><span style="--line:#7c3aed">CO₂ capnogram</span><span id="alveolarLegend" style="--line:#b42355" hidden>Alveolar pressure</span><span class="dash" id="baselineLegend" hidden>Frozen baseline</span></div>
-          <p class="phase-key">Blue shading: inspiration · amber shading: hold · unshaded: expiration. Dashed pressure reference: set PEEP.</p>
-          <p class="phase-key" id="capnogramNote"></p>
+          <details class="chart-help"><summary>Reading the waveforms</summary><p class="phase-key">Blue shading: inspiration · amber shading: hold · unshaded: expiration. Dashed pressure reference: set PEEP.</p>
+          <p class="phase-key" id="capnogramNote"></p></details>
           <p class="axis-note" id="axisNote" hidden>Some values exceed the locked scales. Unlock scales to see their full range.</p>
-          <div class="inspection"><div class="inspection-controls"><label for="ventCursor">Inspect time (s)<input id="ventCursor" type="number" min="0" step="any" value="0"></label><label for="ventCursorSlider" class="sr-only">Inspection time in seconds</label><input id="ventCursorSlider" type="range" min="0" step="any" value="0"></div><div class="inspection-values" id="ventCursorValues" role="status"></div></div>
+          <details class="inspection" id="inspectionPanel"><summary>Inspect a time point</summary><div class="inspection-controls"><label for="ventCursor">Inspect time (s)<input id="ventCursor" type="number" min="0" step="any" value="0"></label><label for="ventCursorSlider" class="sr-only">Inspection time in seconds</label><input id="ventCursorSlider" type="range" min="0" step="any" value="0"></div><div class="inspection-values" id="ventCursorValues" role="status"></div></details>
         </section>
+        <details class="card event-panel" id="eventPanel"><summary>Practice an acute event <span id="eventSummary" class="summary-value"></span></summary>
+          <label class="scenario-label" for="eventType">Event</label><select id="eventType"></select>
+          <div class="controls event-controls" id="eventControls"></div>
+          <div id="eventLocationControl" hidden><label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select></div>
+          <div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><button type="button" id="triggerEvent">Trigger now</button><button type="button" id="resolveEvent">Resolve event</button></div>
+          <p class="small" id="eventStatus" role="status"></p><details class="event-help"><summary>How this event works</summary><p class="small" id="eventDescription"></p>
+          <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
+          </details>
+        </details>
+        <details class="card" id="measurementsPanel"><summary>Detailed measurements</summary>
+          <div id="additionalMetrics" class="metrics"></div><p id="emptyingNote" class="emptying-note"></p>
+          <div class="timing" id="timingReadout" aria-label="Calculated breath timing"></div>
+          <p class="scenario-note" id="scenarioNote"></p>
+        <section class="co2-card" aria-labelledby="co2Heading">
+          <h2 id="co2Heading">Selected-breath CO₂</h2><div class="co2-readings" id="co2Readings"></div>
+          <p class="small" id="regionReadout"></p><p class="small" id="co2Note"></p>
+        </section></details>
         <details class="card loops-card" id="loopsPanel"><summary>Pressure–volume &amp; flow–volume loops</summary><p id="loopCaption" class="small"></p><div class="loop-grid"><svg id="pvLoop" class="loop-plot" role="img" tabindex="0" aria-label="Pressure-volume loop; click to inspect time"></svg><svg id="fvLoop" class="loop-plot" role="img" tabindex="0" aria-label="Flow-volume loop; click to inspect time"></svg></div><p class="small">Blue: inspiration/hold · amber: expiration · dashed: frozen baseline. Click a loop to inspect the corresponding time. Volume is above set-PEEP equilibrium; transient breaths may form open loops.</p></details>
-        <section class="card co2-card" aria-labelledby="co2Heading">
-          <h2 id="co2Heading">Selected-breath CO₂</h2>
-          <div class="co2-readings" id="co2Readings"></div>
-          <p class="small" id="regionReadout"></p>
-          <p class="small" id="co2Note"></p>
-        </section>
-        <div class="button-row" style="margin-top:10px"><div><button type="button" id="freezeBaseline">Freeze baseline</button> <button type="button" id="clearBaseline" disabled>Clear baseline</button></div><label for="comparisonMode">Compare by <select id="comparisonMode"><option value="absolute">Absolute time</option><option value="aligned">Start of inspiration</option></select></label></div><p id="baselineNote" class="baseline-note"></p><p id="settingsChanges" class="small"></p>
+        <details class="card comparison-panel" id="comparisonPanel"><summary>Compare with a baseline</summary><div class="button-row"><div><button type="button" id="freezeBaseline">Freeze baseline</button> <button type="button" id="clearBaseline" disabled>Clear baseline</button></div><label for="comparisonMode">Compare by <select id="comparisonMode"><option value="absolute">Absolute time</option><option value="aligned">Start of inspiration</option></select></label></div><p id="baselineNote" class="baseline-note"></p><p id="settingsChanges" class="small"></p></details>
       </section>
     </div>
     <details class="card model"><summary>Model assumptions, scenario values &amp; sources</summary>
@@ -110,16 +118,16 @@ function buildVentilator() {
       <p>Airway dead space is split into unmixed transit volume and a well-mixed compartment near the mouth. The mixing fraction is 0.2 by default: at VD 150 mL this is 30 mL mixed and 120 mL unmixed. Total dead space stays fixed when its split changes. Gas travels in both directions, including airway CO₂ returning on inspiration. The mixed compartment's exponential dilution is solved exactly for each incoming parcel; a separate 40 ms sensor response smooths the signal without changing stored or exhaled CO₂. Setting mixing to 0 restores unmixed transport. Background: <a href="https://pubmed.ncbi.nlm.nih.gov/37030832/">mechanistic airway-mixing model</a>.</p>
       <p>Each lung region has its own CO₂ content and exchanges with shared tissue stores. Unequal ventilation can therefore create unequal CO₂ concentrations; gas contributions are combined by their flow at the common junction. Internal redistribution also transports CO₂. Both regions initially have the same CO₂, so a rising plateau develops as regional differences form rather than being imposed from the first breath. Background: <a href="https://publications.ersnet.org/content/erjor/8/1/00440-2021">sequential ventilation-inhomogeneity study</a>. These references support the concepts, not the chosen parameters or validation of this implementation.</p>
       <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. Total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
-      <p>The COPD-like and bronchospasm-like examples add illustrative 4:1 and 6:1 regional ratios to their R/C examples. These ratios and the mixing default are not fitted disease parameters; the model does not reproduce all clinical capnograms or dynamic airway collapse. Every settings edit restarts the run. “Start CO₂ from baseline end” preserves the frozen selected breath's separate regional concentrations, airway contents and sensor value while mechanics restart from their chosen initial state. This continued gas state is local to the page; mode links transfer settings, not gas history. Optional legacy shapes are schematic overlays, not the transport model. Timing may be entered as fraction, Ti or I:E, with an option to preserve Ti across rate changes.</p>
+      <p>The COPD-like and bronchospasm-like examples add illustrative 4:1 and 6:1 regional ratios to their R/C examples. These ratios and the mixing default are not fitted disease parameters; the model does not reproduce all clinical capnograms or dynamic airway collapse. Every settings edit restarts the run. “Start CO₂ from baseline end” preserves the frozen selected breath's separate regional concentrations, airway contents and sensor value while mechanics restart from their chosen initial state. This continued gas state is local to the page; shared URLs transfer settings, not gas history. Optional legacy shapes are schematic overlays, not the transport model. Timing may be entered as fraction, Ti or I:E, with an option to preserve Ti across rate changes.</p>
       <p>Acute events warm the baseline off-screen, then preserve regional volumes, gas stores and sensor state through onset and recovery. Status reports if warmup did not fully settle. A nonzero VC ceiling limits absolute airway pressure during inspiration and can reduce delivered volume; 0 retains ideal delivery. Event severity is an illustrative mechanism scale, not a measured percentage of obstruction. Bronchospasm increases unequal inspiratory/expiratory resistance; a kink or common mucus plug adds series resistance; a regional plug affects one branch. Complete common closure traps distal gas while fresh circuit gas washes the proximal sampling compartment at an assumed 0.1 L/s, with this loss included in the CO₂ audit.</p>
       <p>The venous-air-embolism scenario reduces equivalent lung/tissue exchange by (1 − severity)² without reducing metabolic production or changing airway mechanics. It represents reduced pulmonary CO₂ delivery, not bubbles or circulation. Event scenarios replace the fixed Pa–Et estimate with tissue-equivalent store pressure, which is not PaCO₂. A low expired tracing can coexist with rising stored CO₂; recovery may cause a rebound. Bronchospasm and plugging do not always lower EtCO₂, and waveform patterns overlap. Background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12340691/">bronchospasm case observations</a> and <a href="https://pubmed.ncbi.nlm.nih.gov/22383084/">venous-air-embolism observations</a>. These sources support qualitative patterns, not calibration of the event severity or timing. This simulator is educational and cannot diagnose a clinical event.</p>
       <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ fast / slow<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
       <ul><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/">2024 PCV bench study</a>: COPD bench compliance 60 with obstructive resistances including 20. This supports the COPD-like mechanics example, not all of its clinical behavior.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/">2021 respiratory-mechanics bench study</a>: obstructive R 20/C 50 and restrictive R 10/C 25 examples. Our bronchospasm-like R 30/C 50 is an illustrative extension, not a validated disease parameter set.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3376482/">Respiratory compartment model equations</a>.</li></ul>
     </details>`;
-  for (const field of [ventMode === 'vcv' ? 'VT' : 'PC', 'PEEP', 'RR', 'IF'])
-    addVentControl(field, 'ventilatorControls');
-  for (const field of ['R', 'C', 'regionRatio']) addVentControl(field, 'lungControls');
-  for (const field of [...(ventMode === 'vcv' ? ['HF', 'pressureLimit'] : []), 'Rexp', 'T'])
+  for (const field of ['VT', 'PC', 'RR', 'PEEP']) addVentControl(field, 'ventilatorControls');
+  for (const field of ['R', 'C']) addVentControl(field, 'lungControls');
+  for (const field of ['IF', 'HF']) addVentControl(field, 'timingControls');
+  for (const field of ['regionRatio', 'Rexp', 'pressureLimit', 'T'])
     addVentControl(field, 'advancedControls');
   for (const field of ['eventOnset', 'eventRecovery', 'eventSeverity'])
     addVentControl(field, 'eventControls');
@@ -251,8 +259,15 @@ function showVentErrors(errors) {
       )
         ? error.message
         : `Enter ${control.number.min}–${control.number.max} ${ventFields[error.field][1]}.`;
+      // A hidden advanced setting must remain discoverable when it is invalid.
+      let section = control.wrapper.closest('details');
+      while (section) {
+        section.open = true;
+        section = section.parentElement.closest('details');
+      }
     }
   }
+  if (errors.some((e) => e.field === 'IF')) ventElement('timingPanel').open = true;
   const summary = ventElement('ventilationErrors');
   const timingInvalid = errors.some((e) => e.field === 'IF');
   ventElement('timingError').textContent = timingInvalid
@@ -284,6 +299,7 @@ function setVentSettings(p, caseId = 'custom') {
   syncVentTiming(next.IF, next.RR);
   ventElement('lungCase').value = caseId;
   ventBreathIndex = -1;
+  syncVentMode();
   simulateAndDraw();
 }
 function simulateAndDraw() {
@@ -312,7 +328,7 @@ function simulateAndDraw() {
   ventInputs.get('IF').number.value = p.IF;
   ventElement('settingsSummary').textContent =
     `${ventMode === 'vcv' ? `${ventFormat(p.VT, 0)} mL` : `ΔP ${ventFormat(p.PC)} cm H₂O`} · ${ventFormat(p.RR)} /min · R ${ventFormat(p.R)} · C ${ventFormat(p.C, 0)}`;
-  updateModeLinks();
+  updateVentURL();
   renderBreathSelect();
   renderVentMetrics();
   renderTiming();
@@ -339,13 +355,52 @@ function updateVentCaseNote() {
     note.append(link);
   }
 }
-function updateModeLinks() {
-  document.querySelectorAll('[data-mode-link]').forEach((link) => {
-    const url = new URL(link.getAttribute('href').split('?')[0], location.href);
-    url.searchParams.set('settings', JSON.stringify(ventSettings));
-    url.searchParams.set('case', ventCaseId);
-    link.href = url.href;
-  });
+function syncVentMode() {
+  document.body.dataset.ventilationMode = ventMode;
+  for (const [field, hidden] of [
+    ['VT', ventMode !== 'vcv'],
+    ['PC', ventMode !== 'pcv'],
+    ['HF', ventMode !== 'vcv'],
+    ['pressureLimit', ventMode !== 'vcv'],
+  ])
+    ventInputs.get(field).wrapper.hidden = hidden;
+  document
+    .querySelectorAll('[data-vent-mode]')
+    .forEach((button) =>
+      button.setAttribute('aria-pressed', String(button.dataset.ventMode === ventMode)),
+    );
+  ventElement('modeHint').textContent =
+    ventMode === 'vcv'
+      ? 'Volume is set. Pressure responds to the lung.'
+      : 'Pressure is set. Delivered volume responds to the lung.';
+}
+function updateVentURL() {
+  const url = new URL(location.href);
+  url.searchParams.set('mode', ventMode);
+  url.searchParams.set('settings', JSON.stringify(ventSettings));
+  url.searchParams.set('case', ventCaseId);
+  // Some file viewers restrict history; the simulator still works without it.
+  try {
+    history.replaceState(null, '', url.href);
+  } catch {}
+}
+function switchVentMode(mode) {
+  if (!['vcv', 'pcv'].includes(mode) || mode === ventMode) return;
+  const p = readVentSettings();
+  let errors = Ventilation.validate(p);
+  if (!errors.length) {
+    p.mode = mode;
+    if (mode === 'vcv' && p.eventType !== 'none' && p.pressureLimit === 0) p.pressureLimit = 40;
+    errors = Ventilation.validate(p);
+  }
+  if (errors.length) {
+    showVentErrors(errors);
+    for (const error of errors)
+      if (ventInputs.has(error.field)) ventInputs.get(error.field).wrapper.hidden = false;
+    return;
+  }
+  ventMode = mode;
+  setVentSettings(p, ventCaseId);
 }
 function renderBreathSelect() {
   const select = ventElement('breathSelect');
@@ -402,8 +457,8 @@ function renderVentMetrics() {
   extra.replaceChildren();
   for (const [key, label, digits] of [
     ['VT', 'Delivered VT (mL)', 0],
-    ['Expired', 'Expired VT (mL)', 0],
-    ['Peak', 'Peak airway pressure (cm H₂O)', 1],
+    ['EtCO2', 'EtCO₂ (mmHg)', 1],
+    ['Peak', 'Peak pressure (cm H₂O)', 1],
     [
       'Intrinsic',
       ventSettings.regionRatio > 1 || ventRun.scenario
@@ -414,6 +469,7 @@ function renderVentMetrics() {
   ])
     ventMetric(primary, m?.[key], label, old?.[key], digits);
   for (const [key, label, digits] of [
+    ['Expired', 'Expired VT (mL)', 0],
     [
       'Plateau',
       ventSettings.regionRatio > 1 || ventRun.scenario
@@ -624,14 +680,11 @@ function refreshVentView() {
   ventElement('ventCursorSlider').addEventListener('input', (event) =>
     updateVentCursor(event.target.value),
   );
-  document.querySelectorAll('[data-mode-link]').forEach((link) =>
-    link.addEventListener('click', (event) => {
-      if (!ventValid) {
-        event.preventDefault();
-        showVentErrors(Ventilation.validate(readVentSettings()));
-      }
-    }),
-  );
+  document
+    .querySelectorAll('[data-vent-mode]')
+    .forEach((button) =>
+      button.addEventListener('click', () => switchVentMode(button.dataset.ventMode)),
+    );
   let resizeFrame;
   window.addEventListener('resize', () => {
     cancelAnimationFrame(resizeFrame);
@@ -642,7 +695,7 @@ function refreshVentView() {
       }
     });
   });
-  const query = new URLSearchParams(location.search);
+  const query = ventQuery;
   let initial = { ...Ventilation.defaults, mode: ventMode },
     caseId = 'reference';
   try {
@@ -650,6 +703,8 @@ function refreshVentView() {
     if (text) {
       if (text.length > 4096) throw Error('Settings too large');
       const parsed = JSON.parse(text);
+      if (!query.has('mode') && ['vcv', 'pcv'].includes(parsed.mode))
+        ventMode = initial.mode = parsed.mode;
       for (const field of Object.keys(Ventilation.defaults))
         if (field !== 'mode' && Object.hasOwn(parsed, field)) initial[field] = parsed[field];
       // PC has no ceiling control. Give an incoming event the same finite VC

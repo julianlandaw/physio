@@ -37,13 +37,13 @@
           checks.push(...data.checks);
           check('analytical ventilation tests complete', data.passed);
           for (const [mode, page] of [
-            ['vcv', 'volume_control_simulator.html'],
-            ['pcv', 'pressure_control_simulator.html'],
+            ['vcv', 'ventilator_simulator.html?mode=vcv'],
+            ['pcv', 'ventilator_simulator.html?mode=pcv'],
           ]) {
             const app = await load(page),
               d = app.document,
               el = (id) => d.getElementById(id),
-              prefix = mode;
+              prefix = 'vent';
             const change = (id, value) => {
               el(id).value = value;
               el(id).dispatchEvent(
@@ -119,6 +119,11 @@
               el(`${prefix}C`).value === '200' &&
                 !el('ventilationErrors').hidden &&
                 run() === before,
+            );
+            d.querySelector(`[data-vent-mode="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`).click();
+            check(
+              `${mode}: invalid edits block mode switching without losing the edit`,
+              run() === before && app.eval('ventMode') === mode && el('ventC').value === '200',
             );
             change(`${prefix}C`, '50');
             check(
@@ -286,9 +291,21 @@
             change(`${prefix}airwayMix`, '0.4');
             change(`${prefix}regionRatio`, '5');
             change('capnogramShape', 'obstructive');
-            const link = d.querySelector(`[data-mode-link="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`);
-            const shared = new URL(link.href);
-            const other = await load(shared.pathname.split('/').at(-1) + shared.search);
+            el('freezeBaseline').click();
+            const modeBaseline = app.eval('ventBaseline');
+            const otherMode = mode === 'vcv' ? 'pcv' : 'vcv';
+            d.querySelector(`[data-vent-mode="${otherMode}"]`).click();
+            const other = app;
+            check(
+              `${mode}: switching mode keeps the same document and updates active controls`,
+              other.document === d &&
+                app.eval('ventBaseline') === modeBaseline &&
+                run().settings.mode === otherMode &&
+                d.querySelector(`[data-vent-mode="${otherMode}"]`).getAttribute('aria-pressed') ===
+                  'true' &&
+                el('ventVT').closest('.control').hidden === (otherMode !== 'vcv') &&
+                el('ventPC').closest('.control').hidden === (otherMode !== 'pcv'),
+            );
             check(
               `${mode}: mode navigation preserves shared lung and timing settings`,
               other.eval('ventRun.settings.R') === 20 &&
@@ -304,9 +321,43 @@
                 other.eval('ventRun.settings.airwayMix') === 0.4 &&
                 other.eval('ventRun.settings.regionRatio') === 5,
             );
+            const originalTarget = run().settings[mode === 'vcv' ? 'VT' : 'PC'];
+            change(`vent${otherMode === 'vcv' ? 'VT' : 'PC'}`, otherMode === 'vcv' ? '550' : '17');
+            d.querySelector(`[data-vent-mode="${mode}"]`).click();
+            check(
+              `${mode}: switching back remembers each mode's own target`,
+              run().settings[mode === 'vcv' ? 'VT' : 'PC'] === originalTarget &&
+                run().settings[otherMode === 'vcv' ? 'VT' : 'PC'] ===
+                  (otherMode === 'vcv' ? 550 : 17),
+            );
+            const saved = JSON.stringify(run().settings),
+              shared = new URL(app.location.href);
+            check(
+              `${mode}: the shareable URL records the active mode and settings`,
+              shared.searchParams.get('mode') === mode &&
+                shared.searchParams.get('settings') === saved,
+            );
             engine.simulate = solve;
+            const reopened = await load(shared.pathname.split('/').at(-1) + shared.search);
+            check(
+              `${mode}: reopening the unified URL restores the same predictions`,
+              JSON.stringify(reopened.eval('ventRun.settings')) === saved,
+            );
+            const legacy = await load(
+              (mode === 'vcv'
+                ? 'volume_control_simulator.html'
+                : 'pressure_control_simulator.html') +
+                shared.search +
+                '#ventilatorApp',
+            );
+            check(
+              `${mode}: old bookmarks retain settings and mode in the unified simulator`,
+              legacy.location.pathname.endsWith('/ventilator_simulator.html') &&
+                legacy.location.hash === '#ventilatorApp' &&
+                JSON.stringify(legacy.eval('ventRun.settings')) === saved,
+            );
           }
-          const mobile = frame.contentWindow,
+          const mobile = await load('ventilator_simulator.html?mode=vcv'),
             d = mobile.document;
           const settings = d.getElementById('settingsPanel');
           check(
@@ -316,7 +367,24 @@
           settings.querySelector('summary').click();
           check(
             'mobile settings can be opened for editing',
-            settings.open && d.getElementById('vcvVT').getBoundingClientRect().height > 0,
+            settings.open && d.getElementById('ventVT').getBoundingClientRect().height > 0,
+          );
+          check(
+            'the initial view exposes five essential controls and EtCO2',
+            [...settings.querySelectorAll('.control')].filter(
+              (node) => !node.hidden && node.closest('details') === settings,
+            ).length === 5 && d.getElementById('metrics').textContent.includes('EtCO₂'),
+          );
+          check(
+            'inspection, events, display options and detailed results start tucked away',
+            [
+              'inspectionPanel',
+              'eventPanel',
+              'chartOptions',
+              'measurementsPanel',
+              'comparisonPanel',
+              'loopsPanel',
+            ].every((id) => !d.getElementById(id).open),
           );
           settings.querySelector('summary').click();
           check(

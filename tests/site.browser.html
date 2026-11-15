@@ -52,15 +52,15 @@
             respiratory.document.getElementById('pressure-control') !== null,
           );
           check(
-            'respiratory overview links to both simulators',
-            respiratory.document.querySelectorAll('a[href="volume_control_simulator.html"]')
+            'respiratory overview opens both modes of the unified simulator',
+            respiratory.document.querySelectorAll('a[href="ventilator_simulator.html?mode=vcv"]')
               .length > 0 &&
-              respiratory.document.querySelectorAll('a[href="pressure_control_simulator.html"]')
+              respiratory.document.querySelectorAll('a[href="ventilator_simulator.html?mode=pcv"]')
                 .length > 0,
           );
           for (const [page, id, value] of [
-            ['pressure_control_simulator.html', 'pcvPC', '18'],
-            ['volume_control_simulator.html', 'vcvVT', '600'],
+            ['pressure_control_simulator.html', 'ventPC', '18'],
+            ['volume_control_simulator.html', 'ventVT', '600'],
           ]) {
             const app = await openPage('Respiratory/' + page),
               d = app.document,
@@ -68,7 +68,9 @@
               before = metrics.textContent;
             check(
               `${page}: renders pressure, volume, flow and CO2 waveforms`,
-              d.querySelectorAll('#plot path').length === 4,
+              d.querySelectorAll('#plot path').length === 4 &&
+                app.location.pathname.endsWith('/ventilator_simulator.html') &&
+                app.eval('ventMode') === (id === 'ventPC' ? 'pcv' : 'vcv'),
             );
             const input = d.getElementById(id);
             input.value = value;

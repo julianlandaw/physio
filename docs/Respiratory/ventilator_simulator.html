@@ -1,0 +1,47 @@
+<!-- Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ventilator Simulator</title>
+    <link rel="stylesheet" href="../assets/css/ventilation.css" />
+  </head>
+  <body>
+    <nav class="topbar" aria-label="Breadcrumb">
+      <div class="topbar-inner">
+        <a href="respiratory.html">← Respiratory physiology</a
+        ><span class="small">Interactive learning</span>
+      </div>
+    </nav>
+    <main class="app">
+      <header class="page-heading">
+        <div>
+          <h1>Ventilator simulator</h1>
+          <p id="modeHint" class="subtitle">
+            Set a volume or pressure. Explore how the lung responds.
+          </p>
+        </div>
+        <div class="mode-switch" role="group" aria-label="Ventilation mode">
+          <button type="button" data-vent-mode="vcv" aria-pressed="true">Volume control</button>
+          <button type="button" data-vent-mode="pcv" aria-pressed="false">Pressure control</button>
+        </div>
+      </header>
+      <div id="ventilatorApp"></div>
+      <noscript>Enable JavaScript to use this simulator.</noscript>
+    </main>
+    <footer>
+      Educational model. Settings and event responses are illustrative, not patient-specific
+      recommendations.
+    </footer>
+    <script src="../assets/js/ventilation_co2.js"></script>
+    <script src="../assets/js/ventilation_regions.js"></script>
+    <script src="../assets/js/ventilation_scenarios.js"></script>
+    <script src="../assets/js/ventilation_engine.js"></script>
+    <script src="../assets/js/ventilation_cases.js"></script>
+    <script src="../assets/js/ventilation_charts.js"></script>
+    <script src="../assets/js/ventilation_extras.js"></script>
+    <script src="../assets/js/ventilation_event_ui.js"></script>
+    <script src="../assets/js/ventilation.js"></script>
+  </body>
+</html>

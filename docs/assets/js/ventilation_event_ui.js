@@ -14,6 +14,10 @@ function renderVentEventStatus() {
   ventElement('resolveEvent').disabled =
     !ventValid || !enabled || !on || time <= p.eventOnset + 1e-9 || time >= p.T;
   ventElement('eventLocation').disabled = p.eventType !== 'mucus-plug';
+  ventElement('eventLocationControl').hidden = p.eventType !== 'mucus-plug';
+  ventElement('eventSummary').textContent = enabled
+    ? `${VentilationScenarios.names[p.eventType]} · ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'}`
+    : '';
   ventElement('initialState').disabled = enabled;
   const at = enabled
     ? `${VentilationScenarios.names[p.eventType]}: ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'} at ${ventFormat(time, 1)} s. `

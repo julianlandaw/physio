@@ -381,6 +381,7 @@ function drawVentilation() {
       const px = ((event.clientX - rect.left) * q.width) / rect.width;
       const fraction = Math.max(0, Math.min(1, (px - q.pad.l) / (q.width - q.pad.l - q.pad.r)));
       updateVentCursor(Number((q.start + fraction * (q.end - q.start)).toFixed(4)));
+      ventElement('inspectionPanel').open = true;
     };
     svg.addEventListener('pointerdown', inspect);
     svg.addEventListener('pointermove', (event) => {
@@ -389,6 +390,7 @@ function drawVentilation() {
     svg.addEventListener('keydown', (event) => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
+      ventElement('inspectionPanel').open = true;
       const q = ventPlotCoordinates;
       updateVentCursor(
         event.key === 'Home'

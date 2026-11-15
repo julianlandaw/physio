@@ -36,8 +36,8 @@
           checks.push(...data.checks);
           check('standalone event engine checks complete', data.passed);
           for (const [mode, page] of [
-            ['vcv', 'volume_control_simulator.html'],
-            ['pcv', 'pressure_control_simulator.html'],
+            ['vcv', 'ventilator_simulator.html?mode=vcv'],
+            ['pcv', 'ventilator_simulator.html?mode=pcv'],
           ]) {
             const app = await load(page),
               d = app.document,
@@ -137,7 +137,7 @@
               el('eventDescription').textContent.includes('Metabolic production continues'),
             );
             change('eventType', 'tube-kink');
-            change(`${mode}eventSeverity`, '1');
+            change(`venteventSeverity`, '1');
             check(
               `${mode}: complete common obstruction produces absent CO2 and negligible volume`,
               Math.abs(run().breaths[3].metrics.VT) < 1e-6 &&
@@ -152,24 +152,21 @@
                 Math.abs(run().breaths[3].metrics.VT) < 1e-6,
             );
             const valid = run();
-            change(`${mode}eventRecovery`, '5');
+            change(`venteventRecovery`, '5');
             check(
               `${mode}: invalid schedules retain predictions and disable event actions`,
               run() === valid &&
                 !el('ventilationErrors').hidden &&
-                el(`${mode}eventRecovery`).getAttribute('aria-invalid') === 'true' &&
+                el(`venteventRecovery`).getAttribute('aria-invalid') === 'true' &&
                 el('triggerEvent').disabled &&
                 el('resolveEvent').disabled,
             );
-            change(`${mode}eventRecovery`, '25.75');
-            const link = d.querySelector(`[data-mode-link="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`),
-              url = new URL(link.href);
+            change(`venteventRecovery`, '25.75');
             if (mode === 'pcv') {
-              const shared = JSON.parse(url.searchParams.get('settings'));
-              shared.pressureLimit = 0;
-              url.searchParams.set('settings', JSON.stringify(shared));
+              change('ventpressureLimit', '0');
             }
-            const other = await load(url.pathname.split('/').at(-1) + url.search);
+            d.querySelector(`[data-vent-mode="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`).click();
+            const other = app;
             check(
               `${mode}: mode links retain event type, schedule, severity and location`,
               other.eval('ventRun.settings.eventType') === 'mucus-plug' &&
