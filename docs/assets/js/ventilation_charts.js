@@ -65,6 +65,7 @@ function drawVentilation() {
     volume = 1,
     flow = 0.1,
     co2 = 40;
+  if (ventMode === 'vcv' && ventSettings.pressureLimit > 0) pressure = ventSettings.pressureLimit;
   for (const point of [...current, ...baselinePoints]) {
     pressure = Math.max(pressure, point.p, showAlveolar ? point.palv : 0);
     volume = Math.max(volume, point.v);
@@ -223,6 +224,61 @@ function drawVentilation() {
     };
     trace(baselinePoints, key, '#718096', true);
     trace(current, key, ventColors[key]);
+    for (const event of ventRun.events || []) {
+      if (event.time < start || event.time > end) continue;
+      group.append(
+        ventSvg('line', {
+          class: 'event-marker',
+          x1: x(event.time),
+          x2: x(event.time),
+          y1: top,
+          y2: top + panelHeight,
+          stroke: event.kind === 'onset' ? '#b42318' : '#15803d',
+          'stroke-dasharray': '5 3',
+          'pointer-events': 'none',
+        }),
+      );
+      if (key === 'p')
+        svg.append(
+          ventSvg(
+            'text',
+            {
+              x: Math.min(width - pad.r - 5, x(event.time) + 4),
+              y: top + panelHeight - 7,
+              'text-anchor': event.time === end ? 'end' : 'start',
+              'font-size': 10,
+              fill: event.kind === 'onset' ? '#b42318' : '#15803d',
+            },
+            event.kind === 'onset' ? event.label : 'Recovery',
+          ),
+        );
+    }
+    if (key === 'p' && ventMode === 'vcv' && ventSettings.pressureLimit > 0) {
+      group.append(
+        ventSvg('line', {
+          class: 'pressure-ceiling',
+          x1: pad.l,
+          x2: width - pad.r,
+          y1: y(ventSettings.pressureLimit),
+          y2: y(ventSettings.pressureLimit),
+          stroke: '#b42318',
+          'stroke-dasharray': '2 4',
+        }),
+      );
+      svg.append(
+        ventSvg(
+          'text',
+          {
+            x: width - pad.r - 3,
+            y: Math.max(top + 10, y(ventSettings.pressureLimit) - 4),
+            'text-anchor': 'end',
+            'font-size': 9,
+            fill: '#b42318',
+          },
+          `VC ceiling ${ventFormat(ventSettings.pressureLimit, 0)}`,
+        ),
+      );
+    }
     if (key === 'co2') {
       const et = selected?.metrics.EtCO2;
       svg.append(
@@ -371,7 +427,7 @@ function drawVentAnnotations(svg, group, key, b, x, y, top, panelHeight, width, 
     group.append(ventSvg('circle', { cx: x(t), cy: y(value), r: 3, fill: '#b42355' }));
   if (key === 'p') {
     label(
-      `Peak ${ventFormat(m.Peak)}${m.Plateau == null ? '' : ` · ${ventSettings.regionRatio > 1 ? 'end hold' : 'plateau'} ${ventFormat(m.Plateau)}`} cm H₂O`,
+      `Peak ${ventFormat(m.Peak)}${m.Plateau == null ? '' : ` · ${ventSettings.regionRatio > 1 || ventRun.scenario ? 'end hold' : 'plateau'} ${ventFormat(m.Plateau)}`} cm H₂O`,
     );
     label(
       m.Plateau == null

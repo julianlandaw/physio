@@ -20,6 +20,10 @@ const ventFields = {
   CO2Initial: ['Initial alveolar CO₂', 'mmHg', 1],
   airwayMix: ['Airway mixing fraction', 'of total airway dead space', 0.05],
   regionRatio: ['Slow / fast time-constant ratio', '1 = uniform lung', 0.1],
+  pressureLimit: ['VC pressure ceiling (0 = ideal)', 'cm H₂O absolute', 1],
+  eventOnset: ['Event onset', 's', 1],
+  eventRecovery: ['Recovery time (0 = none)', 's', 1],
+  eventSeverity: ['Event severity (teaching scale)', '0 to 1 (1 = maximal)', 0.05],
 };
 let ventSettings = { ...Ventilation.defaults, mode: ventMode },
   ventRun = null,
@@ -61,6 +65,14 @@ function buildVentilator() {
       </details>
       <section class="results-column" aria-label="Predicted ventilation">
         <div id="ventilationErrors" class="validation" role="alert" hidden></div>
+        <details class="card event-panel" id="eventPanel"><summary>Acute event scenarios</summary>
+          <label class="scenario-label" for="eventType">Event</label><select id="eventType"></select>
+          <div class="controls event-controls" id="eventControls"></div>
+          <label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select>
+          <div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><button type="button" id="triggerEvent">Trigger now</button><button type="button" id="resolveEvent">Resolve event</button></div>
+          <p class="small" id="eventStatus" role="status"></p><p class="small" id="eventDescription"></p>
+          <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
+        </details>
         <p id="breathCaption" class="breath-caption"></p><section class="metrics" id="metrics" aria-label="Selected breath measurements"></section>
         <details class="additional"><summary>Plateau, mean pressure &amp; additional measurements</summary><div id="additionalMetrics" class="metrics"></div></details>
         <p id="emptyingNote" class="emptying-note"></p>
@@ -99,14 +111,18 @@ function buildVentilator() {
       <p>Each lung region has its own CO₂ content and exchanges with shared tissue stores. Unequal ventilation can therefore create unequal CO₂ concentrations; gas contributions are combined by their flow at the common junction. Internal redistribution also transports CO₂. Both regions initially have the same CO₂, so a rising plateau develops as regional differences form rather than being imposed from the first breath. Background: <a href="https://publications.ersnet.org/content/erjor/8/1/00440-2021">sequential ventilation-inhomogeneity study</a>. These references support the concepts, not the chosen parameters or validation of this implementation.</p>
       <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. Total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
       <p>The COPD-like and bronchospasm-like examples add illustrative 4:1 and 6:1 regional ratios to their R/C examples. These ratios and the mixing default are not fitted disease parameters; the model does not reproduce all clinical capnograms or dynamic airway collapse. Every settings edit restarts the run. “Start CO₂ from baseline end” preserves the frozen selected breath's separate regional concentrations, airway contents and sensor value while mechanics restart from their chosen initial state. This continued gas state is local to the page; mode links transfer settings, not gas history. Optional legacy shapes are schematic overlays, not the transport model. Timing may be entered as fraction, Ti or I:E, with an option to preserve Ti across rate changes.</p>
+      <p>Acute events warm the baseline off-screen, then preserve regional volumes, gas stores and sensor state through onset and recovery. Status reports if warmup did not fully settle. A nonzero VC ceiling limits absolute airway pressure during inspiration and can reduce delivered volume; 0 retains ideal delivery. Event severity is an illustrative mechanism scale, not a measured percentage of obstruction. Bronchospasm increases unequal inspiratory/expiratory resistance; a kink or common mucus plug adds series resistance; a regional plug affects one branch. Complete common closure traps distal gas while fresh circuit gas washes the proximal sampling compartment at an assumed 0.1 L/s, with this loss included in the CO₂ audit.</p>
+      <p>The venous-air-embolism scenario reduces equivalent lung/tissue exchange by (1 − severity)² without reducing metabolic production or changing airway mechanics. It represents reduced pulmonary CO₂ delivery, not bubbles or circulation. Event scenarios replace the fixed Pa–Et estimate with tissue-equivalent store pressure, which is not PaCO₂. A low expired tracing can coexist with rising stored CO₂; recovery may cause a rebound. Bronchospasm and plugging do not always lower EtCO₂, and waveform patterns overlap. Background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12340691/">bronchospasm case observations</a> and <a href="https://pubmed.ncbi.nlm.nih.gov/22383084/">venous-air-embolism observations</a>. These sources support qualitative patterns, not calibration of the event severity or timing. This simulator is educational and cannot diagnose a clinical event.</p>
       <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ fast / slow<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
       <ul><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/">2024 PCV bench study</a>: COPD bench compliance 60 with obstructive resistances including 20. This supports the COPD-like mechanics example, not all of its clinical behavior.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/">2021 respiratory-mechanics bench study</a>: obstructive R 20/C 50 and restrictive R 10/C 25 examples. Our bronchospasm-like R 30/C 50 is an illustrative extension, not a validated disease parameter set.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3376482/">Respiratory compartment model equations</a>.</li></ul>
     </details>`;
   for (const field of [ventMode === 'vcv' ? 'VT' : 'PC', 'PEEP', 'RR', 'IF'])
     addVentControl(field, 'ventilatorControls');
   for (const field of ['R', 'C', 'regionRatio']) addVentControl(field, 'lungControls');
-  for (const field of [...(ventMode === 'vcv' ? ['HF'] : []), 'Rexp', 'T'])
+  for (const field of [...(ventMode === 'vcv' ? ['HF', 'pressureLimit'] : []), 'Rexp', 'T'])
     addVentControl(field, 'advancedControls');
+  for (const field of ['eventOnset', 'eventRecovery', 'eventSeverity'])
+    addVentControl(field, 'eventControls');
   for (const field of ['VCO2', 'VD', 'airwayMix', 'CO2Gradient', 'FRC', 'CO2Store', 'CO2Initial'])
     addVentControl(field, 'co2Controls');
   for (const item of VENTILATION_CASES) {
@@ -208,6 +224,8 @@ function readVentSettings() {
     mode: ventMode,
     initial: ventElement('initialState').value,
     capnogramShape: ventElement('capnogramShape').value,
+    eventType: ventElement('eventType').value,
+    eventLocation: ventElement('eventLocation').value,
   };
   for (const [field, control] of ventInputs) p[field] = readVentNumber(control.number.value);
   if (ventElement('timingMode').value === 'ti')
@@ -228,7 +246,11 @@ function showVentErrors(errors) {
     if (control) {
       control.wrapper.classList.add('invalid');
       control.number.setAttribute('aria-invalid', 'true');
-      control.error.textContent = `Enter ${control.number.min}–${control.number.max} ${ventFields[error.field][1]}.`;
+      control.error.textContent = ['eventOnset', 'eventRecovery', 'pressureLimit'].includes(
+        error.field,
+      )
+        ? error.message
+        : `Enter ${control.number.min}–${control.number.max} ${ventFields[error.field][1]}.`;
     }
   }
   const summary = ventElement('ventilationErrors');
@@ -239,7 +261,10 @@ function showVentErrors(errors) {
   ventElement('timingValue').setAttribute('aria-invalid', String(timingInvalid));
   summary.hidden = !errors.length;
   summary.textContent = errors.length
-    ? 'Results have not updated. Correct the highlighted settings; the waveforms and measurements retain the last valid run.'
+    ? `Results have not updated. Correct the highlighted settings; waveforms and measurements retain the last valid run. ${errors
+        .filter((e) => !ventInputs.has(e.field))
+        .map((e) => e.message)
+        .join(' ')}`
     : '';
   ventElement('freezeBaseline').disabled = Boolean(errors.length);
 }
@@ -254,6 +279,8 @@ function setVentSettings(p, caseId = 'custom') {
   ventInputs.get('Rexp').number.disabled = ventInputs.get('Rexp').range.disabled = linked;
   ventElement('initialState').value = next.initial;
   ventElement('capnogramShape').value = next.capnogramShape;
+  ventElement('eventType').value = next.eventType;
+  ventElement('eventLocation').value = next.eventLocation;
   syncVentTiming(next.IF, next.RR);
   ventElement('lungCase').value = caseId;
   ventBreathIndex = -1;
@@ -265,7 +292,10 @@ function simulateAndDraw() {
   updateVentCaseNote();
   showVentErrors(errors);
   ventValid = !errors.length;
-  if (!ventValid) return;
+  if (!ventValid) {
+    renderVentEventStatus();
+    return;
+  }
   if (!ventRun || ventForceRun || JSON.stringify(p) !== JSON.stringify(ventRun.settings)) {
     stopVentPlayback();
     ventPlayback.time = 0;
@@ -289,6 +319,7 @@ function simulateAndDraw() {
   drawVentilation();
   drawVentLoops();
   updateVentCursor();
+  renderVentEventStatus();
 }
 function updateVentCaseNote() {
   const item = VENTILATION_CASES.find((c) => c.id === ventCaseId);
@@ -361,7 +392,7 @@ function renderVentMetrics() {
     old = ventBaseline?.metrics;
   ventElement('freezeBaseline').disabled = !ventValid || !b;
   ventElement('breathCaption').textContent = b
-    ? `Breath ${b.index + 1} · ${ventFormat(b.start, 2)}–${ventFormat(b.end, 2)} s · ${ventSettings.initial === 'steady' ? 'periodic steady-state initial volume' : 'run started from rest'}`
+    ? `Breath ${b.index + 1} · ${ventFormat(b.start, 2)}–${ventFormat(b.end, 2)} s · ${ventRun.warmup ? 'warmed baseline → event → recovery' : ventSettings.initial === 'steady' ? 'periodic steady-state initial volume' : 'run started from rest'}${b.metrics.PressureLimited ? ' · VC pressure ceiling reached' : ''}`
     : ventElement('viewWindow').value === 'monitor'
       ? 'No complete breath yet in playback. Continue playing to see completed-breath measurements.'
       : 'No complete breath yet. Waveforms show the partial breath; increase simulation duration for breath measurements.';
@@ -375,7 +406,7 @@ function renderVentMetrics() {
     ['Peak', 'Peak airway pressure (cm H₂O)', 1],
     [
       'Intrinsic',
-      ventSettings.regionRatio > 1
+      ventSettings.regionRatio > 1 || ventRun.scenario
         ? 'Mean intrinsic PEEP (cm H₂O)'
         : 'End-expiratory intrinsic PEEP (cm H₂O)',
       2,
@@ -385,7 +416,7 @@ function renderVentMetrics() {
   for (const [key, label, digits] of [
     [
       'Plateau',
-      ventSettings.regionRatio > 1
+      ventSettings.regionRatio > 1 || ventRun.scenario
         ? 'End-hold airway pressure (cm H₂O)'
         : 'Plateau pressure (cm H₂O); requires VCV hold',
       1,
@@ -393,7 +424,7 @@ function renderVentMetrics() {
     ['Mean', 'Mean airway pressure (cm H₂O)', 1],
     [
       'Driving',
-      ventSettings.regionRatio > 1
+      ventSettings.regionRatio > 1 || ventRun.scenario
         ? 'Equilibrated elastic driving pressure (cm H₂O)'
         : 'Plateau minus start total PEEP (cm H₂O)',
       1,
@@ -405,13 +436,17 @@ function renderVentMetrics() {
     ventMetric(extra, m?.[key], label, old?.[key], digits);
   const q = ventRun.timing;
   renderVentCO2();
-  ventElement('emptyingNote').textContent = b
-    ? `Expiration: ${q.regions.tauE.map((t) => ventFormat(q.Te / t, 2)).join(' / ')} fast/slow time constants; ${ventFormat((100 * b.Vend) / b.Ve, 1)}% of end-inspiratory volume remains. Expiratory flow at breath end: ${ventFormat(Ventilation.sample(ventRun, b.end, 'left').f * 60, 1)} L/min.`
-    : 'The display distinguishes a partial breath from completed-breath measurements.';
+  ventElement('emptyingNote').textContent =
+    b && ventRun.scenario
+      ? `Actual expired volume ${ventFormat(b.metrics.Expired, 0)} mL; ${ventFormat((100 * b.Vend) / b.Ve, 1)}% of end-inspiratory volume remains. ${ventMode === 'pcv' ? 'PC maintains its selected pressure; delivered volume can fall.' : b.metrics.PressureLimited ? 'VC delivery was limited by the pressure ceiling.' : 'No VC pressure limiting during this breath.'} Scenario mechanics vary over time; the timing constants below describe baseline regions.`
+      : b
+        ? `Expiration: ${q.regions.tauE.map((t) => ventFormat(q.Te / t, 2)).join(' / ')} fast/slow time constants; ${ventFormat((100 * b.Vend) / b.Ve, 1)}% of end-inspiratory volume remains. Expiratory flow at breath end: ${ventFormat(Ventilation.sample(ventRun, b.end, 'left').f * 60, 1)} L/min.`
+        : 'The display distinguishes a partial breath from completed-breath measurements.';
   ventElement('baselineLegend').hidden = !ventBaseline;
   ventElement('clearBaseline').disabled = !ventBaseline;
   ventElement('continueCO2').disabled = !ventBaseline;
   renderVentComparison();
+  renderVentEventStatus();
 }
 function renderVentCO2() {
   const m = ventRun.completeBreaths[ventBreathIndex]?.metrics,
@@ -421,11 +456,15 @@ function renderVentCO2() {
   readings.replaceChildren();
   for (const [key, label, digits] of [
     ['EtCO2', 'Estimated EtCO₂ (mmHg)', 1],
-    ['EstimatedPaCO2', 'EtCO₂ + assumed Pa–Et gradient (mmHg)', 1],
+    ventSettings.eventType !== 'none'
+      ? ['TissueCO2', 'Tissue-equivalent CO₂ store pressure (mmHg; not PaCO₂)', 1]
+      : ['EstimatedPaCO2', 'EtCO₂ + assumed Pa–Et gradient (mmHg)', 1],
   ])
     ventMetric(readings, m?.[key], label, old?.[key], digits);
   ventElement('co2Note').textContent =
-    `EtCO₂ is sampled at the end of the selected complete breath. Two lung regions exchange CO₂ with shared tissue stores and receive equal gas-exchange conductance; unequal ventilation can create regional CO₂ differences. Approximate steady alveolar ventilation: ${ventFormat(gas.alveolarVentilation, 2)} L/min. These are illustrative mechanics, not validated disease-specific kinetics. The Pa–Et gradient affects only the arterial estimate.`;
+    ventSettings.eventType !== 'none'
+      ? 'Event mode preserves CO₂ production and stored gas. Low measured EtCO₂ can coexist with rising tissue CO₂. The tissue pressure is a model surrogate, not an arterial measurement; the fixed Pa–Et estimate is suppressed in event scenarios. Interpret CO₂ with delivered/expired volume, pressure and flow.'
+      : `EtCO₂ is sampled at the end of the selected complete breath. Two lung regions exchange CO₂ with shared tissue stores and receive equal gas-exchange conductance; unequal ventilation can create regional CO₂ differences. Approximate ${ventRun.scenario ? 'first-breath fresh-gas' : 'steady alveolar'} ventilation: ${ventFormat(gas.alveolarVentilation, 2)} L/min. These are illustrative mechanics, not validated disease-specific kinetics. The Pa–Et gradient affects only the arterial estimate.`;
   const b = ventRun.completeBreaths[ventBreathIndex],
     fractions = b?.co2State?.lungFractions;
   ventElement('regionReadout').textContent = fractions
@@ -510,6 +549,7 @@ function updateVentCursor(rawTime = ventCursorTime) {
     `${ventFormat(time, 2)} s · breath ${point.breath} · ${point.phase} · Paw ${ventFormat(point.p, 2)} cm H₂O · Palv ${ventFormat(point.palv, 2)} cm H₂O · V ${ventFormat(point.v, 1)} mL · Flow ${ventFormat(point.f * scale, 2)} ${ventElement('flowUnit').value} · CO₂ ${ventFormat(point.co2, 1)} mmHg (${point.co2Phase})${ventValid ? '' : ' · last valid run'}`;
   updateVentCursorLines(time);
   updateVentLoopCursor(time);
+  renderVentEventStatus();
 }
 function refreshVentView() {
   drawVentilation();
@@ -519,6 +559,7 @@ function refreshVentView() {
 
 (function initVentilator() {
   buildVentilator();
+  initVentEventUI();
   initVentExtras();
   ventElement('settingsPanel').open = !window.matchMedia('(max-width: 700px)').matches;
   ventElement('lungCase').addEventListener('change', (event) => {
@@ -611,6 +652,15 @@ function refreshVentView() {
       const parsed = JSON.parse(text);
       for (const field of Object.keys(Ventilation.defaults))
         if (field !== 'mode' && Object.hasOwn(parsed, field)) initial[field] = parsed[field];
+      // PC has no ceiling control. Give an incoming event the same finite VC
+      // ceiling as selecting the event locally, including complete obstruction.
+      if (
+        ventMode === 'vcv' &&
+        parsed.mode === 'pcv' &&
+        initial.eventType !== 'none' &&
+        initial.pressureLimit === 0
+      )
+        initial.pressureLimit = 40;
       if (Ventilation.validate(initial).length) throw Error('Invalid shared settings');
       caseId = VENTILATION_CASES.some((c) => c.id === query.get('case'))
         ? query.get('case')

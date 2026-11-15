@@ -124,7 +124,10 @@ function drawVentLoops() {
         t: breath.start,
         p: run.settings.PEEP,
         v: breath.V0 * 1000,
-        f: -breath.regionV0.reduce((sum, v, i) => sum + v / run.timing.regions.tauE[i], 0),
+        f:
+          run.scenario && breath.start > 0
+            ? Ventilation.sample(run, breath.start, 'left').f
+            : -breath.regionV0.reduce((sum, v, i) => sum + v / run.timing.regions.tauE[i], 0),
       },
       ...ventVisiblePoints(run, breath.start, breath.end),
     ];

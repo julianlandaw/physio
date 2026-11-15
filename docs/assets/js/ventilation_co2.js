@@ -35,6 +35,7 @@ const VentilationCO2 = (() => {
       gasTarget = seed?.measured ?? 0,
       produced = 0,
       exhaled = 0,
+      circuitLoss = 0,
       time = 0;
     const sum = (a) => a[0] + a[1];
     const initialMass = sum(lungMasses) + tissueMass + airwayMass + mixingMass;
@@ -102,7 +103,9 @@ const VentilationCO2 = (() => {
         const next = point.regionVolumes?.map((v) => v / 1000) ?? [point.v / 2000, point.v / 2000];
         const dv = next.map((v, i) => v - volumes[i]);
         const ft = tissueMass / p.CO2Store;
-        const transfers = lungMasses.map((m, i) => (exchange / 2) * (ft - m / lungVolumes[i]) * dt);
+        const transfers = lungMasses.map(
+          (m, i) => (exchange / 2) * (point.perfusionScale ?? 1) * (ft - m / lungVolumes[i]) * dt,
+        );
         const made = source * dt;
         tissueMass += made - sum(transfers);
         lungMasses = lungMasses.map((m, i) => m + transfers[i]);
@@ -131,6 +134,13 @@ const VentilationCO2 = (() => {
             target = mixed.fraction * pressure;
           }
         }
+        if (point.circuitFlush) {
+          // Complete common-airway obstruction isolates the lungs. Fresh circuit
+          // gas washes the proximal mixing/sampling region; tissue CO2 remains.
+          const flushed = mix(0.1 * dt, 0);
+          circuitLoss += flushed.mass;
+          target = mixingVolume ? flushed.fraction * pressure : 0;
+        }
         measured += (target - measured) * -Math.expm1(-dt / sensorTime);
         gasTarget = target;
         lungVolumes = next.map((v) => p.FRC / 2 + v);
@@ -151,8 +161,9 @@ const VentilationCO2 = (() => {
         stored,
         produced,
         exhaled,
+        circuitLoss,
         initialMass,
-        residual: stored + exhaled - initialMass - produced,
+        residual: stored + exhaled + circuitLoss - initialMass - produced,
         state: includeState
           ? {
               lungFraction,

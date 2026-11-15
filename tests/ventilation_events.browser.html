@@ -1,0 +1,205 @@
+<!-- Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Acute ventilation event checks</title>
+  </head>
+  <body data-result="running">
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Ventilator event simulator under test"
+      style="position: absolute; left: -2000px; width: 390px; height: 1000px"
+    ></iframe>
+    <script>
+      const checks = [],
+        frame = document.getElementById('app'),
+        check = (name, value) => {
+          checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
+          if (!value) throw Error(name);
+        };
+      const near = (a, b, tol = 1e-6) => Number.isFinite(a) && Math.abs(a - b) < tol;
+      const load = (page) =>
+        new Promise((resolve) => {
+          frame.onload = () => resolve(frame.contentWindow);
+          frame.src = '../docs/Respiratory/' + page;
+        });
+      (async () => {
+        try {
+          const worker = new Worker('ventilation_events.worker.js');
+          const data = await new Promise((resolve, reject) => {
+            worker.onmessage = (e) => resolve(e.data);
+            worker.onerror = (e) => reject(Error(e.message));
+          });
+          worker.terminate();
+          checks.push(...data.checks);
+          check('standalone event engine checks complete', data.passed);
+          for (const [mode, page] of [
+            ['vcv', 'volume_control_simulator.html'],
+            ['pcv', 'pressure_control_simulator.html'],
+          ]) {
+            const app = await load(page),
+              d = app.document,
+              el = (id) => d.getElementById(id),
+              run = () => app.eval('ventRun'),
+              engine = app.eval('Ventilation');
+            const change = (id, value) => {
+              el(id).value = value;
+              el(id).dispatchEvent(
+                new app.Event(el(id).tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }),
+              );
+            };
+            el('eventPanel').open = true;
+            el('loadEventReference').click();
+            check(
+              `${mode}: reference event loads a settled baseline and full timeline`,
+              run().settings.T === 120 &&
+                run().settings.eventType === 'bronchospasm' &&
+                run().warmup.settled &&
+                el('breathSelect').value === '0' &&
+                el('viewWindow').value === 'full',
+            );
+            check(
+              `${mode}: event and recovery markers appear on all waveform panels`,
+              el('plot').querySelectorAll('.event-marker').length === 8,
+            );
+            check(
+              `${mode}: the VC ceiling is shown only in volume mode`,
+              el('plot').querySelectorAll('.pressure-ceiling').length === (mode === 'vcv' ? 1 : 0),
+            );
+            check(
+              `${mode}: baseline status permits triggering but not resolving`,
+              el('eventStatus').textContent.includes('baseline') &&
+                !el('triggerEvent').disabled &&
+                el('resolveEvent').disabled,
+            );
+            app.updateVentCursor(12.34);
+            const previous = run(),
+              before = engine.sample(previous, 12.34);
+            el('triggerEvent').click();
+            check(
+              `${mode}: Trigger now uses the inspected time without resetting lung or CO2 state`,
+              near(run().settings.eventOnset, 12.34) &&
+                near(app.eval('ventCursorTime'), 12.34) &&
+                near(engine.sample(run(), 12.34).v, before.v) &&
+                near(engine.sample(run(), 12.34).co2, before.co2, 0.03),
+            );
+            check(
+              `${mode}: triggered event reports active state`,
+              el('eventStatus').textContent.includes('active') &&
+                el('triggerEvent').disabled &&
+                !el('eventDescription').textContent.includes('prescribed'),
+            );
+            change('viewWindow', 'full');
+            app.updateVentCursor(25.75);
+            const unresolved = run(),
+              atRecovery = engine.sample(unresolved, 25.75);
+            el('resolveEvent').click();
+            check(
+              `${mode}: resolving at the cursor preserves the state at the recovery boundary`,
+              near(run().settings.eventRecovery, 25.75) &&
+                near(engine.sample(run(), 25.75).v, atRecovery.v) &&
+                near(engine.sample(run(), 25.75).co2, atRecovery.co2, 0.03),
+            );
+            check(
+              `${mode}: resolving does not rewrite earlier history`,
+              [5, 10, 15, 20, 25].every(
+                (t) =>
+                  near(engine.sample(run(), t).v, engine.sample(unresolved, t).v) &&
+                  near(engine.sample(run(), t).co2, engine.sample(unresolved, t).co2, 0.03),
+              ),
+            );
+            check(
+              `${mode}: event scenarios suppress the fixed arterial gradient estimate`,
+              run().metrics.EstimatedPaCO2 === null &&
+                el('co2Readings').textContent.includes('not PaCO₂'),
+            );
+            const solve = engine.simulate;
+            let calls = 0;
+            engine.simulate = (...args) => {
+              calls++;
+              return solve(...args);
+            };
+            el('rewindVent').click();
+            el('playVent').click();
+            app.eval(
+              'cancelAnimationFrame(ventPlayback.frame);ventPlayback.last=0;advanceVentPlayback(1000);cancelAnimationFrame(ventPlayback.frame);',
+            );
+            el('playVent').click();
+            check(
+              `${mode}: scenario playback reuses the generated history`,
+              calls === 0 && near(app.eval('ventPlayback.time'), 1, 0.05),
+            );
+            change('eventType', 'air-embolism');
+            check(
+              `${mode}: embolism explains the pulmonary delivery mechanism`,
+              el('eventDescription').textContent.includes('Metabolic production continues'),
+            );
+            change('eventType', 'tube-kink');
+            change(`${mode}eventSeverity`, '1');
+            check(
+              `${mode}: complete common obstruction produces absent CO2 and negligible volume`,
+              Math.abs(run().breaths[3].metrics.VT) < 1e-6 &&
+                run().breaths[3].metrics.EtCO2 < 1 &&
+                el('eventDescription').textContent.includes('completely blocked'),
+            );
+            change('eventType', 'mucus-plug');
+            change('eventLocation', 'common');
+            check(
+              `${mode}: mucus plug location changes the modeled path`,
+              run().settings.eventLocation === 'common' &&
+                Math.abs(run().breaths[3].metrics.VT) < 1e-6,
+            );
+            const valid = run();
+            change(`${mode}eventRecovery`, '5');
+            check(
+              `${mode}: invalid schedules retain predictions and disable event actions`,
+              run() === valid &&
+                !el('ventilationErrors').hidden &&
+                el(`${mode}eventRecovery`).getAttribute('aria-invalid') === 'true' &&
+                el('triggerEvent').disabled &&
+                el('resolveEvent').disabled,
+            );
+            change(`${mode}eventRecovery`, '25.75');
+            const link = d.querySelector(`[data-mode-link="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`),
+              url = new URL(link.href);
+            if (mode === 'pcv') {
+              const shared = JSON.parse(url.searchParams.get('settings'));
+              shared.pressureLimit = 0;
+              url.searchParams.set('settings', JSON.stringify(shared));
+            }
+            const other = await load(url.pathname.split('/').at(-1) + url.search);
+            check(
+              `${mode}: mode links retain event type, schedule, severity and location`,
+              other.eval('ventRun.settings.eventType') === 'mucus-plug' &&
+                near(other.eval('ventRun.settings.eventOnset'), 12.34) &&
+                near(other.eval('ventRun.settings.eventRecovery'), 25.75) &&
+                other.eval('ventRun.settings.eventSeverity') === 1 &&
+                other.eval('ventRun.settings.eventLocation') === 'common' &&
+                (mode !== 'pcv' || other.eval('ventRun.settings.pressureLimit') === 40),
+            );
+            other.document.getElementById('eventPanel').open = true;
+            check(
+              `${mode}: mobile event controls do not overflow`,
+              other.document.documentElement.scrollWidth <= other.innerWidth,
+            );
+            other.document.getElementById('resetBtn').click();
+            check(
+              `${mode}: Reset restores the standard simulator and removes event markers`,
+              other.eval('ventRun.settings.eventType') === 'none' &&
+                !other.eval('ventRun.scenario') &&
+                other.document.querySelectorAll('.event-marker').length === 0,
+            );
+            engine.simulate = solve;
+          }
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push('FAIL ' + error.message);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      })();
+    </script>
+  </body>
+</html>

@@ -25,6 +25,12 @@ const Ventilation = (() => {
     CO2Initial: 40,
     airwayMix: 0.2,
     regionRatio: 1,
+    pressureLimit: 0,
+    eventType: 'none',
+    eventOnset: 30,
+    eventRecovery: 0,
+    eventSeverity: 0.85,
+    eventLocation: 'regional',
   };
   const limits = {
     VT: [50, 1000],
@@ -45,6 +51,10 @@ const Ventilation = (() => {
     CO2Initial: [5, 100],
     airwayMix: [0, 1],
     regionRatio: [1, 8],
+    pressureLimit: [0, 80],
+    eventOnset: [0, 120],
+    eventRecovery: [0, 120],
+    eventSeverity: [0, 1],
   };
   function validate(p) {
     const errors = [];
@@ -68,6 +78,49 @@ const Ventilation = (() => {
       errors.push({ field: 'initial', message: 'Choose an initial lung state.' });
     if (!['transport', 'auto', 'reference', 'obstructive'].includes(p.capnogramShape))
       errors.push({ field: 'capnogramShape', message: 'Choose a supported capnogram shape.' });
+    if (!Object.hasOwn(VentilationScenarios.names, p.eventType))
+      errors.push({ field: 'eventType', message: 'Choose a supported event.' });
+    if (!['regional', 'common'].includes(p.eventLocation))
+      errors.push({ field: 'eventLocation', message: 'Choose an obstruction location.' });
+    if (p.mode === 'vcv' && p.pressureLimit > 0 && p.pressureLimit <= p.PEEP)
+      errors.push({
+        field: 'pressureLimit',
+        message: 'VC pressure ceiling must exceed PEEP, or be 0 for ideal delivery.',
+      });
+    if (p.mode === 'vcv' && p.pressureLimit > 0 && p.capnogramShape !== 'transport')
+      errors.push({
+        field: 'capnogramShape',
+        message: 'Pressure-limited VC requires the dynamic CO₂ transport tracing.',
+      });
+    if (p.eventType !== 'none') {
+      if (
+        p.mode === 'vcv' &&
+        p.pressureLimit === 0 &&
+        p.eventSeverity === 1 &&
+        (p.eventType === 'tube-kink' ||
+          (p.eventType === 'mucus-plug' && p.eventLocation === 'common'))
+      )
+        errors.push({
+          field: 'pressureLimit',
+          message:
+            'Complete common-airway closure needs a nonzero VC pressure ceiling; ideal flow delivery cannot ventilate a closed airway.',
+        });
+      if (p.eventOnset >= p.T)
+        errors.push({
+          field: 'eventOnset',
+          message: 'Event onset must be before the simulation ends.',
+        });
+      if (p.eventRecovery && (p.eventRecovery <= p.eventOnset || p.eventRecovery > p.T))
+        errors.push({
+          field: 'eventRecovery',
+          message: 'Recovery must follow onset and be within the run, or be 0 for no recovery.',
+        });
+      if (p.capnogramShape !== 'transport')
+        errors.push({
+          field: 'capnogramShape',
+          message: 'Events require the dynamic CO₂ transport tracing.',
+        });
+    }
     return errors;
   }
   function timing(p) {
@@ -131,6 +184,7 @@ const Ventilation = (() => {
     return VentilationRegions.sample(p, q, b, time, side);
   }
   function mechanicalSample(run, rawTime, side) {
+    if (run.scenario) return VentilationScenarios.sample(run, rawTime, side);
     const time = Math.max(0, Math.min(run.settings.T, rawTime));
     side ||= Math.abs(time - run.settings.T) < EPS ? 'left' : 'right';
     let index = Math.floor((time + EPS) / run.timing.cycle);
@@ -198,6 +252,8 @@ const Ventilation = (() => {
     const p = { ...defaults, ...settings };
     const errors = validate(p);
     if (errors.length) throw Error(errors.map((error) => error.message).join(' '));
+    if (p.eventType !== 'none' || (p.mode === 'vcv' && p.pressureLimit > 0))
+      return VentilationScenarios.simulate(p, options);
     const q = timing(p),
       breaths = [];
     let V0 = VentilationRegions.initial(p, q);

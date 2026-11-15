@@ -328,6 +328,19 @@ details summary {
 .co2-card {
   margin: 12px 0;
 }
+.event-panel {
+  margin-bottom: 12px;
+}
+.event-controls {
+  margin: 10px 0;
+}
+.event-panel .button-row {
+  margin-top: 10px;
+  justify-content: flex-start;
+}
+.event-panel select {
+  max-width: 100%;
+}
 .co2-readings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -2,6 +2,7 @@
 importScripts(
   '../docs/assets/js/ventilation_co2.js',
   '../docs/assets/js/ventilation_regions.js',
+  '../docs/assets/js/ventilation_scenarios.js',
   '../docs/assets/js/ventilation_engine.js',
 );
 const checks = [];
