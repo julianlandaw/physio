@@ -10,12 +10,17 @@ function renderVentEventStatus() {
     on = VentilationScenarios.active(p, time);
   ventElement('eventStatus').setAttribute('aria-live', ventPlayback.active ? 'off' : 'polite');
   const enabled = p.eventType !== 'none';
+  // Keep timing fields available when a newly selected event has an invalid
+  // schedule and the plot still represents the previous valid run.
+  const selectedType = ventElement('eventType').value;
+  ventElement('eventSettings').hidden = ventElement('eventActions').hidden =
+    selectedType === 'none';
   ventElement('triggerEvent').disabled =
     !ventValid || !enabled || time >= p.T || time >= p.eventOnset - 1e-9;
   ventElement('resolveEvent').disabled =
     !ventValid || !enabled || !on || time <= p.eventOnset + 1e-9 || time >= p.T;
-  ventElement('eventLocation').disabled = p.eventType !== 'mucus-plug';
-  ventElement('eventLocationControl').hidden = p.eventType !== 'mucus-plug';
+  ventElement('eventLocation').disabled = selectedType !== 'mucus-plug';
+  ventElement('eventLocationControl').hidden = selectedType !== 'mucus-plug';
   ventElement('eventSummary').textContent = enabled
     ? `${item.name} · ${time < p.eventOnset ? 'baseline' : on ? 'active' : 'recovery'}`
     : '';
@@ -104,7 +109,7 @@ function initVentEventUI() {
     ventForceRun = true;
     ventBaseline = null;
     ventElement('keepTi').checked = false;
-    ventElement('timingMode').value = 'fraction';
+    ventElement('timingMode').value = 'ie';
     updateVentTimingMode();
     setVentSettings(
       {

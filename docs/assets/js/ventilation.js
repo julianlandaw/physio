@@ -41,6 +41,17 @@ const ventFormat = (value, digits = 1) =>
 function buildVentilator() {
   ventElement('ventilatorApp').innerHTML = `
     <div class="workspace">
+      <aside class="controls-column" aria-label="Simulation controls">
+        <details class="card event-panel" id="eventPanel" open><summary>Practice an acute event <span id="eventSummary" class="summary-value"></span></summary>
+          <label class="scenario-label" for="eventType">Event</label><select id="eventType"></select>
+          <p class="small" id="eventPattern" hidden></p>
+          <div id="eventSettings"><div class="controls event-controls" id="eventControls"></div>
+          <div id="eventLocationControl" hidden><label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select></div>
+          </div><div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><span id="eventActions"><button type="button" id="triggerEvent">Trigger now</button> <button type="button" id="resolveEvent">Resolve event</button></span></div>
+          <p class="small" id="eventStatus" role="status"></p><details class="event-help"><summary>How this event works</summary><p class="small" id="eventDescription"></p><p class="small" id="eventSources" hidden></p>
+          <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
+          </details>
+        </details>
       <details class="card settings" id="settingsPanel" open aria-labelledby="settingsHeading">
         <summary class="settings-toggle">Adjust settings <span id="settingsSummary"></span></summary>
         <div class="card-heading"><h2 id="settingsHeading">Settings</h2><button id="resetBtn" type="button">Reset</button></div>
@@ -50,7 +61,7 @@ function buildVentilator() {
         <div class="controls lung-controls" id="lungControls"></div>
         <details class="advanced" id="timingPanel"><summary>Breath timing</summary>
           <div class="controls" id="timingControls"></div>
-          <div class="timing-controls"><label for="timingMode">Enter timing as</label><select id="timingMode"><option value="fraction">Inspiratory fraction</option><option value="ti">Inspiratory time (Ti)</option><option value="ie">I:E ratio (1:E)</option></select>
+          <div class="timing-controls"><label for="timingMode">Enter timing as</label><select id="timingMode"><option value="fraction">Inspiratory fraction</option><option value="ti">Inspiratory time (Ti)</option><option value="ie" selected>I:E ratio</option></select>
           <label for="timingValue" id="timingValueLabel" hidden>Inspiratory time (s)</label><input id="timingValue" type="number" step="any" hidden><p id="timingError" class="field-error"></p>
           <label class="check"><input id="keepTi" type="checkbox"> Keep Ti fixed when changing rate</label></div>
         </details>
@@ -67,13 +78,13 @@ function buildVentilator() {
           <button type="button" id="continueCO2" disabled>Start CO₂ from baseline end</button><p class="small" id="co2StartNote">CO₂ starts from the initial pressure above. Mechanics start from the selected lung state.</p>
         </details>
       </details>
-      <section class="results-column" aria-label="Predicted ventilation">
+      </aside><section class="results-column" aria-label="Predicted ventilation">
         <div id="ventilationErrors" class="validation" role="alert" hidden></div>
         <p id="breathCaption" class="breath-caption"></p><section class="metrics" id="metrics" aria-label="Selected breath measurements"></section>
         <section class="card plot-card" aria-label="Ventilator waveforms">
           <div class="chart-toolbar">
             <button id="playVent" class="primary-button" type="button">Play</button><button id="rewindVent" type="button">Rewind</button><span id="playbackStatus" class="small" role="status">Paused</span>
-            <label for="viewWindow">View<select id="viewWindow"><option value="three">Three breaths</option><option value="breath">Selected breath</option><option value="full">Full run</option><option value="monitor">Monitor window</option></select></label>
+            <label for="viewWindow">View<select id="viewWindow"><option value="three">Three breaths</option><option value="breath">Selected breath</option><option value="full" selected>Full run</option><option value="monitor">Monitor window</option></select></label>
           </div>
           <details class="chart-options" id="chartOptions"><summary>Display options</summary><div class="chart-toolbar">
             <label for="playbackSpeed">Speed<select id="playbackSpeed"><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label>
@@ -90,16 +101,6 @@ function buildVentilator() {
           <p class="axis-note" id="axisNote" hidden>Some values exceed the locked scales. Unlock scales to see their full range.</p>
           <details class="inspection" id="inspectionPanel"><summary>Inspect a time point</summary><div class="inspection-controls"><label for="ventCursor">Inspect time (s)<input id="ventCursor" type="number" min="0" step="any" value="0"></label><label for="ventCursorSlider" class="sr-only">Inspection time in seconds</label><input id="ventCursorSlider" type="range" min="0" step="any" value="0"></div><div class="inspection-values" id="ventCursorValues" role="status"></div></details>
         </section>
-        <details class="card event-panel" id="eventPanel"><summary>Practice an acute event <span id="eventSummary" class="summary-value"></span></summary>
-          <label class="scenario-label" for="eventType">Event</label><select id="eventType"></select>
-          <p class="small" id="eventPattern" hidden></p>
-          <div class="controls event-controls" id="eventControls"></div>
-          <div id="eventLocationControl" hidden><label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select></div>
-          <div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><button type="button" id="triggerEvent">Trigger now</button><button type="button" id="resolveEvent">Resolve event</button></div>
-          <p class="small" id="eventStatus" role="status"></p><details class="event-help"><summary>How this event works</summary><p class="small" id="eventDescription"></p><p class="small" id="eventSources" hidden></p>
-          <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
-          </details>
-        </details>
         <details class="card" id="measurementsPanel"><summary>Detailed measurements</summary>
           <div id="additionalMetrics" class="metrics"></div><p id="emptyingNote" class="emptying-note"></p>
           <div class="timing" id="timingReadout" aria-label="Calculated breath timing"></div>
@@ -241,8 +242,7 @@ function readVentSettings() {
   for (const [field, control] of ventInputs) p[field] = readVentNumber(control.number.value);
   if (ventElement('timingMode').value === 'ti')
     p.IF = readVentNumber(ventElement('timingValue').value) / (60 / p.RR);
-  if (ventElement('timingMode').value === 'ie')
-    p.IF = 1 / (1 + readVentNumber(ventElement('timingValue').value));
+  if (ventElement('timingMode').value === 'ie') p.IF = readVentRatio();
   if (ventElement('linkResistance').checked) p.Rexp = p.R;
   return p;
 }
@@ -318,7 +318,7 @@ function simulateAndDraw() {
   if (!ventRun || ventForceRun || JSON.stringify(p) !== JSON.stringify(ventRun.settings)) {
     stopVentPlayback();
     ventPlayback.time = 0;
-    if (ventElement('viewWindow').value === 'monitor') ventElement('viewWindow').value = 'three';
+    if (ventElement('viewWindow').value === 'monitor') ventElement('viewWindow').value = 'full';
     ventRun = Ventilation.simulate(p, { co2State: ventCO2Seed });
     ventForceRun = false;
     ventBreathIndex = ventRun.completeBreaths.length - 1;
@@ -538,7 +538,7 @@ function renderTiming() {
   for (const [label, value] of [
     ['Ti', `${ventFormat(q.Ti, 2)} s`],
     ['Te', `${ventFormat(q.Te, 2)} s`],
-    ['I:E', `1:${ventFormat(q.Te / q.Ti, 2)}`],
+    ['I:E', formatVentRatio(ventSettings.IF)],
     [
       'τₑ fast / slow',
       `${ventFormat(q.regions.tauE[0], 2)} / ${ventFormat(q.regions.tauE[1], 2)} s`,
@@ -633,12 +633,12 @@ function refreshVentView() {
   ventElement('resetBtn').addEventListener('click', () => {
     stopVentPlayback();
     ventPlayback.time = 0;
-    ventElement('viewWindow').value = 'three';
+    ventElement('viewWindow').value = 'full';
     ventCO2Seed = null;
     ventForceRun = true;
     ventElement('co2StartNote').textContent =
       'CO₂ starts from the initial pressure above. Mechanics start from the selected lung state.';
-    ventElement('timingMode').value = 'fraction';
+    ventElement('timingMode').value = 'ie';
     ventElement('keepTi').checked = false;
     updateVentTimingMode();
     ventBaseline = null;

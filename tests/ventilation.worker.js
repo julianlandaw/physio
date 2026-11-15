@@ -5,6 +5,7 @@ importScripts(
   '../docs/assets/js/ventilation_scenarios.js',
   '../docs/assets/js/ventilation_engine.js',
 );
+const referenceDefaults = { ...Ventilation.defaults, IF: 0.33 };
 const checks = [];
 const check = (name, value) => {
   checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
@@ -14,7 +15,7 @@ const near = (a, b, tol = 1e-8) => Number.isFinite(a) && Math.abs(a - b) <= tol;
 try {
   check('ventilation engine runs without a document', typeof document === 'undefined');
   for (const mode of ['vcv', 'pcv']) {
-    const p = { ...Ventilation.defaults, mode, T: 5 };
+    const p = { ...referenceDefaults, mode, T: 5 };
     const s = Ventilation.simulate(p),
       q = s.timing,
       b = s.completeBreaths[0];
@@ -134,12 +135,12 @@ try {
   }
   let rejected = false;
   try {
-    Ventilation.simulate({ ...Ventilation.defaults, C: 0 });
+    Ventilation.simulate({ ...referenceDefaults, C: 0 });
   } catch (error) {
     rejected = true;
   }
   check('engine rejects invalid mechanics before calculation', rejected);
-  const reference = Ventilation.simulate(Ventilation.defaults).gasExchange;
+  const reference = Ventilation.simulate(referenceDefaults).gasExchange;
   check(
     'CO2: reference alveolar ventilation uses tidal volume minus dead space',
     near(reference.alveolarVentilation, 3) && near(reference.steadyVT, 400),
@@ -148,8 +149,7 @@ try {
     'CO2: mL/min STPD to L/min BTPS conversion gives the analytical pressure',
     near(reference.PaCO2, (0.863 * 200) / 3) && near(reference.EtCO2, reference.PaCO2 - 5),
   );
-  const co2 = (changes) =>
-    Ventilation.simulate({ ...Ventilation.defaults, ...changes }).gasExchange;
+  const co2 = (changes) => Ventilation.simulate({ ...referenceDefaults, ...changes }).gasExchange;
   check(
     'CO2: doubling rate halves estimated PaCO2 at fixed VCV tidal volume',
     near(co2({ RR: 24 }).PaCO2, reference.PaCO2 / 2),
@@ -173,7 +173,7 @@ try {
     co2({ mode: 'pcv', R: 30, Rexp: 30 }).EtCO2 > co2({ mode: 'pcv' }).EtCO2,
   );
   const trappedSettings = {
-    ...Ventilation.defaults,
+    ...referenceDefaults,
     mode: 'pcv',
     R: 30,
     Rexp: 40,
@@ -214,11 +214,11 @@ try {
   check(
     'CO2: invalid production, dead space and gradient are rejected',
     ['VCO2', 'VD', 'CO2Gradient'].every((field) =>
-      Ventilation.validate({ ...Ventilation.defaults, [field]: -1 }).some((e) => e.field === field),
+      Ventilation.validate({ ...referenceDefaults, [field]: -1 }).some((e) => e.field === field),
     ),
   );
   for (const mode of ['vcv', 'pcv']) {
-    const run = Ventilation.simulate({ ...Ventilation.defaults, mode, T: 5 }),
+    const run = Ventilation.simulate({ ...referenceDefaults, mode, T: 5 }),
       q = run.timing,
       shape = run.capnogramTiming,
       et = run.metrics.EtCO2;
@@ -266,13 +266,13 @@ try {
         near(obstructive.metrics.EtCO2, et),
     );
   }
-  const noCO2 = Ventilation.simulate({ ...Ventilation.defaults, VD: 400 });
+  const noCO2 = Ventilation.simulate({ ...referenceDefaults, VD: 400 });
   check(
     'low ventilation retains CO2 with finite stores rather than fabricating missing data',
     noCO2.co2.every((v) => Number.isFinite(v) && v >= 0) &&
       Math.abs(noCO2.co2Balance.residual) < 1e-9,
   );
-  const autoShape = Ventilation.simulate({ ...Ventilation.defaults, Rexp: 40 });
+  const autoShape = Ventilation.simulate({ ...referenceDefaults, Rexp: 40 });
   const overrideShape = Ventilation.simulate({
     ...autoShape.settings,
     capnogramShape: 'reference',
@@ -283,50 +283,50 @@ try {
   );
   check(
     'unsupported capnogram shapes are rejected',
-    Ventilation.validate({ ...Ventilation.defaults, capnogramShape: 'unknown' }).some(
+    Ventilation.validate({ ...referenceDefaults, capnogramShape: 'unknown' }).some(
       (e) => e.field === 'capnogramShape',
     ),
   );
-  const dynamic = Ventilation.simulate({ ...Ventilation.defaults, T: 120 });
+  const dynamic = Ventilation.simulate({ ...referenceDefaults, T: 120 });
   check(
     'dynamic CO2 changes over breaths rather than repeating one amplitude',
     Math.abs(dynamic.breaths[0].metrics.EtCO2 - dynamic.metrics.EtCO2) > 1,
   );
-  const fastDynamic = Ventilation.simulate({ ...Ventilation.defaults, RR: 24, T: 120 });
+  const fastDynamic = Ventilation.simulate({ ...referenceDefaults, RR: 24, T: 120 });
   check(
     'increased VCV ventilation lowers CO2 after the same initial conditions',
     fastDynamic.metrics.EtCO2 < dynamic.metrics.EtCO2,
   );
-  const highProduction = Ventilation.simulate({ ...Ventilation.defaults, VCO2: 400, T: 120 });
+  const highProduction = Ventilation.simulate({ ...referenceDefaults, VCO2: 400, T: 120 });
   check(
     'higher metabolic production increases stored and end-tidal CO2',
     highProduction.metrics.EtCO2 > dynamic.metrics.EtCO2 &&
       highProduction.co2Balance.produced > dynamic.co2Balance.produced,
   );
   const continued = Ventilation.simulate(
-    { ...Ventilation.defaults, RR: 24, T: 20 },
+    { ...referenceDefaults, RR: 24, T: 20 },
     { co2State: dynamic.co2Balance.state },
   );
   check(
     'continuation starts at the captured CO2 sensor value without a jump',
     near(continued.co2[0], dynamic.co2.at(-1)) && Math.abs(continued.co2Balance.residual) < 1e-9,
   );
-  const gradientOnly = Ventilation.simulate({ ...Ventilation.defaults, CO2Gradient: 12, T: 5 });
+  const gradientOnly = Ventilation.simulate({ ...referenceDefaults, CO2Gradient: 12, T: 5 });
   check(
     'the assumed Pa-Et gradient changes only the arterial display estimate',
     near(gradientOnly.metrics.EstimatedPaCO2 - gradientOnly.metrics.EtCO2, 12) &&
       near(
         gradientOnly.metrics.EtCO2,
-        Ventilation.simulate({ ...Ventilation.defaults, T: 5 }).metrics.EtCO2,
+        Ventilation.simulate({ ...referenceDefaults, T: 5 }).metrics.EtCO2,
       ),
   );
-  const noAirway = Ventilation.simulate({ ...Ventilation.defaults, VD: 0, T: 5 });
+  const noAirway = Ventilation.simulate({ ...referenceDefaults, VD: 0, T: 5 });
   check(
     'zero dead space is supported without a transport division by zero',
     noAirway.co2.every(Number.isFinite) && Math.abs(noAirway.co2Balance.residual) < 1e-9,
   );
   const extreme = Ventilation.simulate({
-    ...Ventilation.defaults,
+    ...referenceDefaults,
     VT: 1000,
     RR: 40,
     IF: 0.05,
@@ -338,14 +338,14 @@ try {
     'very short high-flow inspiration and tiny dead space conserve CO2',
     Math.abs(extreme.co2Balance.residual) < 1e-9 && extreme.co2.every(Number.isFinite),
   );
-  const refined = Ventilation.simulate({ ...Ventilation.defaults, T: 20 }, { co2Step: 0.002 });
-  const normalStep = Ventilation.simulate({ ...Ventilation.defaults, T: 20 });
+  const refined = Ventilation.simulate({ ...referenceDefaults, T: 20 }, { co2Step: 0.002 });
+  const normalStep = Ventilation.simulate({ ...referenceDefaults, T: 20 });
   check(
     'CO2 time-step refinement changes end-tidal pressure by less than 0.2 mmHg',
     Math.abs(refined.metrics.EtCO2 - normalStep.metrics.EtCO2) < 0.2,
   );
   const store = VentilationCO2.create(
-    { ...Ventilation.defaults, VCO2: 0, VD: 0, FRC: 2, CO2Store: 10 },
+    { ...referenceDefaults, VCO2: 0, VD: 0, FRC: 2, CO2Store: 10 },
     0,
     { lungFraction: 0.04, tissueFraction: 0.08 },
   );
@@ -357,9 +357,9 @@ try {
     'isolated lung/tissue exchange matches the analytical mixing solution',
     Math.abs(mixed.alveolar / 713 - expectedFraction) < 1e-5 && Math.abs(mixed.residual) < 1e-10,
   );
-  const checkpointRun = Ventilation.simulate({ ...Ventilation.defaults, T: 17.9 });
+  const checkpointRun = Ventilation.simulate({ ...referenceDefaults, T: 17.9 });
   const rapidEmptying = Ventilation.simulate({
-    ...Ventilation.defaults,
+    ...referenceDefaults,
     R: 1,
     Rexp: 1,
     C: 5,
@@ -376,11 +376,10 @@ try {
     near(checkpoint.co2State.measured, checkpoint.metrics.EtCO2) &&
       Math.abs(checkpoint.co2State.measured - checkpointRun.co2Balance.measured) > 0.01,
   );
-  const tank = VentilationCO2.create(
-    { ...Ventilation.defaults, VCO2: 0, VD: 150, airwayMix: 1 },
-    1,
-    { lungFraction: 0.05, tissueFraction: 0.05 },
-  );
+  const tank = VentilationCO2.create({ ...referenceDefaults, VCO2: 0, VD: 150, airwayMix: 1 }, 1, {
+    lungFraction: 0.05,
+    tissueFraction: 0.05,
+  });
   tank.advance(2, (t) => ({ v: (1 - 0.1 * t) * 1000, phase: 'expiration' }));
   const tankEnd = tank.read(),
     expectedMix = 0.05 * (1 - Math.exp(-0.2 / 0.15));
@@ -401,8 +400,8 @@ try {
       .filter((x) => x.t >= b.start + run.timing.Ti && x.t <= b.end);
     return points.find((x) => x.p >= 0.9 * e).t - points.find((x) => x.p >= 0.1 * e).t;
   };
-  const unmixed = Ventilation.simulate({ ...Ventilation.defaults, T: 5, airwayMix: 0 });
-  const airwayMixed = Ventilation.simulate({ ...Ventilation.defaults, T: 5, airwayMix: 0.4 });
+  const unmixed = Ventilation.simulate({ ...referenceDefaults, T: 5, airwayMix: 0 });
+  const airwayMixed = Ventilation.simulate({ ...referenceDefaults, T: 5, airwayMix: 0.4 });
   check(
     'airway mixing broadens the upstroke without changing total dead space',
     riseTime(airwayMixed) > riseTime(unmixed) + 0.1 &&
@@ -412,7 +411,7 @@ try {
       ),
   );
   for (const mode of ['vcv', 'pcv']) {
-    const settings = { ...Ventilation.defaults, mode, regionRatio: 6, T: 20 },
+    const settings = { ...referenceDefaults, mode, regionRatio: 6, T: 20 },
       r = Ventilation.simulate(settings),
       q = r.timing,
       g = q.regions;
@@ -486,8 +485,8 @@ try {
       );
     }
   }
-  const heterogeneous = Ventilation.simulate({ ...Ventilation.defaults, regionRatio: 6, T: 120 });
-  const homogeneous = Ventilation.simulate({ ...Ventilation.defaults, regionRatio: 1, T: 120 });
+  const heterogeneous = Ventilation.simulate({ ...referenceDefaults, regionRatio: 6, T: 120 });
+  const homogeneous = Ventilation.simulate({ ...referenceDefaults, regionRatio: 1, T: 120 });
   const lateRise = (r) => {
     const b = r.completeBreaths.at(-1),
       q = r.timing;
@@ -511,13 +510,13 @@ try {
       near(homogeneous.co2Balance.alveolarRegions[0], homogeneous.co2Balance.alveolarRegions[1]),
   );
   const continuation = Ventilation.simulate(
-    { ...Ventilation.defaults, regionRatio: 6, T: 5 },
+    { ...referenceDefaults, regionRatio: 6, T: 5 },
     { co2State: heterogeneous.co2Balance.state },
   );
   const saved = heterogeneous.co2Balance.state;
   const expectedInitial =
-    Ventilation.defaults.CO2Store * saved.tissueFraction +
-    (Ventilation.defaults.FRC / 2) * (saved.lungFractions[0] + saved.lungFractions[1]) +
+    referenceDefaults.CO2Store * saved.tissueFraction +
+    (referenceDefaults.FRC / 2) * (saved.lungFractions[0] + saved.lungFractions[1]) +
     saved.plugVolume * saved.plugFraction +
     saved.mixingVolume * saved.mixFraction;
   check(
@@ -527,7 +526,7 @@ try {
       Math.abs(continuation.co2Balance.residual) < 1e-9,
   );
   const extremeRegions = Ventilation.simulate({
-    ...Ventilation.defaults,
+    ...referenceDefaults,
     regionRatio: 8,
     R: 1,
     Rexp: 1,
@@ -546,7 +545,7 @@ try {
   );
   check(
     'invalid mixing and regional ratio values are rejected',
-    Ventilation.validate({ ...Ventilation.defaults, airwayMix: 2, regionRatio: 0 }).length === 2,
+    Ventilation.validate({ ...referenceDefaults, airwayMix: 2, regionRatio: 0 }).length === 2,
   );
   self.postMessage({ passed: true, checks });
 } catch (error) {

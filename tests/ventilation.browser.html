@@ -70,8 +70,23 @@
             check(
               `${mode}: timing and breath number are exposed`,
               el('timingReadout').textContent.includes('Ti') &&
-                el('timingReadout').textContent.includes('1:2.03') &&
+                el('timingReadout').textContent.includes('2:1') &&
                 el('breathCaption').textContent.includes('Breath 12'),
+            );
+            check(
+              `${mode}: defaults use 2:1 I:E timing and display the full run`,
+              el('timingMode').value === 'ie' &&
+                el('timingValue').value === '2:1' &&
+                near(run().timing.Ti / run().timing.Te, 2) &&
+                el('viewWindow').value === 'full' &&
+                app.ventWindow()[0] === 0 &&
+                app.ventWindow()[1] === run().settings.T,
+            );
+            check(
+              `${mode}: acute events are open at the top of the controls column`,
+              el('eventPanel').open &&
+                el('eventPanel').parentElement.classList.contains('controls-column') &&
+                el('eventPanel').parentElement.firstElementChild === el('eventPanel'),
             );
             const gas = { ...run().metrics },
               mechanics = JSON.stringify([
@@ -310,7 +325,7 @@
               `${mode}: mode navigation preserves shared lung and timing settings`,
               other.eval('ventRun.settings.R') === 20 &&
                 other.eval('ventRun.settings.C') === 60 &&
-                other.eval('ventRun.settings.IF') === 0.33,
+                other.eval('ventRun.settings.IF') === 2 / 3,
             );
             check(
               `${mode}: mode navigation preserves the CO2 assumptions`,
@@ -376,10 +391,9 @@
             ).length === 5 && d.getElementById('metrics').textContent.includes('EtCO₂'),
           );
           check(
-            'inspection, events, display options and detailed results start tucked away',
+            'inspection, display options and detailed results start tucked away',
             [
               'inspectionPanel',
-              'eventPanel',
               'chartOptions',
               'measurementsPanel',
               'comparisonPanel',

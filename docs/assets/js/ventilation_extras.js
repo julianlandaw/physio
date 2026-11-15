@@ -13,8 +13,27 @@ function ventAligned() {
 }
 function syncVentTiming(fraction, rate) {
   const mode = ventElement('timingMode').value;
-  ventElement('timingValue').value =
-    mode === 'ti' ? (fraction * 60) / rate : (1 - fraction) / fraction;
+  const input = ventElement('timingValue');
+  input.value = mode === 'ie' ? formatVentRatio(fraction) : (fraction * 60) / rate;
+  // Keep the exact fraction when displaying a rounded ratio from a saved run.
+  input.dataset.ratioValue = input.value;
+  input.dataset.ratioFraction = fraction;
+}
+function formatVentRatio(fraction) {
+  const ratio = fraction / (1 - fraction),
+    rounded = (n) => Number(n.toFixed(6));
+  return ratio >= 1 ? `${rounded(ratio)}:1` : `1:${rounded(1 / ratio)}`;
+}
+function readVentRatio() {
+  const input = ventElement('timingValue');
+  if (input.value === input.dataset.ratioValue) return Number(input.dataset.ratioFraction);
+  const parts = input.value.trim().split(':');
+  if (parts.length === 1) parts.unshift('1');
+  if (parts.length !== 2) return NaN;
+  const [inspiration, expiration] = parts.map(readVentNumber);
+  return [inspiration, expiration].every((n) => Number.isFinite(n) && n > 0)
+    ? inspiration / (inspiration + expiration)
+    : NaN;
 }
 function updateVentTimingMode() {
   const mode = ventElement('timingMode').value,
@@ -22,7 +41,9 @@ function updateVentTimingMode() {
   ventInputs.get('IF').wrapper.hidden = direct;
   ventElement('timingValue').hidden = ventElement('timingValueLabel').hidden = !direct;
   ventElement('timingValueLabel').textContent =
-    mode === 'ti' ? 'Inspiratory time (s)' : 'I:E ratio — enter E for 1:E';
+    mode === 'ti' ? 'Inspiratory time (s)' : 'I:E ratio (e.g. 2:1)';
+  ventElement('timingValue').type = mode === 'ie' ? 'text' : 'number';
+  ventElement('timingValue').inputMode = mode === 'ie' ? 'text' : 'decimal';
   if (ventRun) syncVentTiming(ventRun.settings.IF, ventRun.settings.RR);
 }
 function preserveVentTi(rate) {
@@ -260,6 +281,7 @@ function updateVentLoopCursor(time) {
   }
 }
 function initVentExtras() {
+  updateVentTimingMode();
   ventElement('playbackStatus').setAttribute('aria-live', 'off');
   ventElement('timingMode').addEventListener('change', () => {
     updateVentTimingMode();

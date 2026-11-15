@@ -55,6 +55,7 @@ button:disabled {
   cursor: default;
 }
 input[type='number'],
+input[type='text'],
 select {
   width: 100%;
   min-width: 0;
@@ -147,9 +148,14 @@ p {
   background: var(--panel);
   padding: 14px;
 }
-.settings {
-  position: sticky;
-  top: 12px;
+.controls-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+.controls-column > details[open] > summary {
+  margin-bottom: 12px;
 }
 .settings-toggle {
   list-style: none;
@@ -393,6 +399,11 @@ details summary {
   margin-top: 10px;
   justify-content: flex-start;
 }
+#eventActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .co2-readings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -580,9 +591,6 @@ footer {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  .settings {
-    position: static;
-  }
   .settings[open] > .settings-toggle {
     display: block;
     margin-bottom: 12px;
@@ -648,7 +656,7 @@ footer {
 }
 @media print {
   .topbar,
-  .settings,
+  .controls-column,
   .chart-toolbar,
   .inspection,
   .button-row {

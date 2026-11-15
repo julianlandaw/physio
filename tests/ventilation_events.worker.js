@@ -14,6 +14,7 @@ const near = (a, b, tol = 1e-7) => Number.isFinite(a) && Math.abs(a - b) < tol;
 try {
   const base = {
     ...Ventilation.defaults,
+    IF: 0.33,
     VT: 500,
     PC: 10.4,
     T: 120,

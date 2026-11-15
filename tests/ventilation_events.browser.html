@@ -196,8 +196,25 @@
               el = (id) => d.getElementById(id);
             check(
               `${mode}: scenario menu groups clinical mechanisms without adding main-view controls`,
-              el('eventType').querySelectorAll('optgroup').length === 5 && !el('eventPanel').open,
+              el('eventType').querySelectorAll('optgroup').length === 5 && el('eventPanel').open,
             );
+            el('ventT').value = 5;
+            el('ventT').dispatchEvent(new app.Event('input', { bubbles: true }));
+            el('eventType').value = 'hypotension';
+            el('eventType').dispatchEvent(new app.Event('change', { bubbles: true }));
+            check(
+              `${mode}: invalid new events keep their scheduling controls available`,
+              !el('ventilationErrors').hidden &&
+                !el('eventSettings').hidden &&
+                el('triggerEvent').disabled,
+            );
+            el('venteventOnset').value = 2;
+            el('venteventOnset').dispatchEvent(new app.Event('input', { bubbles: true }));
+            check(
+              `${mode}: a newly selected event's schedule can be corrected`,
+              el('ventilationErrors').hidden && app.eval('ventRun.settings.eventOnset') === 2,
+            );
+            el('resetBtn').click();
             for (const type of [
               'malignant-hyperthermia',
               'hypotension',

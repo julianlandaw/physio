@@ -9,7 +9,7 @@ const Ventilation = (() => {
     PC: 12,
     PEEP: 5,
     RR: 12,
-    IF: 0.33,
+    IF: 2 / 3,
     HF: 0.25,
     R: 10,
     Rexp: 10,
