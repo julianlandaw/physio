@@ -21,6 +21,7 @@ const ventFields = {
   CO2Initial: ['Initial alveolar CO₂', 'mmHg', 1],
   airwayMix: ['Airway mixing fraction', 'of total airway dead space', 0.05],
   regionRatio: ['Slow / fast time-constant ratio', '1 = uniform lung', 0.1],
+  modelWeight: ['Ideal weight used for model scaling', 'kg', 1],
   pressureLimit: ['VC pressure ceiling (0 = ideal)', 'cm H₂O absolute', 1],
   eventOnset: ['Event onset', 's', 1],
   eventRecovery: ['Recovery time (0 = none)', 's', 1],
@@ -49,9 +50,25 @@ function buildVentilator() {
           <div id="eventLocationControl" hidden><label class="scenario-label" for="eventLocation">Mucus plug location</label><select id="eventLocation"><option value="regional">One lung region</option><option value="common">Common endotracheal airway</option></select></div>
           </div><div class="button-row"><button type="button" id="loadEventReference">Load settled reference</button><span id="eventActions"><button type="button" id="triggerEvent">Trigger now</button> <button type="button" id="resolveEvent">Resolve event</button></span></div>
           <p class="small" id="eventStatus" role="status"></p><details class="event-help"><summary>How this event works</summary><p class="small" id="eventDescription"></p><p class="small" id="eventSources" hidden></p>
-          <p class="small">Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
+          <p class="small">Without a patient profile, Load reference sets VT 500 mL / PC 10.4 cm H₂O, rate 12/min, a 40 cm H₂O VC ceiling, onset at 30 s and recovery at 90 s in a 120 s run. A valid patient profile replaces the size-based starting settings. These are teaching settings. Press Play to watch, or inspect a time and trigger/resolve there. Severity changes mechanism strength, not a prescribed CO₂ amplitude. Patterns overlap across causes.</p>
           </details>
         </details>
+      <details class="card" id="patientPanel"><summary>Patient &amp; starting settings <span id="patientSummary" class="summary-value"></span></summary>
+        <div class="patient-inputs">
+          <label for="patientAge">Age (years)<input id="patientAge" type="number" min="1" max="110" step="any" placeholder="e.g. 40" aria-describedby="patientError"></label>
+          <label for="patientWeight">Ideal/predicted weight (kg)<input id="patientWeight" type="number" min="5" max="150" step="any" placeholder="e.g. 70" aria-describedby="patientError"></label>
+        </div>
+        <label class="scenario-label" for="patientVolume">Target tidal volume</label><select id="patientVolume"><option value="6">6 mL/kg</option><option value="7">7 mL/kg</option><option value="8">8 mL/kg</option></select>
+        <label class="check patient-scale"><input id="patientScale" type="checkbox" checked> Also scale the teaching lung model</label>
+        <p class="small" id="patientPreview">Enter age and ideal/predicted weight to preview a starting example.</p>
+        <p id="patientError" class="field-error" role="status"></p>
+        <button id="applyPatient" type="button" disabled>Apply starting settings</button><p class="small" id="patientApplied" role="status"></p>
+        <details class="event-help"><summary>How these starting settings are chosen</summary>
+          <p class="small">Use ideal/predicted weight, not actual weight. This selects a volume example, an age-based child/teen rate or adult reference rate, and PEEP 5. It does not find an optimal clinical prescription. Adult age alone does not determine a different rate. Gas exchange, disease and measured mechanics still matter.</p>
+          <p class="small">Supported teaching range: age 1–110 years, ideal weight 5–150 kg. Infants are not modeled. With model scaling enabled, C, dead space, resting lung volume, CO₂ production and stores scale with weight; resistance scales inversely with its square root. These are illustrative size assumptions, not validated pediatric physiology. Uncheck to keep your current lung/gas parameters. Timing is retained; Keep Ti fixed is respected. PC is fitted to the passive baseline model, not an acute event.</p>
+          <p class="small">Background: <a href="https://pubmed.ncbi.nlm.nih.gov/39048148/">AARC tidal-volume assessment guidance</a> · <a href="https://www.sciencedirect.com/science/article/abs/pii/S0300957225002795">ERC 2025 age-based respiratory reference table</a>. The rate interpolation, model scaling and PC fit are teaching choices, not validated recommendations.</p>
+        </details>
+      </details>
       <details class="card settings" id="settingsPanel" open aria-labelledby="settingsHeading">
         <summary class="settings-toggle">Adjust settings <span id="settingsSummary"></span></summary>
         <div class="card-heading"><h2 id="settingsHeading">Settings</h2><button id="resetBtn" type="button">Reset</button></div>
@@ -119,12 +136,13 @@ function buildVentilator() {
       <p>With unequal regions, the optional alveolar-pressure curve and intrinsic PEEP report compliance-weighted mean elastic pressure, not either individual region's pressure. Regional end-expiratory values are shown below the CO₂ readings. End-hold airway pressure may continue changing while the regions equilibrate; it is labeled separately from a uniform-lung plateau. Equilibrated elastic driving pressure uses the delivered volume divided by total C. Instantaneous resistive drop refers to removal of VCV flow at the start of the hold and is distinct from subsequent redistribution.</p>
       <p>Airway dead space is split into unmixed transit volume and a well-mixed compartment near the mouth. The mixing fraction is 0.2 by default: at VD 150 mL this is 30 mL mixed and 120 mL unmixed. Total dead space stays fixed when its split changes. Gas travels in both directions, including airway CO₂ returning on inspiration. The mixed compartment's exponential dilution is solved exactly for each incoming parcel; a separate 40 ms sensor response smooths the signal without changing stored or exhaled CO₂. Setting mixing to 0 restores unmixed transport. Background: <a href="https://pubmed.ncbi.nlm.nih.gov/37030832/">mechanistic airway-mixing model</a>.</p>
       <p>Each lung region has its own CO₂ content and exchanges with shared tissue stores. Unequal ventilation can therefore create unequal CO₂ concentrations; gas contributions are combined by their flow at the common junction. Internal redistribution also transports CO₂. Both regions initially have the same CO₂, so a rising plateau develops as regional differences form rather than being imposed from the first breath. Background: <a href="https://publications.ersnet.org/content/erjor/8/1/00440-2021">sequential ventilation-inhomogeneity study</a>. These references support the concepts, not the chosen parameters or validation of this implementation.</p>
-      <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. Baseline total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
+      <p>Teaching defaults: total resting alveolar volume 2.5 L, tissue-equivalent storage 20 L, initial alveolar CO₂ 40 mmHg and production 200 mL/min STPD. At the 70 kg model reference, baseline total equivalent lung/tissue exchange conductance is 0.5 L/s, divided equally; this is not blood flow. Gas amounts use BTPS with sea-level conversion 863/713. No separate alveolar dead space, blood-perfusion network, shunt, circulation delays or acid–base chemistry is modeled. The assumed Pa–Et gradient only adds to sampled EtCO₂ for an arterial display estimate. Approximate steady alveolar ventilation is <code>max(VTsteady − VD, 0) × RR / 1000</code> L/min; it is not a measurement of regional gas exchange.</p>
       <p>The COPD-like and bronchospasm-like examples add illustrative 4:1 and 6:1 regional ratios to their R/C examples. These ratios and the mixing default are not fitted disease parameters; the model does not reproduce all clinical capnograms or dynamic airway collapse. Every settings edit restarts the run. “Start CO₂ from baseline end” preserves the frozen selected breath's separate regional concentrations, airway contents and sensor value while mechanics restart from their chosen initial state. This continued gas state is local to the page; shared URLs transfer settings, not gas history. Optional legacy shapes are schematic overlays, not the transport model. Timing may be entered as fraction, Ti or I:E, with an option to preserve Ti across rate changes.</p>
       <p>Acute events warm the baseline off-screen, then preserve regional volumes, gas stores and sensor state through onset and recovery. Status reports if warmup did not fully settle. A nonzero VC ceiling limits absolute airway pressure during inspiration and can reduce delivered volume; 0 retains ideal delivery. Event severity is an illustrative mechanism scale, not a measured percentage of obstruction. Bronchospasm increases unequal inspiratory/expiratory resistance; a kink or common mucus plug adds series resistance; a regional plug affects one branch. Complete common closure traps distal gas while fresh circuit gas washes the proximal sampling compartment at an assumed 0.1 L/s, with this loss included in the CO₂ audit.</p>
       <p>The venous-air-embolism scenario reduces equivalent lung/tissue exchange by (1 − severity)² without reducing metabolic production or changing airway mechanics. It represents reduced pulmonary CO₂ delivery, not bubbles or circulation. Event scenarios replace the fixed Pa–Et estimate with tissue-equivalent store pressure, which is not PaCO₂. A low expired tracing can coexist with rising stored CO₂; recovery may cause a rebound. Bronchospasm and plugging do not always lower EtCO₂, and waveform patterns overlap. Background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12340691/">bronchospasm case observations</a> and <a href="https://pubmed.ncbi.nlm.nih.gov/22383084/">venous-air-embolism observations</a>. These sources support qualitative patterns, not calibration of the event severity or timing. This simulator is educational and cannot diagnose a clinical event.</p>
       <p>Other events act on the same transported gas, not a prescribed waveform. MH increases metabolic CO₂ production. Abdominal insufflation stiffens both regions and adds gradually absorbed CO₂. Hypotension represents reduced cardiac output; PE reduces regional pulmonary delivery unequally. Mainstem intubation excludes one region at maximal severity while ventilation of the other continues. Acute compliance loss models stiffness without fluid, recruitment or oxygenation. CO₂ rebreathing introduces inspired gas through the airway. Metabolic production, absorbed CO₂ and inspired CO₂ are audited separately. Compliance changes preserve volumes and gas content while elastic pressure can change immediately; the reference resting gas volume stays fixed.</p>
       <p>Each event's “How this event works” section links its background sources and states its limitations. No blood pressure, cardiac output, oxygen saturation, temperature, clot, pleural-pressure or disease-specific treatment model is included. Severity and the 120 s reference time scale are teaching choices, not measured disease severity or validated onset/recovery times. Clinical patterns overlap, and an abnormal tracing alone does not establish the cause.</p>
+      <p>The optional patient profile suggests an editable volume/rate/PEEP starting example, not an optimal clinical prescription. Its optional model scaling changes C, dead space, resting gas volume, CO₂ stores and baseline production in proportion to ideal weight, relative to the current model weight; resistance changes inversely with the square root of that ratio. Exchange conductance and the insufflation scenario’s CO₂ uptake scale with model weight relative to 70 kg. These are explicit teaching assumptions, not patient measurements or validated pediatric kinetics. Child/teen rates use interpolated low-normal ERC age anchors; adults use a 12/min reference regardless of adult age. Timing, pathology and real gas exchange can require different settings. The profile is preserved in shared URLs and event references; Reset clears it.</p>
       <table class="source-table"><thead><tr><th>Example</th><th>Rᵢ / Rₑ<br>cm H₂O/(L/s)</th><th>C<br>mL/cm H₂O</th><th>τₑ fast / slow<br>s</th></tr></thead><tbody id="caseTable"></tbody></table>
       <ul><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11107031/">2024 PCV bench study</a>: COPD bench compliance 60 with obstructive resistances including 20. This supports the COPD-like mechanics example, not all of its clinical behavior.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7925949/">2021 respiratory-mechanics bench study</a>: obstructive R 20/C 50 and restrictive R 10/C 25 examples. Our bronchospasm-like R 30/C 50 is an illustrative extension, not a validated disease parameter set.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3376482/">Respiratory compartment model equations</a>.</li></ul>
     </details>`;
@@ -313,6 +331,7 @@ function simulateAndDraw() {
   ventValid = !errors.length;
   if (!ventValid) {
     renderVentEventStatus();
+    renderVentPatient();
     return;
   }
   if (!ventRun || ventForceRun || JSON.stringify(p) !== JSON.stringify(ventRun.settings)) {
@@ -335,6 +354,7 @@ function simulateAndDraw() {
   renderBreathSelect();
   renderTiming();
   renderVentEventDescription();
+  renderVentPatient();
   refreshVentView();
 }
 function updateVentCaseNote() {
@@ -354,6 +374,10 @@ function updateVentCaseNote() {
     link.textContent = ` ${item.sourceLabel}`;
     note.append(link);
   }
+  if (ventSettings.modelWeight !== 70)
+    note.append(
+      ` Mechanics are scaled from the 70 kg reference to ${ventFormat(ventSettings.modelWeight)} kg using teaching assumptions.`,
+    );
 }
 function syncVentMode() {
   document.body.dataset.ventilationMode = ventMode;
@@ -379,6 +403,8 @@ function updateVentURL() {
   url.searchParams.set('mode', ventMode);
   url.searchParams.set('settings', JSON.stringify(ventSettings));
   url.searchParams.set('case', ventCaseId);
+  if (ventPatient) url.searchParams.set('patient', JSON.stringify(ventPatient));
+  else url.searchParams.delete('patient');
   // Some file viewers restrict history; the simulator still works without it.
   try {
     history.replaceState(null, '', url.href);
@@ -456,7 +482,11 @@ function renderVentMetrics() {
   primary.replaceChildren();
   extra.replaceChildren();
   for (const [key, label, digits] of [
-    ['VT', 'Delivered VT (mL)', 0],
+    [
+      'VT',
+      `Delivered VT (mL)${ventPatient && m ? ` · ${ventFormat(m.VT / ventPatient.ibw)} mL/kg` : ''}`,
+      0,
+    ],
     ['EtCO2', 'EtCO₂ (mmHg)', 1],
     ['Peak', 'Peak pressure (cm H₂O)', 1],
     [
@@ -615,6 +645,7 @@ function refreshVentView() {
   buildVentilator();
   initVentEventUI();
   initVentExtras();
+  initVentPatientUI();
   ventElement('settingsPanel').open = !window.matchMedia('(max-width: 700px)').matches;
   ventElement('lungCase').addEventListener('change', (event) => {
     const item = VENTILATION_CASES.find((c) => c.id === event.target.value);
@@ -622,15 +653,16 @@ function refreshVentView() {
       setVentSettings(
         {
           ...readVentSettings(),
-          R: item.R,
-          Rexp: item.R,
-          C: item.C,
+          R: item.R / Math.sqrt(ventSettings.modelWeight / 70),
+          Rexp: item.R / Math.sqrt(ventSettings.modelWeight / 70),
+          C: (item.C * ventSettings.modelWeight) / 70,
           regionRatio: item.regionRatio,
         },
         item.id,
       );
   });
   ventElement('resetBtn').addEventListener('click', () => {
+    resetVentPatient();
     stopVentPlayback();
     ventPlayback.time = 0;
     ventElement('viewWindow').value = 'full';
@@ -721,9 +753,9 @@ function refreshVentView() {
       const example = VENTILATION_CASES.find((c) => c.id === caseId);
       if (
         example &&
-        (initial.R !== example.R ||
-          initial.Rexp !== example.R ||
-          initial.C !== example.C ||
+        (Math.abs(initial.R - example.R / Math.sqrt(initial.modelWeight / 70)) > 1e-8 ||
+          Math.abs(initial.Rexp - example.R / Math.sqrt(initial.modelWeight / 70)) > 1e-8 ||
+          Math.abs(initial.C - (example.C * initial.modelWeight) / 70) > 1e-8 ||
           initial.regionRatio !== example.regionRatio)
       )
         caseId = 'custom';

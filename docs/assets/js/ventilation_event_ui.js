@@ -105,29 +105,28 @@ function initVentEventUI() {
   ventElement('loadEventReference').addEventListener('click', () => {
     const type =
       ventElement('eventType').value === 'none' ? 'bronchospasm' : ventElement('eventType').value;
+    const reference = ventPatientReference({
+      ...Ventilation.defaults,
+      mode: ventMode,
+      VT: 500,
+      PC: 10.4,
+      T: 120,
+      initial: 'steady',
+      pressureLimit: 40,
+      eventType: type,
+      eventSeverity:
+        VentilationScenarios.catalog[type].severity ?? Ventilation.defaults.eventSeverity,
+      eventOnset: 30,
+      eventRecovery: 90,
+    });
+    if (!reference) return;
     ventCO2Seed = null;
     ventForceRun = true;
     ventBaseline = null;
     ventElement('keepTi').checked = false;
     ventElement('timingMode').value = 'ie';
     updateVentTimingMode();
-    setVentSettings(
-      {
-        ...Ventilation.defaults,
-        mode: ventMode,
-        VT: 500,
-        PC: 10.4,
-        T: 120,
-        initial: 'steady',
-        pressureLimit: 40,
-        eventType: type,
-        eventSeverity:
-          VentilationScenarios.catalog[type].severity ?? Ventilation.defaults.eventSeverity,
-        eventOnset: 30,
-        eventRecovery: 90,
-      },
-      'reference',
-    );
+    setVentSettings(reference, 'reference');
     ventBreathIndex = 0;
     renderBreathSelect();
     ventElement('viewWindow').value = 'full';

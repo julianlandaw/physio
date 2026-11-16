@@ -157,6 +157,29 @@ p {
 .controls-column > details[open] > summary {
   margin-bottom: 12px;
 }
+.patient-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.patient-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.77rem;
+  font-weight: 600;
+}
+.patient-inputs input {
+  margin-top: auto;
+  font-weight: 400;
+}
+#patientSummary {
+  display: inline-block;
+  white-space: nowrap;
+}
+.patient-scale {
+  margin-top: 12px;
+}
 .settings-toggle {
   list-style: none;
 }

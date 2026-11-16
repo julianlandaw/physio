@@ -196,7 +196,7 @@ const VentilationScenarios = (() => {
       const age = Math.max(0, t - p.eventOnset),
         duration = p.eventRecovery ? p.eventRecovery - p.eventOnset : Infinity;
       result.absorbed =
-        100 *
+        ((100 * p.modelWeight) / 70) *
         p.eventSeverity *
         -Math.expm1(-Math.min(age, duration) / 30) *
         Math.exp(-Math.max(0, age - duration) / 30);
@@ -559,7 +559,8 @@ const VentilationScenarios = (() => {
     const P = guess >= 5 && guess <= 100 ? guess : base.CO2Initial;
     let seed = {
         lungFraction: P / 713,
-        tissueFraction: P / 713 + ((base.VCO2 / 60000) * 863) / 713 / 0.5,
+        tissueFraction:
+          P / 713 + ((base.VCO2 / 60000) * 863) / 713 / VentilationCO2.exchangeFor(base),
         airwayFraction: P / 713,
         measured: P,
       },

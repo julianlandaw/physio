@@ -5,8 +5,10 @@
 // a stirred mixing region carry gas bidirectionally. Sensor filtering is separate.
 const VentilationCO2 = (() => {
   const pressure = 713,
-    exchange = 0.5,
     sensorTime = 0.04;
+  function exchangeFor(p) {
+    return (0.5 * (p.modelWeight ?? 70)) / 70;
+  }
   function create(p, initialVolume = 0, seed, maxStep = 0.01) {
     if (!Number.isFinite(maxStep) || maxStep <= 0 || maxStep > 0.05)
       throw Error('Invalid CO₂ integration step.');
@@ -14,6 +16,7 @@ const VentilationCO2 = (() => {
     const mixingVolume = airwayVolume * (p.airwayMix ?? 0);
     const plugVolume = airwayVolume - mixingVolume;
     const source = ((p.VCO2 / 60000) * 863) / pressure;
+    const exchange = exchangeFor(p);
     let volumes = Array.isArray(initialVolume)
       ? initialVolume.slice()
       : [initialVolume / 2, initialVolume / 2];
@@ -194,5 +197,5 @@ const VentilationCO2 = (() => {
     }
     return { advance, read };
   }
-  return { create };
+  return { create, exchangeFor };
 })();

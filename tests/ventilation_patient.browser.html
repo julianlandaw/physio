@@ -1,0 +1,178 @@
+<!-- Copyright (c) 2026 Julian W. Landaw | SPDX-License-Identifier: MIT -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Patient starting-settings checks</title>
+  </head>
+  <body data-result="running">
+    <pre id="results">Running…</pre>
+    <iframe
+      id="app"
+      title="Patient ventilator settings under test"
+      style="position: absolute; left: -2000px; width: 390px; height: 1100px"
+    ></iframe>
+    <script>
+      const checks = [],
+        check = (name, value) => {
+          checks.push(`${value ? 'PASS' : 'FAIL'} ${name}`);
+          if (!value) throw Error(name);
+        },
+        near = (a, b, tol = 1e-6) => Number.isFinite(a) && Math.abs(a - b) < tol,
+        frame = document.getElementById('app');
+      const load = (page) =>
+        new Promise((resolve) => {
+          frame.onload = () => resolve(frame.contentWindow);
+          frame.src = '../docs/Respiratory/' + page;
+        });
+      (async () => {
+        try {
+          const worker = new Worker('ventilation_patient.worker.js'),
+            data = await new Promise((resolve, reject) => {
+              worker.onmessage = (e) => resolve(e.data);
+              worker.onerror = (e) => reject(Error(e.message));
+            });
+          worker.terminate();
+          checks.push(...data.checks);
+          check('independent patient-model checks complete', data.passed);
+          for (const mode of ['vcv', 'pcv']) {
+            const app = await load('ventilator_simulator.html?mode=' + mode),
+              d = app.document,
+              el = (id) => d.getElementById(id),
+              run = () => app.eval('ventRun');
+            const change = (id, value) => {
+              el(id).value = value;
+              el(id).dispatchEvent(
+                new app.Event(el(id).tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }),
+              );
+            };
+            check(
+              `${mode}: patient controls are discoverable without displacing the top-left events`,
+              !el('patientPanel').open &&
+                el('eventPanel').parentElement.firstElementChild === el('eventPanel') &&
+                el('applyPatient').disabled,
+            );
+            el('patientPanel').open = true;
+            const original = run();
+            change('patientAge', '40');
+            change('patientWeight', '70');
+            check(
+              `${mode}: editing patient inputs previews without rerunning or changing ventilation`,
+              run() === original &&
+                el('patientPreview').textContent.includes('420 mL') &&
+                !el('applyPatient').disabled,
+            );
+            el('applyPatient').click();
+            check(
+              `${mode}: applying an adult example updates both mode targets and the mL/kg readout`,
+              run().settings.VT === 420 &&
+                near(run().metrics.VT, 420, 0.1) &&
+                el('metrics').textContent.includes('6.0 mL/kg') &&
+                run().settings.RR === 12 &&
+                run().settings.PEEP === 5,
+            );
+            const adultRun = run();
+            change('patientWeight', '');
+            check(
+              `${mode}: incomplete patient data retain predictions and explain the missing input`,
+              run() === adultRun &&
+                el('applyPatient').disabled &&
+                el('patientWeight').getAttribute('aria-invalid') === 'true',
+            );
+            change('patientAge', '.5');
+            change('patientWeight', '10');
+            check(
+              `${mode}: infants do not receive automatic example settings`,
+              el('applyPatient').disabled && el('patientError').textContent.includes('infants'),
+            );
+            change('patientAge', '5');
+            change('patientWeight', '20');
+            el('applyPatient').click();
+            check(
+              `${mode}: child example changes size and rate without forcing adult dead space`,
+              run().settings.modelWeight === 20 &&
+                run().settings.VT === 120 &&
+                run().settings.RR === 17 &&
+                run().settings.VD < 50 &&
+                run().settings.FRC < 1 &&
+                run().co2Balance.valid,
+            );
+            const child = run().settings;
+            el('applyPatient').click();
+            check(
+              `${mode}: applying again is idempotent`,
+              near(run().settings.C, child.C) &&
+                near(run().settings.R, child.R) &&
+                near(run().settings.VD, child.VD),
+            );
+            const otherMode = mode === 'vcv' ? 'pcv' : 'vcv';
+            d.querySelector(`[data-vent-mode="${otherMode}"]`).click();
+            check(
+              `${mode}: switching modes keeps age, ideal weight and matching target`,
+              el('patientAge').value === '5' &&
+                el('patientWeight').value === '20' &&
+                near(run().metrics.VT, 120, 0.1),
+            );
+            const url = new URL(app.location.href),
+              shared = await load(url.pathname.split('/').at(-1) + url.search),
+              sd = shared.document;
+            check(
+              `${mode}: shared links restore patient context and actual sized settings`,
+              sd.getElementById('patientAge').value === '5' &&
+                sd.getElementById('patientWeight').value === '20' &&
+                shared.eval('ventRun.settings.modelWeight') === 20 &&
+                shared.eval('ventRun.co2Balance.valid'),
+            );
+            sd.getElementById('eventType').value = 'insufflation';
+            sd.getElementById('loadEventReference').click();
+            check(
+              `${mode}: loading an acute reference preserves the patient-sized model and targets`,
+              shared.eval('ventRun.settings.VT') === 120 &&
+                shared.eval('ventRun.settings.modelWeight') === 20 &&
+                shared.eval('ventRun.settings.RR') === 17 &&
+                shared.eval('ventRun.settings.T') === 120 &&
+                shared.eval('ventRun.co2Balance.valid'),
+            );
+            sd.getElementById('lungCase').value = 'copd';
+            sd.getElementById('lungCase').dispatchEvent(
+              new shared.Event('change', { bubbles: true }),
+            );
+            check(
+              `${mode}: changing lung examples retains size scaling`,
+              near(shared.eval('ventRun.settings.C'), (60 * 20) / 70) &&
+                near(shared.eval('ventRun.settings.R'), 20 / Math.sqrt(20 / 70)),
+            );
+            sd.getElementById('patientPanel').open = true;
+            check(
+              `${mode}: patient panel fits phone width`,
+              sd.documentElement.scrollWidth <= shared.innerWidth,
+            );
+            sd.getElementById('resetBtn').click();
+            check(
+              `${mode}: Reset clears patient context and restores ordinary defaults`,
+              sd.getElementById('patientAge').value === '' &&
+                sd.getElementById('patientWeight').value === '' &&
+                shared.eval('ventRun.settings.modelWeight') === 70 &&
+                shared.eval('ventRun.settings.VT') === 400 &&
+                !new URL(shared.location.href).searchParams.has('patient'),
+            );
+          }
+          const malformed = await load(
+            'ventilator_simulator.html?patient=' + encodeURIComponent('{"age":0}'),
+          );
+          check(
+            'invalid shared patient data are ignored with a visible explanation',
+            malformed.document.getElementById('patientError').textContent.includes('invalid') &&
+              malformed.document.getElementById('patientPanel').open &&
+              malformed.eval('ventRun.settings.modelWeight') === 70,
+          );
+          document.body.dataset.result = 'passed';
+        } catch (error) {
+          checks.push('FAIL ' + error.message);
+          document.body.dataset.result = 'failed';
+        }
+        document.getElementById('results').textContent = checks.join('\n');
+      })();
+    </script>
+  </body>
+</html>

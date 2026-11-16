@@ -128,17 +128,17 @@
                 run() === before &&
                 el('metrics').textContent === metric,
             );
-            change(`${prefix}C`, '200');
+            change(`${prefix}C`, '500');
             check(
               `${mode}: out-of-range entries are explained rather than clamped`,
-              el(`${prefix}C`).value === '200' &&
+              el(`${prefix}C`).value === '500' &&
                 !el('ventilationErrors').hidden &&
                 run() === before,
             );
             d.querySelector(`[data-vent-mode="${mode === 'vcv' ? 'pcv' : 'vcv'}"]`).click();
             check(
               `${mode}: invalid edits block mode switching without losing the edit`,
-              run() === before && app.eval('ventMode') === mode && el('ventC').value === '200',
+              run() === before && app.eval('ventMode') === mode && el('ventC').value === '500',
             );
             change(`${prefix}C`, '50');
             check(
